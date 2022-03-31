@@ -5,7 +5,7 @@ pragma abicoder v2;
 import { Funding } from "../lib/Funding.sol";
 import { OpenOrder } from "../lib/OpenOrder.sol";
 
-interface IOrderBook {
+interface IOrderBookUniswapV2 {
     struct AddLiquidityParams {
         address trader;
         address baseToken;

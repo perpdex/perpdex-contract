@@ -4,10 +4,10 @@ pragma solidity 0.7.6;
 /// @notice For future upgrades, do not change ClearingHouseStorageV1. Create a new
 /// contract which implements ClearingHouseStorageV1 and following the naming convention
 /// ClearingHouseStorageVX.
-abstract contract ClearingHouseStorageV1 {
+abstract contract ClearingHousePerpdexStorageV1 {
     // --------- IMMUTABLE ---------
     address internal _quoteToken;
-    address internal _uniswapV3Factory;
+    address internal _uniswapV2Router02;
 
     // cache the settlement token's decimals for gas optimization
     uint8 internal _settlementTokenDecimals;

@@ -155,6 +155,35 @@ library UniswapV2Broker {
     // INTERNAL VIEW
     //
 
+    function getLiquidityValue(address pool) internal view returns (uint256 tokenAAmount, uint256 tokenBAmount) {
+        (sqrtMarkPrice, , , , , , ) = IUniswapV3Pool(pool).slot0();
+    }
+
+    function getSqrtMarkPriceX96(address pool) internal view returns (uint160 sqrtMarkPrice) {
+        (sqrtMarkPrice, , , , , , ) = IUniswapV3Pool(pool).slot0();
+    }
+
+    function getMarkPrice(address pool) internal view returns (uint160 sqrtMarkPrice) {
+        (sqrtMarkPrice, , , , , , ) = IUniswapV3Pool(pool).slot0();
+    }
+
+    function getMarkTwap(address pool, uint32 twapInterval) internal view returns (uint160) {
+        // return the current price as twapInterval is too short/ meaningless
+        if (twapInterval < 10) {
+            (uint160 sqrtMarkPrice, , , , , , ) = getSlot0(pool);
+            return sqrtMarkPrice;
+        }
+        uint32[] memory secondsAgos = new uint32[](2);
+
+        // solhint-disable-next-line not-rely-on-time
+        secondsAgos[0] = twapInterval;
+        secondsAgos[1] = 0;
+        (int56[] memory tickCumulatives, ) = IUniswapV3Pool(pool).observe(secondsAgos);
+
+        // tick(imprecise as it's an integer) to price
+        return TickMath.getSqrtRatioAtTick(int24((tickCumulatives[1] - tickCumulatives[0]) / twapInterval));
+    }
+
     //
     // PRIVATE VIEW
     //

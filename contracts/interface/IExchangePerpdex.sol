@@ -4,7 +4,7 @@ pragma abicoder v2;
 
 import { Funding } from "../lib/Funding.sol";
 
-interface IExchange {
+interface IExchangePerpdex {
     /// @param amount when closing position, amount(uint256) == takerPositionSize(int256),
     ///        as amount is assigned as takerPositionSize in ClearingHouse.closePosition()
     struct SwapParams {
@@ -14,7 +14,6 @@ interface IExchange {
         bool isExactInput;
         bool isClose;
         uint256 amount;
-        uint160 sqrtPriceLimitX96;
     }
 
     struct SwapResponse {
@@ -26,7 +25,6 @@ interface IExchange {
         uint256 insuranceFundFee;
         int256 pnlToBeRealized;
         uint256 sqrtPriceAfterX96;
-        int24 tick;
         bool isPartialClose;
     }
 
@@ -51,11 +49,6 @@ interface IExchange {
     /// @param indexTwap The index twap price when the funding growth is updated
     event FundingUpdated(address indexed baseToken, uint256 markTwap, uint256 indexTwap);
 
-    /// @notice Emitted when maxTickCrossedWithinBlock is updated
-    /// @param baseToken Address of the base token
-    /// @param maxTickCrossedWithinBlock Max tick allowed to be crossed within block when reducing position
-    event MaxTickCrossedWithinBlockChanged(address indexed baseToken, uint24 maxTickCrossedWithinBlock);
-
     /// @notice Emitted when accountBalance is updated
     /// @param accountBalance The address of accountBalance contract
     event AccountBalanceChanged(address accountBalance);
@@ -76,11 +69,6 @@ interface IExchange {
     function settleFunding(address trader, address baseToken)
         external
         returns (int256 fundingPayment, Funding.Growth memory fundingGrowthGlobal);
-
-    /// @notice Get the max ticks allowed to be crossed within a block when reducing position
-    /// @param baseToken Address of the base token
-    /// @return maxTickCrossedWithinBlock The max ticks allowed to be crossed within a block when reducing position
-    function getMaxTickCrossedWithinBlock(address baseToken) external view returns (uint24);
 
     /// @notice Get all the pending funding payment for a trader
     /// @return pendingFundingPayment The pending funding payment of the trader.
