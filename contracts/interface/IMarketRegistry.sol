@@ -80,7 +80,7 @@ interface IMarketRegistry {
     function getUniswapV3Factory() external view returns (address factory);
 
     /// @notice Get Uniswap V2 router 02 address
-    /// @return factory The address of the Uniswap router
+    /// @return router The address of the Uniswap router
     function getUniswapV2Router02() external view returns (address router);
 
     /// @notice Get max allowed orders per market

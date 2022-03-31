@@ -6,7 +6,7 @@ import { Funding } from "../lib/Funding.sol";
 /// @notice For future upgrades, do not change ExchangeStorageV1. Create a new
 /// contract which implements ExchangeStorageV1 and following the naming convention
 /// ExchangeStorageVX.
-abstract contract ExchangeStorageV1 {
+abstract contract ExchangePerpdexStorageV1 {
     address internal _orderBook;
     address internal _accountBalance;
     address internal _clearingHouseConfig;
@@ -23,4 +23,6 @@ abstract contract ExchangeStorageV1 {
     // first key: trader, second key: baseToken
     // value: the last timestamp when a trader exceeds price limit when closing a position/being liquidated
     mapping(address => mapping(address => uint256)) internal _lastOverPriceLimitTimestampMap;
+
+    address internal _marketRegistry;
 }

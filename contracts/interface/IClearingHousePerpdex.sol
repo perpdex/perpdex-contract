@@ -89,8 +89,6 @@ interface IClearingHousePerpdex {
     /// @param maker The one who provide liquidity
     /// @param baseToken The address of virtual base token(ETH, BTC, etc...)
     /// @param quoteToken The address of virtual USD token
-    /// @param lowerTick The lower tick of the position in which to add liquidity
-    /// @param upperTick The upper tick of the position in which to add liquidity
     /// @param base The amount of base token added (> 0) / removed (< 0) as liquidity; fees not included
     /// @param quote The amount of quote token added ... (same as the above)
     /// @param liquidity The amount of liquidity unit added (> 0) / removed (< 0)
@@ -236,9 +234,9 @@ interface IClearingHousePerpdex {
     /// @return quoteToken The quote token address
     function getQuoteToken() external view returns (address quoteToken);
 
-    /// @notice Get UniswapV2Factory address
-    /// @return factory UniswapV2Factory address
-    function getUniswapV2Factory() external view returns (address factory);
+    /// @notice Get IUniswapV2Router02 address
+    /// @return router IUniswapV2Router02 address
+    function getUniswapV2Router02() external view returns (address router);
 
     /// @notice Get ClearingHouseConfig address
     /// @return clearingHouseConfig ClearingHouseConfig address

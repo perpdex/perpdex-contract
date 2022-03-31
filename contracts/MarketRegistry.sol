@@ -135,6 +135,12 @@ contract MarketRegistry is IMarketRegistry, ClearingHouseCallee, MarketRegistryS
     }
 
     /// @inheritdoc IMarketRegistry
+    function getUniswapV2Router02() external view override returns (address) {
+        require(false, "not implemented");
+        return address(0);
+    }
+
+    /// @inheritdoc IMarketRegistry
     function getMaxOrdersPerMarket() external view override returns (uint8) {
         return _maxOrdersPerMarket;
     }

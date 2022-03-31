@@ -23,6 +23,7 @@ import { IClearingHouseConfig } from "./interface/IClearingHouseConfig.sol";
 import { ExchangePerpdexStorageV1 } from "./storage/ExchangePerpdexStorage.sol";
 import { IExchangePerpdex } from "./interface/IExchangePerpdex.sol";
 import { OpenOrder } from "./lib/OpenOrder.sol";
+import { IUniswapV2Router02 } from "./amm/uniswap_v2_periphery/interfaces/IUniswapV2Router02.sol";
 
 // never inherit any new stateful contract. never change the orders of parent stateful contracts
 contract ExchangePerpdex is IExchangePerpdex, BlockContext, ClearingHouseCallee, ExchangePerpdexStorageV1 {
@@ -75,12 +76,15 @@ contract ExchangePerpdex is IExchangePerpdex, BlockContext, ClearingHouseCallee,
     ) external initializer {
         __ClearingHouseCallee_init();
 
+        // E_MRNC: MarketRegistiry is not contract
+        require(_marketRegistry.isContract(), "E_MRNC");
         // E_OBNC: OrderBook is not contract
         require(orderBookArg.isContract(), "E_OBNC");
         // E_CHNC: CH is not contract
         require(clearingHouseConfigArg.isContract(), "E_CHNC");
 
         // update states
+        _marketRegistry = marketRegistryArg;
         _orderBook = orderBookArg;
         _clearingHouseConfig = clearingHouseConfigArg;
     }
@@ -93,7 +97,7 @@ contract ExchangePerpdex is IExchangePerpdex, BlockContext, ClearingHouseCallee,
         emit AccountBalanceChanged(accountBalanceArg);
     }
 
-    /// @inheritdoc IExchange
+    /// @inheritdoc IExchangePerpdex
     function swap(SwapParams memory params) external override returns (SwapResponse memory) {
         _requireOnlyClearingHouse();
 
@@ -135,8 +139,11 @@ contract ExchangePerpdex is IExchangePerpdex, BlockContext, ClearingHouseCallee,
             );
         }
 
-        // TODO:
-        uint256 sqrtPriceX96 = UniswapV2Broker.getSqrtMarkPriceX96(params.baseToken);
+        address router = IMarketRegistry(_marketRegistry).getUniswapV2Router02();
+        address quoteToken = IMarketRegistry(_marketRegistry).getQuoteToken();
+        uint256 sqrtPriceX96 =
+            UniswapV2Broker.getSqrtMarkPriceX96(IUniswapV2Router02(router).factory(), params.baseToken, quoteToken);
+
         return
             SwapResponse({
                 base: response.base.abs(),
@@ -151,7 +158,7 @@ contract ExchangePerpdex is IExchangePerpdex, BlockContext, ClearingHouseCallee,
             });
     }
 
-    /// @inheritdoc IExchange
+    /// @inheritdoc IExchangePerpdex
     function settleFunding(address trader, address baseToken)
         external
         override
@@ -197,22 +204,26 @@ contract ExchangePerpdex is IExchangePerpdex, BlockContext, ClearingHouseCallee,
     // EXTERNAL VIEW
     //
 
-    /// @inheritdoc IExchange
+    function getMarketRegistry() external view returns (address) {
+        return _marketRegistry;
+    }
+
+    /// @inheritdoc IExchangePerpdex
     function getOrderBook() external view override returns (address) {
         return _orderBook;
     }
 
-    /// @inheritdoc IExchange
+    /// @inheritdoc IExchangePerpdex
     function getAccountBalance() external view override returns (address) {
         return _accountBalance;
     }
 
-    /// @inheritdoc IExchange
+    /// @inheritdoc IExchangePerpdex
     function getClearingHouseConfig() external view override returns (address) {
         return _clearingHouseConfig;
     }
 
-    /// @inheritdoc IExchange
+    /// @inheritdoc IExchangePerpdex
     function getPnlToBeRealized(RealizePnlParams memory params) external view override returns (int256) {
         AccountMarket.Info memory info =
             IAccountBalance(_accountBalance).getAccountInfo(params.trader, params.baseToken);
@@ -237,7 +248,7 @@ contract ExchangePerpdex is IExchangePerpdex, BlockContext, ClearingHouseCallee,
                 : 0;
     }
 
-    /// @inheritdoc IExchange
+    /// @inheritdoc IExchangePerpdex
     function getAllPendingFundingPayment(address trader) external view override returns (int256 pendingFundingPayment) {
         address[] memory baseTokens = IAccountBalance(_accountBalance).getBaseTokens(trader);
         uint256 baseTokenLength = baseTokens.length;
@@ -252,7 +263,7 @@ contract ExchangePerpdex is IExchangePerpdex, BlockContext, ClearingHouseCallee,
     // PUBLIC VIEW
     //
 
-    /// @inheritdoc IExchange
+    /// @inheritdoc IExchangePerpdex
     function getPendingFundingPayment(address trader, address baseToken) public view override returns (int256) {
         (Funding.Growth memory fundingGrowthGlobal, , ) = _getFundingGrowthGlobalAndTwaps(baseToken);
 
@@ -268,9 +279,17 @@ contract ExchangePerpdex is IExchangePerpdex, BlockContext, ClearingHouseCallee,
             );
     }
 
-    /// @inheritdoc IExchange
+    /// @inheritdoc IExchangePerpdex
     function getSqrtMarkTwapX96(address baseToken, uint32 twapInterval) public view override returns (uint160) {
-        return UniswapV2Broker.getSqrtMarkTwapX96(IMarketRegistry(_marketRegistry).getPool(baseToken), twapInterval);
+        address router = IMarketRegistry(_marketRegistry).getUniswapV2Router02();
+        address quoteToken = IMarketRegistry(_marketRegistry).getQuoteToken();
+        return
+            UniswapV2Broker.getSqrtMarkTwapX96(
+                IUniswapV2Router02(router).factory(),
+                baseToken,
+                quoteToken,
+                twapInterval
+            );
     }
 
     //
@@ -279,7 +298,7 @@ contract ExchangePerpdex is IExchangePerpdex, BlockContext, ClearingHouseCallee,
 
     /// @dev customized fee: https://www.notion.so/perp/Customise-fee-tier-on-B2QFee-1b7244e1db63416c8651e8fa04128cdb
     function _swap(SwapParams memory params) internal returns (InternalSwapResponse memory) {
-        IUniswapV2Router02 router = IMarketRegistry(_marketRegistry).getUniswapV2Router02();
+        address router = IMarketRegistry(_marketRegistry).getUniswapV2Router02();
         address quoteToken = IMarketRegistry(_marketRegistry).getQuoteToken();
 
         //        (uint256 scaledAmountForUniswapV3PoolSwap, int256 signedScaledAmountForReplaySwap) =

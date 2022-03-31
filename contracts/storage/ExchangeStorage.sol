@@ -6,7 +6,7 @@ import { Funding } from "../lib/Funding.sol";
 /// @notice For future upgrades, do not change ExchangeStorageV1. Create a new
 /// contract which implements ExchangeStorageV1 and following the naming convention
 /// ExchangeStorageVX.
-abstract contract ExchangePerpdexStorageV1 {
+abstract contract ExchangeStorageV1 {
     address internal _orderBook;
     address internal _accountBalance;
     address internal _clearingHouseConfig;

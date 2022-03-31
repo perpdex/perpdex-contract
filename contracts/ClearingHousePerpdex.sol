@@ -20,7 +20,7 @@ import { IAccountBalance } from "./interface/IAccountBalance.sol";
 import { BaseRelayRecipient } from "./gsn/BaseRelayRecipient.sol";
 import { ClearingHousePerpdexStorageV1 } from "./storage/ClearingHousePerpdexStorage.sol";
 import { BlockContext } from "./base/BlockContext.sol";
-import { IClearingHouse } from "./interface/IClearingHouse.sol";
+import { IClearingHousePerpdex } from "./interface/IClearingHousePerpdex.sol";
 import { AccountMarket } from "./lib/AccountMarket.sol";
 import { OpenOrder } from "./lib/OpenOrder.sol";
 
@@ -103,7 +103,7 @@ contract ClearingHousePerpdex is
         address clearingHouseConfigArg,
         address vaultArg,
         address quoteTokenArg,
-        address uniV2FactoryArg,
+        address uniV2Router02Arg,
         address exchangeArg,
         address accountBalanceArg,
         address insuranceFundArg
@@ -115,7 +115,7 @@ contract ClearingHousePerpdex is
         // CH_QDN18: QuoteToken decimals is not 18
         require(IERC20Metadata(quoteTokenArg).decimals() == 18, "CH_QDN18");
         // CH_UANC: UniV2Factory address is not contract
-        require(uniV2FactoryArg.isContract(), "CH_UANC");
+        require(uniV2Router02Arg.isContract(), "CH_UANC");
         // ClearingHouseConfig address is not contract
         require(clearingHouseConfigArg.isContract(), "CH_CCNC");
         // AccountBalance is not contract
@@ -125,7 +125,7 @@ contract ClearingHousePerpdex is
         // CH_IFANC: InsuranceFund address is not contract
         require(insuranceFundArg.isContract(), "CH_IFANC");
 
-        address orderBookArg = IExchange(exchangeArg).getOrderBook();
+        address orderBookArg = IExchangePerpdex(exchangeArg).getOrderBook();
         // orderBook is not contract
         require(orderBookArg.isContract(), "CH_OBNC");
 
@@ -135,7 +135,7 @@ contract ClearingHousePerpdex is
         _clearingHouseConfig = clearingHouseConfigArg;
         _vault = vaultArg;
         _quoteToken = quoteTokenArg;
-        _uniswapV2Factory = uniV2FactoryArg;
+        _uniswapV2Router02 = uniV2Router02Arg;
         _exchange = exchangeArg;
         _orderBook = orderBookArg;
         _accountBalance = accountBalanceArg;
@@ -152,7 +152,7 @@ contract ClearingHousePerpdex is
         emit TrustedForwarderChanged(trustedForwarderArg);
     }
 
-    /// @inheritdoc IClearingHouse
+    /// @inheritdoc IClearingHousePerpdex
     function addLiquidity(AddLiquidityParams calldata params)
         external
         override
@@ -166,9 +166,6 @@ contract ClearingHousePerpdex is
         //   base & quote: in LiquidityAmounts.getLiquidityForAmounts() -> FullMath.mulDiv()
         //   lowerTick & upperTick: in UniswapV3Pool._modifyPosition()
         //   minBase, minQuote & deadline: here
-
-        // CH_DUTB: Disable useTakerBalance
-        require(!params.useTakerBalance, "CH_DUTB");
 
         address trader = _msgSender();
         // register token if it's the first time
@@ -217,7 +214,7 @@ contract ClearingHousePerpdex is
             });
     }
 
-    /// @inheritdoc IClearingHouse
+    /// @inheritdoc IClearingHousePerpdex
     function removeLiquidity(RemoveLiquidityParams calldata params)
         external
         override
@@ -279,7 +276,7 @@ contract ClearingHousePerpdex is
         return RemoveLiquidityResponse({ quote: response.quote, base: response.base, fee: response.fee });
     }
 
-    /// @inheritdoc IClearingHouse
+    /// @inheritdoc IClearingHousePerpdex
     function settleAllFunding(address trader) external override {
         address[] memory baseTokens = IAccountBalance(_accountBalance).getBaseTokens(trader);
         uint256 baseTokenLength = baseTokens.length;
@@ -288,7 +285,7 @@ contract ClearingHousePerpdex is
         }
     }
 
-    /// @inheritdoc IClearingHouse
+    /// @inheritdoc IClearingHousePerpdex
     function openPosition(OpenPositionParams memory params)
         external
         override
@@ -342,7 +339,7 @@ contract ClearingHousePerpdex is
         return (response.base, response.quote);
     }
 
-    /// @inheritdoc IClearingHouse
+    /// @inheritdoc IClearingHousePerpdex
     function closePosition(ClosePositionParams calldata params)
         external
         override
@@ -363,7 +360,7 @@ contract ClearingHousePerpdex is
         // must settle funding first
         _settleFunding(trader, params.baseToken);
 
-        IExchange.SwapResponse memory response =
+        IExchangePerpdex.SwapResponse memory response =
             _closePosition(
                 InternalClosePositionParams({ trader: trader, baseToken: params.baseToken, isLiquidation: false })
             );
@@ -388,7 +385,7 @@ contract ClearingHousePerpdex is
         return (response.base, response.quote);
     }
 
-    /// @inheritdoc IClearingHouse
+    /// @inheritdoc IClearingHousePerpdex
     function liquidate(
         address trader,
         address baseToken,
@@ -427,12 +424,12 @@ contract ClearingHousePerpdex is
         return (base, quote, isPartialClose);
     }
 
-    /// @inheritdoc IClearingHouse
+    /// @inheritdoc IClearingHousePerpdex
     function liquidate(address trader, address baseToken) external override whenNotPaused nonReentrant {
         _liquidate(trader, baseToken);
     }
 
-    /// @inheritdoc IClearingHouse
+    /// @inheritdoc IClearingHousePerpdex
     function cancelExcessOrders(
         address maker,
         address baseToken,
@@ -446,7 +443,7 @@ contract ClearingHousePerpdex is
         //        _cancelExcessOrders(maker, baseToken, orderIds);
     }
 
-    /// @inheritdoc IClearingHouse
+    /// @inheritdoc IClearingHousePerpdex
     function cancelAllExcessOrders(address maker, address baseToken) external override whenNotPaused nonReentrant {
         require(false, "not implemented");
 
@@ -462,49 +459,49 @@ contract ClearingHousePerpdex is
     // EXTERNAL VIEW
     //
 
-    /// @inheritdoc IClearingHouse
+    /// @inheritdoc IClearingHousePerpdex
     function getQuoteToken() external view override returns (address) {
         return _quoteToken;
     }
 
-    /// @inheritdoc IClearingHouse
-    function getUniswapV2Factory() external view override returns (address) {
-        return _uniswapV2Factory;
+    /// @inheritdoc IClearingHousePerpdex
+    function getUniswapV2Router02() external view override returns (address) {
+        return _uniswapV2Router02;
     }
 
-    /// @inheritdoc IClearingHouse
+    /// @inheritdoc IClearingHousePerpdex
     function getClearingHouseConfig() external view override returns (address) {
         return _clearingHouseConfig;
     }
 
-    /// @inheritdoc IClearingHouse
+    /// @inheritdoc IClearingHousePerpdex
     function getVault() external view override returns (address) {
         return _vault;
     }
 
-    /// @inheritdoc IClearingHouse
+    /// @inheritdoc IClearingHousePerpdex
     function getExchange() external view override returns (address) {
         return _exchange;
     }
 
-    /// @inheritdoc IClearingHouse
+    /// @inheritdoc IClearingHousePerpdex
     function getOrderBook() external view override returns (address) {
         return _orderBook;
     }
 
-    /// @inheritdoc IClearingHouse
+    /// @inheritdoc IClearingHousePerpdex
     function getAccountBalance() external view override returns (address) {
         return _accountBalance;
     }
 
-    /// @inheritdoc IClearingHouse
+    /// @inheritdoc IClearingHousePerpdex
     function getInsuranceFund() external view override returns (address) {
         return _insuranceFund;
     }
 
-    /// @inheritdoc IClearingHouse
+    /// @inheritdoc IClearingHousePerpdex
     function getAccountValue(address trader) public view override returns (int256) {
-        int256 fundingPayment = IExchange(_exchange).getAllPendingFundingPayment(trader);
+        int256 fundingPayment = IExchangePerpdex(_exchange).getAllPendingFundingPayment(trader);
         (int256 owedRealizedPnl, int256 unrealizedPnl, uint256 pendingFee) =
             IAccountBalance(_accountBalance).getPnlAndPendingFee(trader);
         // solhint-disable-next-line var-name-mixedcase
@@ -583,7 +580,7 @@ contract ClearingHousePerpdex is
     function _settleBalanceAndRealizePnl(
         address maker,
         address baseToken,
-        IOrderBook.RemoveLiquidityResponse memory response
+        IOrderBookUniswapV2.RemoveLiquidityResponse memory response
     ) internal returns (int256) {
         int256 pnlToBeRealized;
         if (response.takerBase != 0) {
@@ -612,7 +609,10 @@ contract ClearingHousePerpdex is
 
     /// @dev explainer diagram for the relationship between exchangedPositionNotional, fee and openNotional:
     ///      https://www.figma.com/file/xuue5qGH4RalX7uAbbzgP3/swap-accounting-and-events
-    function _openPosition(InternalOpenPositionParams memory params) internal returns (IExchange.SwapResponse memory) {
+    function _openPosition(InternalOpenPositionParams memory params)
+        internal
+        returns (IExchangePerpdex.SwapResponse memory)
+    {
         IExchangePerpdex.SwapResponse memory response =
             IExchangePerpdex(_exchange).swap(
                 IExchangePerpdex.SwapParams({

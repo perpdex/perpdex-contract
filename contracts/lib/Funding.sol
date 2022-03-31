@@ -99,4 +99,20 @@ library Funding {
 
         return fundingBelowX96.add(fundingInsideX96).div(PerpFixedPoint96._IQ96);
     }
+
+    /// @return liquidityCoefficientInFundingPayment the funding payment of an order/liquidity
+    function calcLiquidityCoefficientInFundingPaymentByOrderPerpdex(
+        OpenOrder.Info memory order,
+        Growth memory fundingGrowth
+    ) internal pure returns (int256) {
+        // funding inside the range =
+        // liquidity * ΔtwPremiumDivBySqrtPriceGrowthInsideX96
+        int256 fundingInsideX96 =
+            order.liquidity.toInt256().mul(
+                // ΔtwPremiumDivBySqrtPriceGrowthInsideX96
+                fundingGrowth.twPremiumDivBySqrtPriceX96.sub(order.lastTwPremiumDivBySqrtPriceGrowthInsideX96)
+            );
+
+        return fundingInsideX96.div(PerpFixedPoint96._IQ96);
+    }
 }

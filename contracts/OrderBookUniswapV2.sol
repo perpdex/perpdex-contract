@@ -2,6 +2,7 @@
 pragma solidity 0.7.6;
 pragma abicoder v2;
 
+import { AddressUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
 import { SafeMathUpgradeable } from "@openzeppelin/contracts-upgradeable/math/SafeMathUpgradeable.sol";
 import { SignedSafeMathUpgradeable } from "@openzeppelin/contracts-upgradeable/math/SignedSafeMathUpgradeable.sol";
 import { FullMath } from "@uniswap/v3-core/contracts/libraries/FullMath.sol";
@@ -18,12 +19,14 @@ import { PerpMath } from "./lib/PerpMath.sol";
 import { Tick } from "./lib/Tick.sol";
 import { ClearingHouseCallee } from "./base/ClearingHouseCallee.sol";
 import { IMarketRegistry } from "./interface/IMarketRegistry.sol";
-import { OrderBookUniswapV2StorageV1 } from "./storage/OrderBookUniswapV2StorageV1.sol";
+import { OrderBookUniswapV2StorageV1 } from "./storage/OrderBookUniswapV2Storage.sol";
 import { IOrderBookUniswapV2 } from "./interface/IOrderBookUniswapV2.sol";
 import { OpenOrder } from "./lib/OpenOrder.sol";
+import { IUniswapV2Router02 } from "./amm/uniswap_v2_periphery/interfaces/IUniswapV2Router02.sol";
 
 // never inherit any new stateful contract. never change the orders of parent stateful contracts
 contract OrderBookUniswapV2 is IOrderBookUniswapV2, ClearingHouseCallee, OrderBookUniswapV2StorageV1 {
+    using AddressUpgradeable for address;
     using SafeMathUpgradeable for uint256;
     using SafeMathUpgradeable for uint128;
     using SignedSafeMathUpgradeable for int256;
@@ -42,7 +45,6 @@ contract OrderBookUniswapV2 is IOrderBookUniswapV2, ClearingHouseCallee, OrderBo
 
     struct InternalAddLiquidityToOrderParams {
         address maker;
-        IUniswapV2Router02 router;
         address baseToken;
         address quoteToken;
         uint128 liquidity;
@@ -53,10 +55,9 @@ contract OrderBookUniswapV2 is IOrderBookUniswapV2, ClearingHouseCallee, OrderBo
 
     struct InternalRemoveLiquidityParams {
         address maker;
-        IUniswapV2Router02 router;
+        address router;
         address baseToken;
         address quoteToken;
-        bytes32 orderId;
         uint128 liquidity;
     }
 
@@ -76,6 +77,12 @@ contract OrderBookUniswapV2 is IOrderBookUniswapV2, ClearingHouseCallee, OrderBo
 
     function initialize(address marketRegistryArg) external initializer {
         __ClearingHouseCallee_init();
+
+        // E_MRNC: MarketRegistiry is not contract
+        require(_marketRegistry.isContract(), "E_MRNC");
+
+        // update states
+        _marketRegistry = marketRegistryArg;
     }
 
     function setExchange(address exchangeArg) external onlyOwner {
@@ -83,7 +90,7 @@ contract OrderBookUniswapV2 is IOrderBookUniswapV2, ClearingHouseCallee, OrderBo
         emit ExchangeChanged(exchangeArg);
     }
 
-    /// @inheritdoc IOrderBook
+    /// @inheritdoc IOrderBookUniswapV2
     function addLiquidity(AddLiquidityParams calldata params) external override returns (AddLiquidityResponse memory) {
         _requireOnlyClearingHouse();
         address router = IMarketRegistry(_marketRegistry).getUniswapV2Router02();
@@ -98,9 +105,9 @@ contract OrderBookUniswapV2 is IOrderBookUniswapV2, ClearingHouseCallee, OrderBo
                 UniswapV2Broker.AddLiquidityParams(router, params.baseToken, quoteToken, params.base, params.quote)
             );
 
-            a = feeGrowthGlobalX128;
-            a = params.fundingGrowthGlobal.twPremiumX96;
-            a = params.fundingGrowthGlobal.twPremiumDivBySqrtPriceX96;
+            //            a = feeGrowthGlobalX128;
+            //            a = params.fundingGrowthGlobal.twPremiumX96;
+            //            a = params.fundingGrowthGlobal.twPremiumDivBySqrtPriceX96;
         }
 
         // state changes; if adding liquidity to an existing order, get fees accrued
@@ -108,10 +115,9 @@ contract OrderBookUniswapV2 is IOrderBookUniswapV2, ClearingHouseCallee, OrderBo
             _addLiquidityToOrder(
                 InternalAddLiquidityToOrderParams({
                     maker: params.trader,
-                    router: router,
                     baseToken: params.baseToken,
                     quoteToken: quoteToken,
-                    liquidity: response.liquidity,
+                    liquidity: response.liquidity.toUint128(),
                     base: response.base,
                     quote: response.quote,
                     globalFundingGrowth: params.fundingGrowthGlobal
@@ -123,32 +129,33 @@ contract OrderBookUniswapV2 is IOrderBookUniswapV2, ClearingHouseCallee, OrderBo
                 base: response.base,
                 quote: response.quote,
                 fee: fee,
-                liquidity: response.liquidity
+                liquidity: response.liquidity.toUint128()
             });
     }
 
-    /// @inheritdoc IOrderBook
+    /// @inheritdoc IOrderBookUniswapV2
     function removeLiquidity(RemoveLiquidityParams calldata params)
         external
         override
         returns (RemoveLiquidityResponse memory)
     {
         _requireOnlyClearingHouse();
-        IUniswapV2Router02 router = IMarketRegistry(_marketRegistry).getUniswapV2Router02();
+        address router = IMarketRegistry(_marketRegistry).getUniswapV2Router02();
+        address quoteToken = IMarketRegistry(_marketRegistry).getQuoteToken();
         bytes32 orderId = OpenOrder.calcOrderKey(params.maker, params.baseToken, 0, 0);
         return
             _removeLiquidity(
                 InternalRemoveLiquidityParams({
                     maker: params.maker,
+                    router: router,
                     baseToken: params.baseToken,
-                    pool: pool,
-                    orderId: orderId,
+                    quoteToken: quoteToken,
                     liquidity: params.liquidity
                 })
             );
     }
 
-    /// @inheritdoc IOrderBook
+    /// @inheritdoc IOrderBookUniswapV2
     function updateFundingGrowthAndLiquidityCoefficientInFundingPayment(
         address trader,
         address baseToken,
@@ -166,7 +173,7 @@ contract OrderBookUniswapV2 is IOrderBookUniswapV2, ClearingHouseCallee, OrderBo
         //        (, int24 tick, , , , , ) = UniswapV3Broker.getSlot0(pool);
         //        for (uint256 i = 0; i < orderIdLength; i++) {
         {
-            OpenOrder.Info storage order = _openOrder;
+            OpenOrder.Info storage order = _openOrderMap[trader][baseToken];
             //            Tick.FundingGrowthRangeInfo memory fundingGrowthRangeInfo =
             //                tickMap.getAllFundingGrowth(
             //                    order.lowerTick,
@@ -176,38 +183,28 @@ contract OrderBookUniswapV2 is IOrderBookUniswapV2, ClearingHouseCallee, OrderBo
             //                    fundingGrowthGlobal.twPremiumDivBySqrtPriceX96
             //                );
 
-            // TODO: process funding
-
             // the calculation here is based on cached values
             liquidityCoefficientInFundingPayment = liquidityCoefficientInFundingPayment.add(
-                Funding.calcLiquidityCoefficientInFundingPaymentByOrder(order, fundingGrowthRangeInfo)
+                Funding.calcLiquidityCoefficientInFundingPaymentByOrderPerpdex(order, fundingGrowthGlobal)
             );
 
             // thus, state updates have to come after
-
-            a = feeGrowthGlobalX128;
-            a = params.fundingGrowthGlobal.twPremiumX96;
-            a = params.fundingGrowthGlobal.twPremiumDivBySqrtPriceX96;
-
-            //            order.lastTwPremiumGrowth =
-            //            order.lastTwPremiumGrowthInsideX96 = fundingGrowthRangeInfo.twPremiumGrowthInsideX96;
-            //            order.lastTwPremiumGrowthBelowX96 = fundingGrowthRangeInfo.twPremiumGrowthBelowX96;
-            //            order.lastTwPremiumDivBySqrtPriceGrowthInsideX96 = fundingGrowthRangeInfo
-            //                .twPremiumDivBySqrtPriceGrowthInsideX96;
+            order.lastTwPremiumGrowthInsideX96 = fundingGrowthGlobal.twPremiumX96;
+            order.lastTwPremiumDivBySqrtPriceGrowthInsideX96 = fundingGrowthGlobal.twPremiumDivBySqrtPriceX96;
         }
 
         return liquidityCoefficientInFundingPayment;
     }
 
-    /// @inheritdoc IOrderBook
+    /// @inheritdoc IOrderBookUniswapV2
     function updateOrderDebt(
-        bytes32 orderId,
+        address trader,
+        address baseToken,
         int256 base,
         int256 quote
     ) external override {
         _requireOnlyClearingHouse();
-        require(orderId == 0); // TODO: remove orderId
-        OpenOrder.Info storage openOrder = _openOrder; // _openOrderMap[orderId];
+        OpenOrder.Info storage openOrder = _openOrderMap[trader][baseToken];
         openOrder.baseDebt = openOrder.baseDebt.toInt256().add(base).toUint256();
         openOrder.quoteDebt = openOrder.quoteDebt.toInt256().add(quote).toUint256();
     }
@@ -216,22 +213,16 @@ contract OrderBookUniswapV2 is IOrderBookUniswapV2, ClearingHouseCallee, OrderBo
     // EXTERNAL VIEW
     //
 
-    /// @inheritdoc IOrderBook
+    function getMarketRegistry() external view returns (address) {
+        return _marketRegistry;
+    }
+
+    /// @inheritdoc IOrderBookUniswapV2
     function getExchange() external view override returns (address) {
         return _exchange;
     }
 
-    /// @inheritdoc IOrderBook
-    function getOpenOrderIds(address trader, address baseToken) external view override returns (bytes32[] memory) {
-        return _openOrderIdsMap[trader][baseToken];
-    }
-
-    /// @inheritdoc IOrderBook
-    function getOpenOrderById(bytes32 orderId) external view override returns (OpenOrder.Info memory) {
-        return _openOrderMap[orderId];
-    }
-
-    /// @inheritdoc IOrderBook
+    /// @inheritdoc IOrderBookUniswapV2
     function getOpenOrder(address trader, address baseToken)
         external
         view
@@ -242,22 +233,20 @@ contract OrderBookUniswapV2 is IOrderBookUniswapV2, ClearingHouseCallee, OrderBo
             OpenOrder.Info memory
         )
     {
-        return _openOrder;
-        //        return _openOrderMap[OpenOrder.calcOrderKey(trader, baseToken, lowerTick, upperTick)];
+        return _openOrderMap[trader][baseToken];
     }
 
-    /// @inheritdoc IOrderBook
+    /// @inheritdoc IOrderBookUniswapV2
     function hasOrder(address trader, address[] calldata tokens) external view override returns (bool) {
-        return _openOrder.liquidity > 0;
-        //        for (uint256 i = 0; i < tokens.length; i++) {
-        //            if (_openOrderIdsMap[trader][tokens[i]].length > 0) {
-        //                return true;
-        //            }
-        //        }
-        //        return false;
+        for (uint256 i = 0; i < tokens.length; i++) {
+            if (_openOrderMap[trader][tokens[i]].liquidity > 0) {
+                return true;
+            }
+        }
+        return false;
     }
 
-    /// @inheritdoc IOrderBook
+    /// @inheritdoc IOrderBookUniswapV2
     function getTotalQuoteBalanceAndPendingFee(address trader, address[] calldata baseTokens)
         external
         view
@@ -274,7 +263,7 @@ contract OrderBookUniswapV2 is IOrderBookUniswapV2, ClearingHouseCallee, OrderBo
         return (totalQuoteAmountInPools, totalPendingFee);
     }
 
-    /// @inheritdoc IOrderBook
+    /// @inheritdoc IOrderBookUniswapV2
     function getTotalTokenAmountInPoolAndPendingFee(
         address trader,
         address baseToken,
@@ -283,40 +272,25 @@ contract OrderBookUniswapV2 is IOrderBookUniswapV2, ClearingHouseCallee, OrderBo
         (tokenAmount, pendingFee) = _getTotalTokenAmountInPool(trader, baseToken, fetchBase);
     }
 
-    /// @inheritdoc IOrderBook
+    /// @inheritdoc IOrderBookUniswapV2
     function getLiquidityCoefficientInFundingPayment(
         address trader,
         address baseToken,
         Funding.Growth memory fundingGrowthGlobal
     ) external view override returns (int256 liquidityCoefficientInFundingPayment) {
-        bytes32[] memory orderIds = _openOrderIdsMap[trader][baseToken];
-        mapping(int24 => Tick.GrowthInfo) storage tickMap = _growthOutsideTickMap[baseToken];
-        address pool = IMarketRegistry(_marketRegistry).getPool(baseToken);
-
-        // funding of liquidity coefficient
-        //        (, int24 tick, , , , , ) = UniswapV3Broker.getSlot0(pool);
-        //        for (uint256 i = 0; i < orderIds.length; i++) {
         {
-            OpenOrder.Info memory order = _openOrder; // _openOrderMap[orderIds[i]];
-            //            Tick.FundingGrowthRangeInfo memory fundingGrowthRangeInfo =
-            //                tickMap.getAllFundingGrowth(
-            //                    order.lowerTick,
-            //                    order.upperTick,
-            //                    tick,
-            //                    fundingGrowthGlobal.twPremiumX96,
-            //                    fundingGrowthGlobal.twPremiumDivBySqrtPriceX96
-            //                );
+            OpenOrder.Info memory order = _openOrderMap[trader][baseToken];
 
             // the calculation here is based on cached values
             liquidityCoefficientInFundingPayment = liquidityCoefficientInFundingPayment.add(
-                Funding.calcLiquidityCoefficientInFundingPaymentByOrder(order, fundingGrowthRangeInfo)
+                Funding.calcLiquidityCoefficientInFundingPaymentByOrderPerpdex(order, fundingGrowthGlobal)
             );
         }
 
         return liquidityCoefficientInFundingPayment;
     }
 
-    /// @inheritdoc IOrderBook
+    /// @inheritdoc IOrderBookUniswapV2
     function getPendingFee(address trader, address baseToken)
         external
         view
@@ -341,18 +315,15 @@ contract OrderBookUniswapV2 is IOrderBookUniswapV2, ClearingHouseCallee, OrderBo
     // PUBLIC VIEW
     //
 
-    /// @inheritdoc IOrderBook
+    /// @inheritdoc IOrderBookUniswapV2
     function getTotalOrderDebt(
         address trader,
         address baseToken,
         bool fetchBase
     ) public view override returns (uint256) {
         uint256 totalOrderDebt;
-        //        bytes32[] memory orderIds = _openOrderIdsMap[trader][baseToken];
-        //        uint256 orderIdLength = orderIds.length;
-        //        for (uint256 i = 0; i < orderIdLength; i++) {
         {
-            OpenOrder.Info memory orderInfo = _openOrder; // _openOrderMap[orderIds[i]];
+            OpenOrder.Info memory orderInfo = _openOrderMap[trader][baseToken];
             uint256 orderDebt = fetchBase ? orderInfo.baseDebt : orderInfo.quoteDebt;
             totalOrderDebt = totalOrderDebt.add(orderDebt);
         }
@@ -411,7 +382,9 @@ contract OrderBookUniswapV2 is IOrderBookUniswapV2, ClearingHouseCallee, OrderBo
         )
     {
         // update token info based on existing open order
-        OpenOrder.Info storage openOrder = _openOrder; // openOrderMap[params.orderId];
+        OpenOrder.Info storage openOrder = _openOrderMap[params.maker][params.baseToken];
+
+        // TODO: fee
 
         // as in _addLiquidityToOrder(), fee should be calculated before the states are updated
         //        uint256 feeGrowthInsideX128;
@@ -433,7 +406,8 @@ contract OrderBookUniswapV2 is IOrderBookUniswapV2, ClearingHouseCallee, OrderBo
         if (openOrder.liquidity == 0) {
             //            _removeOrder(params.maker, params.baseToken, params.orderId);
         } else {
-            openOrder.lastFeeGrowthInsideX128 = feeGrowthInsideX128;
+            // TODO: fee
+            openOrder.lastFeeGrowthInsideX128 = 0; //feeGrowthInsideX128;
         }
 
         return (fee, baseDebt, quoteDebt);
@@ -441,32 +415,23 @@ contract OrderBookUniswapV2 is IOrderBookUniswapV2, ClearingHouseCallee, OrderBo
 
     /// @dev this function is extracted from and only used by addLiquidity() to avoid stack too deep error
     function _addLiquidityToOrder(InternalAddLiquidityToOrderParams memory params) internal returns (uint256) {
-        //        bytes32 orderId = OpenOrder.calcOrderKey(params.maker, params.baseToken, 0, 0);
-        // get the struct by key, no matter it's a new or existing order
-        OpenOrder.Info storage openOrder = _openOrder; // _openOrderMap[orderId];
+        OpenOrder.Info storage openOrder = _openOrderMap[params.maker][params.baseToken];
 
         // initialization for a new order
         if (openOrder.liquidity == 0) {
-            //            bytes32[] storage orderIds = _openOrderIdsMap[params.maker][params.baseToken];
-            // OB_ONE: orders number exceeds
-            //            require(orderIds.length < IMarketRegistry(_marketRegistry).getMaxOrdersPerMarket(), "OB_ONE");
-
-            // state changes
-            //            orderIds.push(orderId);
-
-            openOrder.lastTwPremiumGrowth = params.globalFundingGrowth.twPremiumX96;
+            openOrder.lastTwPremiumGrowthInsideX96 = params.globalFundingGrowth.twPremiumX96;
             openOrder.lastTwPremiumDivBySqrtPriceGrowthInsideX96 = params
                 .globalFundingGrowth
                 .twPremiumDivBySqrtPriceX96;
         }
+
+        // TODO: fee
 
         // fee should be calculated before the states are updated, as for
         // - a new order, there is no fee accrued yet
         // - an existing order, fees accrued have to be settled before more liquidity is added
         //        (uint256 fee, uint256 feeGrowthInsideX128) =
         //            _getPendingFeeAndFeeGrowthInsideX128ByOrder(params.baseToken, openOrder);
-
-        // TODO: process funding
 
         // after the fee is calculated, liquidity & lastFeeGrowthInsideX128 can be updated
         openOrder.liquidity = openOrder.liquidity.add(params.liquidity).toUint128();
@@ -511,19 +476,24 @@ contract OrderBookUniswapV2 is IOrderBookUniswapV2, ClearingHouseCallee, OrderBo
     ) internal view returns (uint256 tokenAmount, uint256 pendingFee) {
         //        bytes32[] memory orderIds = _openOrderIdsMap[trader][baseToken];
 
-        IUniswapV2Router02 router = IMarketRegistry(_marketRegistry).getUniswapV2Router02();
+        address router = IMarketRegistry(_marketRegistry).getUniswapV2Router02();
         address quoteToken = IMarketRegistry(_marketRegistry).getQuoteToken();
 
         //        uint256 orderIdLength = orderIds.length;
 
         //        for (uint256 i = 0; i < orderIdLength; i++) {
         {
-            OpenOrder.Info memory order = _openOrder; // _openOrderMap[orderIds[i]];
+            OpenOrder.Info memory order = _openOrderMap[trader][baseToken];
 
             uint256 amount;
             {
                 (uint256 baseAmount, uint256 quoteAmount) =
-                    UniswapV2Broker.getLiquidityValue(router.factory(), baseToken, quoteToken, order.liquidity);
+                    UniswapV2Broker.getLiquidityValue(
+                        IUniswapV2Router02(router).factory(),
+                        baseToken,
+                        quoteToken,
+                        order.liquidity
+                    );
 
                 if (fetchBase) {
                     amount = baseAmount;

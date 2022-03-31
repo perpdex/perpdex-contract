@@ -17,7 +17,8 @@ abstract contract OrderBookUniswapV2StorageV1 {
     // key: openOrderId
     //    mapping(bytes32 => OpenOrder.Info) internal _openOrderMap;
 
-    OpenOrder.Info _openOrder;
+    // first key: trader, second key: base token
+    mapping(address => mapping(address => OpenOrder.Info)) _openOrderMap;
 
     // first key: base token, second key: tick index
     // value: the accumulator of **Tick.GrowthInfo** outside each tick of each pool
@@ -26,4 +27,6 @@ abstract contract OrderBookUniswapV2StorageV1 {
     // key: base token
     // value: the global accumulator of **quote fee transformed from base fee** of each pool
     //    mapping(address => uint256) internal _feeGrowthGlobalX128Map;
+
+    address internal _marketRegistry;
 }

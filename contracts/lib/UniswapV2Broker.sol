@@ -4,9 +4,14 @@ pragma abicoder v2;
 
 import { IUniswapV2Pair } from "../amm/uniswap_v2/interfaces/IUniswapV2Pair.sol";
 import { IUniswapV2Router02 } from "../amm/uniswap_v2_periphery/interfaces/IUniswapV2Router02.sol";
+import { UniswapV2LiquidityMathLibrary } from "../amm/uniswap_v2_periphery/libraries/UniswapV2LiquidityMathLibrary.sol";
+import { UniswapV2Library } from "../amm/uniswap_v2_periphery/libraries/UniswapV2Library.sol";
+import { Math } from "../amm/uniswap_v2/libraries/Math.sol";
+import { FullMath } from "@uniswap/v3-core/contracts/libraries/FullMath.sol";
 import { PerpSafeCast } from "./PerpSafeCast.sol";
 import { SafeMathUpgradeable } from "@openzeppelin/contracts-upgradeable/math/SafeMathUpgradeable.sol";
 import { PerpMath } from "../lib/PerpMath.sol";
+import { FixedPoint96 } from "@uniswap/v3-core/contracts/libraries/FixedPoint96.sol";
 
 /**
  * Uniswap's v2 pool: token0 & token1
@@ -155,33 +160,47 @@ library UniswapV2Broker {
     // INTERNAL VIEW
     //
 
-    function getLiquidityValue(address pool) internal view returns (uint256 tokenAAmount, uint256 tokenBAmount) {
-        (sqrtMarkPrice, , , , , , ) = IUniswapV3Pool(pool).slot0();
+    function getLiquidityValue(
+        address factory,
+        address baseToken,
+        address quoteToken,
+        uint256 liquidityAmount
+    ) internal view returns (uint256 baseAmount, uint256 quoteAmount) {
+        return UniswapV2LiquidityMathLibrary.getLiquidityValue(factory, baseToken, quoteToken, liquidityAmount);
     }
 
-    function getSqrtMarkPriceX96(address pool) internal view returns (uint160 sqrtMarkPrice) {
-        (sqrtMarkPrice, , , , , , ) = IUniswapV3Pool(pool).slot0();
+    function getSqrtMarkPriceX96(
+        address factory,
+        address baseToken,
+        address quoteToken
+    ) internal view returns (uint160 sqrtMarkPrice) {
+        (uint256 baseAmount, uint256 quoteAmount) = UniswapV2Library.getReserves(factory, baseToken, quoteToken);
+        return uint160(Math.sqrt(FullMath.mulDiv(quoteAmount, FixedPoint96.Q96 * FixedPoint96.Q96, baseAmount)));
     }
 
-    function getMarkPrice(address pool) internal view returns (uint160 sqrtMarkPrice) {
-        (sqrtMarkPrice, , , , , , ) = IUniswapV3Pool(pool).slot0();
-    }
-
-    function getMarkTwap(address pool, uint32 twapInterval) internal view returns (uint160) {
+    function getSqrtMarkTwapX96(
+        address factory,
+        address baseToken,
+        address quoteToken,
+        uint32 twapInterval
+    ) internal view returns (uint160) {
         // return the current price as twapInterval is too short/ meaningless
         if (twapInterval < 10) {
-            (uint160 sqrtMarkPrice, , , , , , ) = getSlot0(pool);
-            return sqrtMarkPrice;
+            return getSqrtMarkPriceX96(factory, baseToken, quoteToken);
         }
-        uint32[] memory secondsAgos = new uint32[](2);
 
-        // solhint-disable-next-line not-rely-on-time
-        secondsAgos[0] = twapInterval;
-        secondsAgos[1] = 0;
-        (int56[] memory tickCumulatives, ) = IUniswapV3Pool(pool).observe(secondsAgos);
+        // TODO: implement
+        return 0;
 
-        // tick(imprecise as it's an integer) to price
-        return TickMath.getSqrtRatioAtTick(int24((tickCumulatives[1] - tickCumulatives[0]) / twapInterval));
+        //        uint32[] memory secondsAgos = new uint32[](2);
+        //
+        //        // solhint-disable-next-line not-rely-on-time
+        //        secondsAgos[0] = twapInterval;
+        //        secondsAgos[1] = 0;
+        //        (int56[] memory tickCumulatives, ) = IUniswapV3Pool(pool).observe(secondsAgos);
+        //
+        //        // tick(imprecise as it's an integer) to price
+        //        return TickMath.getSqrtRatioAtTick(int24((tickCumulatives[1] - tickCumulatives[0]) / twapInterval));
     }
 
     //

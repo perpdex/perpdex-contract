@@ -11,16 +11,12 @@ interface IOrderBookUniswapV2 {
         address baseToken;
         uint256 base;
         uint256 quote;
-        int24 lowerTick;
-        int24 upperTick;
         Funding.Growth fundingGrowthGlobal;
     }
 
     struct RemoveLiquidityParams {
         address maker;
         address baseToken;
-        int24 lowerTick;
-        int24 upperTick;
         uint128 liquidity;
     }
 
@@ -50,18 +46,6 @@ interface IOrderBookUniswapV2 {
         Funding.Growth globalFundingGrowth;
     }
 
-    /// @param insuranceFundFee = fee * insuranceFundFeeRatio
-    struct ReplaySwapResponse {
-        int24 tick;
-        uint256 fee;
-        uint256 insuranceFundFee;
-    }
-
-    struct MintCallbackData {
-        address trader;
-        address pool;
-    }
-
     /// @notice Emitted when the `Exchange` contract address changed
     /// @param exchange The address of exchange contract
     event ExchangeChanged(address indexed exchange);
@@ -89,42 +73,18 @@ interface IOrderBookUniswapV2 {
         Funding.Growth memory fundingGrowthGlobal
     ) external returns (int256 liquidityCoefficientInFundingPayment);
 
-    /// @notice Replay the swap and get the swap result (price impact and swap fee),
-    /// only can be called by `ClearingHouse` contract;
-    /// @dev `ReplaySwapResponse.insuranceFundFee = fee * insuranceFundFeeRatio`
-    /// @param params ReplaySwap params, detail on `IOrderBook.ReplaySwapParams`
-    /// @return response The swap result encoded in `ReplaySwapResponse`
-    function replaySwap(ReplaySwapParams memory params) external returns (ReplaySwapResponse memory response);
-
     function updateOrderDebt(
-        bytes32 orderId,
+        address trader,
+        address baseToken,
         int256 base,
         int256 quote
     ) external;
 
-    /// @notice Get open order ids of a trader in the given market
-    /// @param trader The trader address
-    /// @param baseToken The base token address
-    /// @return orderIds The open order ids
-    function getOpenOrderIds(address trader, address baseToken) external view returns (bytes32[] memory);
-
-    /// @notice Get open order info by given order id
-    /// @param orderId The order id
-    /// @return info The open order info encoded in `OpenOrder.Info`
-    function getOpenOrderById(bytes32 orderId) external view returns (OpenOrder.Info memory);
-
     /// @notice Get open order info by given base token, upper tick and lower tick
     /// @param trader The trader address
     /// @param baseToken The base token address
-    /// @param upperTick The upper tick
-    /// @param lowerTick The lower tick
     /// @return info he open order info encoded in `OpenOrder.Info`
-    function getOpenOrder(
-        address trader,
-        address baseToken,
-        int24 lowerTick,
-        int24 upperTick
-    ) external view returns (OpenOrder.Info memory);
+    function getOpenOrder(address trader, address baseToken) external view returns (OpenOrder.Info memory);
 
     /// @notice Check if the specified trader has order in given markets
     /// @param trader The trader address
@@ -179,15 +139,8 @@ interface IOrderBookUniswapV2 {
     /// @notice Get the pending fees of a order
     /// @param trader The trader address
     /// @param baseToken The base token address
-    /// @param lowerTick The lower tick
-    /// @param upperTick The upper tick
     /// @return fee The pending fees
-    function getPendingFee(
-        address trader,
-        address baseToken,
-        int24 lowerTick,
-        int24 upperTick
-    ) external view returns (uint256);
+    function getPendingFee(address trader, address baseToken) external view returns (uint256);
 
     /// @notice Get `Exchange` contract address
     /// @return exchange The `Exchange` contract address
