@@ -2,25 +2,20 @@
 pragma solidity 0.7.6;
 pragma abicoder v2;
 
-interface IClearingHouse {
+interface IClearingHousePerpdex {
     /// @param useTakerBalance only accept false now
     struct AddLiquidityParams {
         address baseToken;
         uint256 base;
         uint256 quote;
-        int24 lowerTick;
-        int24 upperTick;
         uint256 minBase;
         uint256 minQuote;
-        bool useTakerBalance;
         uint256 deadline;
     }
 
     /// @param liquidity collect fee when 0
     struct RemoveLiquidityParams {
         address baseToken;
-        int24 lowerTick;
-        int24 upperTick;
         uint128 liquidity;
         uint256 minBase;
         uint256 minQuote;
@@ -60,23 +55,14 @@ interface IClearingHouse {
         uint256 amount;
         uint256 oppositeAmountBound;
         uint256 deadline;
-        uint160 sqrtPriceLimitX96;
         bytes32 referralCode;
     }
 
     struct ClosePositionParams {
         address baseToken;
-        uint160 sqrtPriceLimitX96;
         uint256 oppositeAmountBound;
         uint256 deadline;
         bytes32 referralCode;
-    }
-
-    struct CollectPendingFeeParams {
-        address trader;
-        address baseToken;
-        int24 lowerTick;
-        int24 upperTick;
     }
 
     /// @notice Emitted when open position with non-zero referral code
@@ -113,8 +99,6 @@ interface IClearingHouse {
         address indexed maker,
         address indexed baseToken,
         address indexed quoteToken,
-        int24 lowerTick,
-        int24 upperTick,
         int256 base,
         int256 quote,
         int128 liquidity,
@@ -252,9 +236,9 @@ interface IClearingHouse {
     /// @return quoteToken The quote token address
     function getQuoteToken() external view returns (address quoteToken);
 
-    /// @notice Get UniswapV3Factory address
-    /// @return factory UniswapV3Factory address
-    function getUniswapV3Factory() external view returns (address factory);
+    /// @notice Get UniswapV2Factory address
+    /// @return factory UniswapV2Factory address
+    function getUniswapV2Factory() external view returns (address factory);
 
     /// @notice Get ClearingHouseConfig address
     /// @return clearingHouseConfig ClearingHouseConfig address
