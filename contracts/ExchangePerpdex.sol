@@ -304,15 +304,6 @@ contract ExchangePerpdex is IExchangePerpdex, BlockContext, ClearingHouseCallee,
         address router = IMarketRegistry(_marketRegistry).getUniswapV2Router02();
         address quoteToken = IMarketRegistry(_marketRegistry).getQuoteToken();
 
-        //        (uint256 scaledAmountForUniswapV3PoolSwap, int256 signedScaledAmountForReplaySwap) =
-        //            SwapMath.calcScaledAmountForSwaps(
-        //                params.isBaseToQuote,
-        //                params.isExactInput,
-        //                params.amount,
-        //                marketInfo.exchangeFeeRatio,
-        //                marketInfo.uniswapFeeRatio
-        //            );
-
         (Funding.Growth memory fundingGrowthGlobal, , , , ) = _getFundingGrowthGlobalAndTwaps(params.baseToken);
 
         UniswapV2Broker.SwapResponse memory response =
@@ -328,26 +319,17 @@ contract ExchangePerpdex is IExchangePerpdex, BlockContext, ClearingHouseCallee,
                 )
             );
 
-        // as we charge fees in ClearingHouse instead of in Uniswap pools,
-        // we need to scale up base or quote amounts to get the exact exchanged position size and notional
+        // as we charge fees in Uniswap pools,
+        // we don't need to handle fee.
         int256 exchangedPositionSize;
         int256 exchangedPositionNotional;
         if (params.isBaseToQuote) {
             // short: exchangedPositionSize <= 0 && exchangedPositionNotional >= 0
-            //            exchangedPositionSize = SwapMath
-            //                .calcAmountScaledByFeeRatio(response.base, marketInfo.uniswapFeeRatio, false)
-            //                .neg256();
-
             exchangedPositionSize = response.base.neg256();
-            // due to base to quote fee, exchangedPositionNotional contains the fee
-            // s.t. we can take the fee away from exchangedPositionNotional
             exchangedPositionNotional = response.quote.toInt256();
         } else {
             // long: exchangedPositionSize >= 0 && exchangedPositionNotional <= 0
             exchangedPositionSize = response.base.toInt256();
-            //            exchangedPositionNotional = SwapMath
-            //                .calcAmountScaledByFeeRatio(response.quote, marketInfo.uniswapFeeRatio, false)
-            //                .neg256();
             exchangedPositionNotional = response.quote.neg256();
         }
 
@@ -356,16 +338,14 @@ contract ExchangePerpdex is IExchangePerpdex, BlockContext, ClearingHouseCallee,
             _firstTradedTimestampMap[params.baseToken] = _blockTimestamp();
         }
 
-        // TODO: fee
-
         return
             InternalSwapResponse({
                 base: exchangedPositionSize,
                 quote: exchangedPositionNotional, // .sub(replayResponse.fee.toInt256()),
                 exchangedPositionSize: exchangedPositionSize,
                 exchangedPositionNotional: exchangedPositionNotional,
-                fee: 0, // replayResponse.fee,
-                insuranceFundFee: 0 // replayResponse.insuranceFundFee,
+                fee: 0,
+                insuranceFundFee: 0
             });
     }
 

@@ -113,7 +113,6 @@ library UniswapV2Broker {
                 block.timestamp // deadline
             );
 
-        // TODO: Consider whether to include fee
         return RemoveLiquidityResponse({ base: amountBase, quote: amountQuote });
     }
 
@@ -125,25 +124,22 @@ library UniswapV2Broker {
         if (params.isBaseToQuote) {
             path[0] = params.baseToken;
             path[1] = params.quoteToken;
-            amountIn = params.amount;
         } else {
             path[0] = params.quoteToken;
             path[1] = params.baseToken;
-            amountIn = params.amount;
         }
 
         if (params.isExactInput) {
             amounts = IUniswapV2Router02(params.router).swapExactTokensForTokens(
-                amountIn, // amountIn
+                params.amount, // amountIn
                 1, // amountOutMin
                 path, // path
                 params.recipient, // to
                 block.timestamp // deadline
             );
         } else {
-            // TODO: consider if pass amountIn to amountOut is right
             amounts = IUniswapV2Router02(params.router).swapTokensForExactTokens(
-                amountIn, // amountOut
+                params.amount, // amountOut
                 type(uint256).max, // amountInMax
                 path, // path
                 params.recipient, // to

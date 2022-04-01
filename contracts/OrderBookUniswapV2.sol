@@ -384,12 +384,6 @@ contract OrderBookUniswapV2 is IOrderBookUniswapV2, ClearingHouseCallee, OrderBo
         // update token info based on existing open order
         OpenOrder.Info storage openOrder = _openOrderMap[params.maker][params.baseToken];
 
-        // TODO: fee
-
-        // as in _addLiquidityToOrder(), fee should be calculated before the states are updated
-        //        uint256 feeGrowthInsideX128;
-        //        (fee, feeGrowthInsideX128) = _getPendingFeeAndFeeGrowthInsideX128ByOrder(params.baseToken, openOrder);
-
         if (params.liquidity != 0) {
             if (openOrder.baseDebt != 0) {
                 baseDebt = FullMath.mulDiv(openOrder.baseDebt, params.liquidity, openOrder.liquidity);
@@ -400,14 +394,6 @@ contract OrderBookUniswapV2 is IOrderBookUniswapV2, ClearingHouseCallee, OrderBo
                 openOrder.quoteDebt = openOrder.quoteDebt.sub(quoteDebt);
             }
             openOrder.liquidity = openOrder.liquidity.sub(params.liquidity).toUint128();
-        }
-
-        // after the fee is calculated, lastFeeGrowthInsideX128 can be updated if liquidity != 0 after removing
-        if (openOrder.liquidity == 0) {
-            //            _removeOrder(params.maker, params.baseToken, params.orderId);
-        } else {
-            // TODO: fee
-            openOrder.lastFeeGrowthInsideX128 = 0; //feeGrowthInsideX128;
         }
 
         return (fee, baseDebt, quoteDebt);
@@ -425,22 +411,12 @@ contract OrderBookUniswapV2 is IOrderBookUniswapV2, ClearingHouseCallee, OrderBo
                 .twPremiumDivBySqrtPriceX96;
         }
 
-        // TODO: fee
-
-        // fee should be calculated before the states are updated, as for
-        // - a new order, there is no fee accrued yet
-        // - an existing order, fees accrued have to be settled before more liquidity is added
-        //        (uint256 fee, uint256 feeGrowthInsideX128) =
-        //            _getPendingFeeAndFeeGrowthInsideX128ByOrder(params.baseToken, openOrder);
-
         // after the fee is calculated, liquidity & lastFeeGrowthInsideX128 can be updated
         openOrder.liquidity = openOrder.liquidity.add(params.liquidity).toUint128();
-        //        openOrder.lastFeeGrowthInsideX128 = feeGrowthInsideX128;
         openOrder.baseDebt = openOrder.baseDebt.add(params.base);
         openOrder.quoteDebt = openOrder.quoteDebt.add(params.quote);
 
-        uint256 fee = 0;
-        return fee;
+        return 0;
     }
 
     //
