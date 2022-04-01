@@ -3,8 +3,10 @@ pragma solidity 0.7.6;
 pragma abicoder v2;
 
 import { IUniswapV2Pair } from "../amm/uniswap_v2/interfaces/IUniswapV2Pair.sol";
+import { IUniswapV2Factory } from "../amm/uniswap_v2/interfaces/IUniswapV2Factory.sol";
 import { IUniswapV2Router02 } from "../amm/uniswap_v2_periphery/interfaces/IUniswapV2Router02.sol";
 import { UniswapV2LiquidityMathLibrary } from "../amm/uniswap_v2_periphery/libraries/UniswapV2LiquidityMathLibrary.sol";
+import { UniswapV2OracleLibrary } from "../amm/uniswap_v2_periphery/libraries/UniswapV2OracleLibrary.sol";
 import { UniswapV2Library } from "../amm/uniswap_v2_periphery/libraries/UniswapV2Library.sol";
 import { Math } from "../amm/uniswap_v2/libraries/Math.sol";
 import { FullMath } from "@uniswap/v3-core/contracts/libraries/FullMath.sol";
@@ -178,29 +180,16 @@ library UniswapV2Broker {
         return uint160(Math.sqrt(FullMath.mulDiv(quoteAmount, FixedPoint96.Q96 * FixedPoint96.Q96, baseAmount)));
     }
 
-    function getSqrtMarkTwapX96(
+    function getCurrentCumulativePrice(
         address factory,
         address baseToken,
-        address quoteToken,
-        uint32 twapInterval
-    ) internal view returns (uint160) {
-        // return the current price as twapInterval is too short/ meaningless
-        if (twapInterval < 10) {
-            return getSqrtMarkPriceX96(factory, baseToken, quoteToken);
-        }
-
-        // TODO: implement
-        return 0;
-
-        //        uint32[] memory secondsAgos = new uint32[](2);
-        //
-        //        // solhint-disable-next-line not-rely-on-time
-        //        secondsAgos[0] = twapInterval;
-        //        secondsAgos[1] = 0;
-        //        (int56[] memory tickCumulatives, ) = IUniswapV3Pool(pool).observe(secondsAgos);
-        //
-        //        // tick(imprecise as it's an integer) to price
-        //        return TickMath.getSqrtRatioAtTick(int24((tickCumulatives[1] - tickCumulatives[0]) / twapInterval));
+        address quoteToken
+    ) internal view returns (uint256 priceCumulative, uint32 blockTimestamp) {
+        address pair = IUniswapV2Factory(factory).getPair(baseToken, quoteToken);
+        uint256 price0Cumulative;
+        uint256 price1Cumulative;
+        (price0Cumulative, price1Cumulative, blockTimestamp) = UniswapV2OracleLibrary.currentCumulativePrices(pair);
+        priceCumulative = IUniswapV2Pair(pair).token0() == baseToken ? price0Cumulative : price1Cumulative;
     }
 
     //

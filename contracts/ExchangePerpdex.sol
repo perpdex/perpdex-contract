@@ -24,6 +24,8 @@ import { ExchangePerpdexStorageV1 } from "./storage/ExchangePerpdexStorage.sol";
 import { IExchangePerpdex } from "./interface/IExchangePerpdex.sol";
 import { OpenOrder } from "./lib/OpenOrder.sol";
 import { IUniswapV2Router02 } from "./amm/uniswap_v2_periphery/interfaces/IUniswapV2Router02.sol";
+import { Math } from "./amm/uniswap_v2/libraries/Math.sol";
+import { FixedPoint96 } from "@uniswap/v3-core/contracts/libraries/FixedPoint96.sol";
 
 // never inherit any new stateful contract. never change the orders of parent stateful contracts
 contract ExchangePerpdex is IExchangePerpdex, BlockContext, ClearingHouseCallee, ExchangePerpdexStorageV1 {
@@ -170,7 +172,11 @@ contract ExchangePerpdex is IExchangePerpdex, BlockContext, ClearingHouseCallee,
 
         uint256 markTwap;
         uint256 indexTwap;
-        (fundingGrowthGlobal, markTwap, indexTwap) = _getFundingGrowthGlobalAndTwaps(baseToken);
+        uint256 priceCumulative;
+        uint32 blockTimestamp;
+        (fundingGrowthGlobal, markTwap, indexTwap, priceCumulative, blockTimestamp) = _getFundingGrowthGlobalAndTwaps(
+            baseToken
+        );
 
         fundingPayment = _updateFundingGrowth(
             trader,
@@ -182,7 +188,7 @@ contract ExchangePerpdex is IExchangePerpdex, BlockContext, ClearingHouseCallee,
 
         uint256 timestamp = _blockTimestamp();
         // update states before further actions in this block; once per block
-        if (timestamp != _lastSettledTimestampMap[baseToken]) {
+        if (markTwap > 0 || _lastSettledTimestampMap[baseToken] == 0) {
             // update fundingGrowthGlobal and _lastSettledTimestamp
             Funding.Growth storage lastFundingGrowthGlobal = _globalFundingGrowthX96Map[baseToken];
             (
@@ -190,6 +196,9 @@ contract ExchangePerpdex is IExchangePerpdex, BlockContext, ClearingHouseCallee,
                 lastFundingGrowthGlobal.twPremiumX96,
                 lastFundingGrowthGlobal.twPremiumDivBySqrtPriceX96
             ) = (timestamp, fundingGrowthGlobal.twPremiumX96, fundingGrowthGlobal.twPremiumDivBySqrtPriceX96);
+
+            _lastPriceCumulativeMap[baseToken] = priceCumulative;
+            _lastPriceCumulativeTimestampMap[baseToken] = blockTimestamp;
 
             emit FundingUpdated(baseToken, markTwap, indexTwap);
 
@@ -265,7 +274,7 @@ contract ExchangePerpdex is IExchangePerpdex, BlockContext, ClearingHouseCallee,
 
     /// @inheritdoc IExchangePerpdex
     function getPendingFundingPayment(address trader, address baseToken) public view override returns (int256) {
-        (Funding.Growth memory fundingGrowthGlobal, , ) = _getFundingGrowthGlobalAndTwaps(baseToken);
+        (Funding.Growth memory fundingGrowthGlobal, , , , ) = _getFundingGrowthGlobalAndTwaps(baseToken);
 
         int256 liquidityCoefficientInFundingPayment =
             IOrderBook(_orderBook).getLiquidityCoefficientInFundingPayment(trader, baseToken, fundingGrowthGlobal);
@@ -280,16 +289,10 @@ contract ExchangePerpdex is IExchangePerpdex, BlockContext, ClearingHouseCallee,
     }
 
     /// @inheritdoc IExchangePerpdex
-    function getSqrtMarkTwapX96(address baseToken, uint32 twapInterval) public view override returns (uint160) {
+    function getSqrtMarkPriceX96(address baseToken) public view override returns (uint160) {
         address router = IMarketRegistry(_marketRegistry).getUniswapV2Router02();
         address quoteToken = IMarketRegistry(_marketRegistry).getQuoteToken();
-        return
-            UniswapV2Broker.getSqrtMarkTwapX96(
-                IUniswapV2Router02(router).factory(),
-                baseToken,
-                quoteToken,
-                twapInterval
-            );
+        return UniswapV2Broker.getSqrtMarkPriceX96(IUniswapV2Router02(router).factory(), baseToken, quoteToken);
     }
 
     //
@@ -310,7 +313,7 @@ contract ExchangePerpdex is IExchangePerpdex, BlockContext, ClearingHouseCallee,
         //                marketInfo.uniswapFeeRatio
         //            );
 
-        (Funding.Growth memory fundingGrowthGlobal, , ) = _getFundingGrowthGlobalAndTwaps(params.baseToken);
+        (Funding.Growth memory fundingGrowthGlobal, , , , ) = _getFundingGrowthGlobalAndTwaps(params.baseToken);
 
         UniswapV2Broker.SwapResponse memory response =
             UniswapV2Broker.swap(
@@ -406,7 +409,9 @@ contract ExchangePerpdex is IExchangePerpdex, BlockContext, ClearingHouseCallee,
         returns (
             Funding.Growth memory fundingGrowthGlobal,
             uint256 markTwap,
-            uint256 indexTwap
+            uint256 indexTwap,
+            uint256 priceCumulative,
+            uint32 blockTimestamp
         )
     {
         uint32 twapInterval;
@@ -420,16 +425,29 @@ contract ExchangePerpdex is IExchangePerpdex, BlockContext, ClearingHouseCallee,
             twapInterval = twapInterval > deltaTimestamp ? deltaTimestamp : twapInterval;
         }
 
-        uint256 markTwapX96 = getSqrtMarkTwapX96(baseToken, twapInterval).formatSqrtPriceX96ToPriceX96();
-        markTwap = markTwapX96.formatX96ToX10_18();
-        indexTwap = IIndexPrice(baseToken).getIndexPrice(twapInterval);
+        {
+            address router = IMarketRegistry(_marketRegistry).getUniswapV2Router02();
+            address quoteToken = IMarketRegistry(_marketRegistry).getQuoteToken();
+            (priceCumulative, blockTimestamp) = UniswapV2Broker.getCurrentCumulativePrice(
+                IUniswapV2Router02(router).factory(),
+                baseToken,
+                quoteToken
+            );
+        }
 
         uint256 lastSettledTimestamp = _lastSettledTimestampMap[baseToken];
         Funding.Growth storage lastFundingGrowthGlobal = _globalFundingGrowthX96Map[baseToken];
-        if (timestamp == lastSettledTimestamp || lastSettledTimestamp == 0) {
+        if (timestamp <= lastSettledTimestamp + twapInterval || lastSettledTimestamp == 0) {
             // if this is the latest updated timestamp, values in _globalFundingGrowthX96Map are up-to-date already
             fundingGrowthGlobal = lastFundingGrowthGlobal;
         } else {
+            uint256 markTwapX96 =
+                (priceCumulative - _lastPriceCumulativeMap[baseToken]) /
+                    ((1 << (112 - 96)) * (blockTimestamp - _lastPriceCumulativeTimestampMap[baseToken]));
+            uint256 sqrtMarkTwapX96 = Math.sqrt(markTwapX96.mul(FixedPoint96.Q96));
+            markTwap = markTwapX96.formatX96ToX10_18();
+            indexTwap = IIndexPrice(baseToken).getIndexPrice(twapInterval);
+
             // deltaTwPremium = (markTwap - indexTwap) * (now - lastSettledTimestamp)
             int256 deltaTwPremiumX96 =
                 _getDeltaTwapX96(markTwapX96, indexTwap.formatX10_18ToX96()).mul(
@@ -442,11 +460,11 @@ contract ExchangePerpdex is IExchangePerpdex, BlockContext, ClearingHouseCallee,
             // log(1e9 * 2^96 * (3600 * 24 * 365) * 2^96) / log(2) = 246.8078491997 < 255
             // twPremiumDivBySqrtPrice += deltaTwPremium / getSqrtMarkTwap(baseToken)
             fundingGrowthGlobal.twPremiumDivBySqrtPriceX96 = lastFundingGrowthGlobal.twPremiumDivBySqrtPriceX96.add(
-                PerpMath.mulDiv(deltaTwPremiumX96, PerpFixedPoint96._IQ96, getSqrtMarkTwapX96(baseToken, 0))
+                PerpMath.mulDiv(deltaTwPremiumX96, PerpFixedPoint96._IQ96, sqrtMarkTwapX96)
             );
         }
 
-        return (fundingGrowthGlobal, markTwap, indexTwap);
+        return (fundingGrowthGlobal, markTwap, indexTwap, priceCumulative, blockTimestamp);
     }
 
     function _getDeltaTwapX96(uint256 markTwapX96, uint256 indexTwapX96) internal view returns (int256 deltaTwapX96) {

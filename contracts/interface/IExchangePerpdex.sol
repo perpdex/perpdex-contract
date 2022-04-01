@@ -82,12 +82,11 @@ interface IExchangePerpdex {
     /// negative value means the trader receives funding.
     function getPendingFundingPayment(address trader, address baseToken) external view returns (int256);
 
-    /// @notice Get the square root of the market twap price with the given time interval
+    /// @notice Get the square root of the market price
     /// @dev The return value is a X96 number
     /// @param baseToken Address of the base token
-    /// @param twapInterval The time interval in seconds
-    /// @return sqrtMarkTwapX96 The square root of the market twap price
-    function getSqrtMarkTwapX96(address baseToken, uint32 twapInterval) external view returns (uint160 sqrtMarkTwapX96);
+    /// @return sqrtMarkPriceX96 The square root of the market twap price
+    function getSqrtMarkPriceX96(address baseToken) external view returns (uint160 sqrtMarkPriceX96);
 
     /// @notice Get the pnl that can be realized if trader reduce position
     /// @dev This function normally won't be needed by traders, but it might be useful for 3rd party

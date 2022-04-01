@@ -260,8 +260,7 @@ contract ClearingHousePerpdex is
 
         int256 takerOpenNotional = IAccountBalance(_accountBalance).getTakerOpenNotional(trader, params.baseToken);
 
-        // TODO: implement sqrtPrice
-        uint256 sqrtPrice = IExchangePerpdex(_exchange).getSqrtMarkTwapX96(params.baseToken, 0);
+        uint256 sqrtPrice = IExchangePerpdex(_exchange).getSqrtMarkPriceX96(params.baseToken);
         emit PositionChanged(
             trader,
             params.baseToken,
