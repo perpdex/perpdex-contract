@@ -8,16 +8,15 @@ import { SignedSafeMathUpgradeable } from "@openzeppelin/contracts-upgradeable/m
 import { ClearingHouseCallee } from "./base/ClearingHouseCallee.sol";
 import { PerpSafeCast } from "./lib/PerpSafeCast.sol";
 import { PerpMath } from "./lib/PerpMath.sol";
-import { IExchange } from "./interface/IExchange.sol";
 import { IIndexPrice } from "./interface/IIndexPrice.sol";
-import { IOrderBook } from "./interface/IOrderBook.sol";
+import { IOrderBookUniswapV2 } from "./interface/IOrderBookUniswapV2.sol";
 import { IClearingHouseConfig } from "./interface/IClearingHouseConfig.sol";
 import { AccountBalanceStorageV1, AccountMarket } from "./storage/AccountBalanceStorage.sol";
 import { BlockContext } from "./base/BlockContext.sol";
 import { IAccountBalance } from "./interface/IAccountBalance.sol";
 
 // never inherit any new stateful contract. never change the orders of parent stateful contracts
-contract AccountBalance is IAccountBalance, BlockContext, ClearingHouseCallee, AccountBalanceStorageV1 {
+contract AccountBalancePerpdex is IAccountBalance, BlockContext, ClearingHouseCallee, AccountBalanceStorageV1 {
     using AddressUpgradeable for address;
     using SafeMathUpgradeable for uint256;
     using SignedSafeMathUpgradeable for int256;
@@ -42,7 +41,7 @@ contract AccountBalance is IAccountBalance, BlockContext, ClearingHouseCallee, A
         // IClearingHouseConfig address is not contract
         require(clearingHouseConfigArg.isContract(), "AB_CHCNC");
 
-        // IOrderBook is not contract
+        // IOrderBookUniswapV2 is not contract
         require(orderBookArg.isContract(), "AB_OBNC");
 
         __ClearingHouseCallee_init();
@@ -109,10 +108,9 @@ contract AccountBalance is IAccountBalance, BlockContext, ClearingHouseCallee, A
         _modifyOwedRealizedPnl(maker, fee);
 
         // to avoid dust, let realizedPnl = getQuote() when there's no order
-        if (
-            getTakerPositionSize(maker, baseToken) == 0 &&
-            IOrderBook(_orderBook).getOpenOrderIds(maker, baseToken).length == 0
-        ) {
+        address[] memory tokens = new address[](1);
+        tokens[0] = baseToken;
+        if (getTakerPositionSize(maker, baseToken) == 0 && !IOrderBookUniswapV2(_orderBook).hasOrder(maker, tokens)) {
             // only need to take care of taker's accounting when there's no order
             int256 takerOpenNotional = _accountMarketMap[maker][baseToken].takerOpenNotional;
             // AB_IQBAR: inconsistent quote balance and realizedPnl
@@ -198,7 +196,7 @@ contract AccountBalance is IAccountBalance, BlockContext, ClearingHouseCallee, A
     function getTotalOpenNotional(address trader, address baseToken) external view override returns (int256) {
         // quote.pool[baseToken] + quoteBalance[baseToken]
         (uint256 quoteInPool, ) =
-            IOrderBook(_orderBook).getTotalTokenAmountInPoolAndPendingFee(trader, baseToken, false);
+            IOrderBookUniswapV2(_orderBook).getTotalTokenAmountInPoolAndPendingFee(trader, baseToken, false);
         int256 quoteBalance = getQuote(trader, baseToken);
         return quoteInPool.toInt256().add(quoteBalance);
     }
@@ -261,7 +259,7 @@ contract AccountBalance is IAccountBalance, BlockContext, ClearingHouseCallee, A
 
     /// @inheritdoc IAccountBalance
     function hasOrder(address trader) external view override returns (bool) {
-        return IOrderBook(_orderBook).hasOrder(trader, _baseTokensMap[trader]);
+        return IOrderBookUniswapV2(_orderBook).hasOrder(trader, _baseTokensMap[trader]);
     }
 
     //
@@ -270,14 +268,14 @@ contract AccountBalance is IAccountBalance, BlockContext, ClearingHouseCallee, A
 
     /// @inheritdoc IAccountBalance
     function getBase(address trader, address baseToken) public view override returns (int256) {
-        uint256 orderDebt = IOrderBook(_orderBook).getTotalOrderDebt(trader, baseToken, true);
+        uint256 orderDebt = IOrderBookUniswapV2(_orderBook).getTotalOrderDebt(trader, baseToken, true);
         // base = takerPositionSize - orderBaseDebt
         return _accountMarketMap[trader][baseToken].takerPositionSize.sub(orderDebt.toInt256());
     }
 
     /// @inheritdoc IAccountBalance
     function getQuote(address trader, address baseToken) public view override returns (int256) {
-        uint256 orderDebt = IOrderBook(_orderBook).getTotalOrderDebt(trader, baseToken, false);
+        uint256 orderDebt = IOrderBookUniswapV2(_orderBook).getTotalOrderDebt(trader, baseToken, false);
         // quote = takerOpenNotional - orderQuoteDebt
         return _accountMarketMap[trader][baseToken].takerOpenNotional.sub(orderDebt.toInt256());
     }
@@ -296,8 +294,8 @@ contract AccountBalance is IAccountBalance, BlockContext, ClearingHouseCallee, A
 
         // makerBalance = totalTokenAmountInPool - totalOrderDebt
         (uint256 totalBaseBalanceFromOrders, ) =
-            IOrderBook(_orderBook).getTotalTokenAmountInPoolAndPendingFee(trader, baseToken, true);
-        uint256 totalBaseDebtFromOrder = IOrderBook(_orderBook).getTotalOrderDebt(trader, baseToken, true);
+            IOrderBookUniswapV2(_orderBook).getTotalTokenAmountInPoolAndPendingFee(trader, baseToken, true);
+        uint256 totalBaseDebtFromOrder = IOrderBookUniswapV2(_orderBook).getTotalOrderDebt(trader, baseToken, true);
         int256 makerBaseBalance = totalBaseBalanceFromOrders.toInt256().sub(totalBaseDebtFromOrder.toInt256());
 
         int256 takerPositionSize = _accountMarketMap[trader][baseToken].takerPositionSize;
@@ -371,7 +369,9 @@ contract AccountBalance is IAccountBalance, BlockContext, ClearingHouseCallee, A
             return;
         }
 
-        if (IOrderBook(_orderBook).getOpenOrderIds(trader, baseToken).length > 0) {
+        address[] memory tokens = new address[](1);
+        tokens[0] = baseToken;
+        if (IOrderBookUniswapV2(_orderBook).hasOrder(trader, tokens)) {
             return;
         }
 
@@ -415,7 +415,7 @@ contract AccountBalance is IAccountBalance, BlockContext, ClearingHouseCallee, A
 
         // pendingFee is included
         int256 totalMakerQuoteBalance;
-        (totalMakerQuoteBalance, pendingFee) = IOrderBook(_orderBook).getTotalQuoteBalanceAndPendingFee(
+        (totalMakerQuoteBalance, pendingFee) = IOrderBookUniswapV2(_orderBook).getTotalQuoteBalanceAndPendingFee(
             trader,
             _baseTokensMap[trader]
         );
