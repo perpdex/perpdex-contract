@@ -49,6 +49,11 @@ interface IExchangePerpdex {
     /// @param indexTwap The index twap price when the funding growth is updated
     event FundingUpdated(address indexed baseToken, uint256 markTwap, uint256 indexTwap);
 
+    /// @notice Emitted when maxPriceRocWithinBlock is updated
+    /// @param baseToken Address of the base token
+    /// @param maxPriceRocX96WithinBlock Max price changes allowed to be occured within block when reducing position
+    event MaxPriceRocWithinBlockChanged(address indexed baseToken, uint256 maxPriceRocX96WithinBlock);
+
     /// @notice Emitted when accountBalance is updated
     /// @param accountBalance The address of accountBalance contract
     event AccountBalanceChanged(address accountBalance);

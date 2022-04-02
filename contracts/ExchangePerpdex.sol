@@ -99,6 +99,21 @@ contract ExchangePerpdex is IExchangePerpdex, BlockContext, ClearingHouseCallee,
         emit AccountBalanceChanged(accountBalanceArg);
     }
 
+    /// @dev Restrict the price impact by setting the price changes can be occured within a block when
+    /// trader reducing liquidity. It is used to prevent the malicious behavior of the malicious traders.
+    /// The restriction is applied in _isOverPriceLimitWithPrice()
+    /// @param baseToken The base token address
+    /// @param maxPriceRocX96WithinBlock The maximum price changes can be occured within a block
+    function setMaxPriceRocWithinBlock(address baseToken, uint256 maxPriceRocX96WithinBlock) external onlyOwner {
+        // EX_BNC: baseToken is not contract
+        require(baseToken.isContract(), "EX_BNC");
+        // EX_BTNE: base token does not exists
+        require(IMarketRegistry(_marketRegistry).hasPool(baseToken), "EX_BTNE");
+
+        _maxPriceRocX96WithinBlockMap[baseToken] = maxPriceRocX96WithinBlock;
+        emit MaxPriceRocWithinBlockChanged(baseToken, maxPriceRocX96WithinBlock);
+    }
+
     /// @inheritdoc IExchangePerpdex
     function swap(SwapParams memory params) external override returns (SwapResponse memory) {
         _requireOnlyClearingHouse();
@@ -106,23 +121,23 @@ contract ExchangePerpdex is IExchangePerpdex, BlockContext, ClearingHouseCallee,
         // EX_MIP: market is paused
         //        require(_maxTickCrossedWithinBlockMap[params.baseToken] > 0, "EX_MIP");
 
+        // update price for price limit checks
+        uint256 timestamp = _blockTimestamp();
+        if (_lastUpdatedSqrtMarkPriceX96TimestampMap[params.baseToken] != timestamp) {
+            _lastUpdatedSqrtMarkPriceX96Map[params.baseToken] = getSqrtMarkPriceX96(params.baseToken);
+            _lastUpdatedSqrtMarkPriceX96TimestampMap[params.baseToken] = timestamp;
+        }
+
         int256 takerPositionSize =
             IAccountBalance(_accountBalance).getTakerPositionSize(params.trader, params.baseToken);
-
-        bool isPartialClose;
-
-        // TODO: is isOverPriceLimit required?
 
         // get openNotional before swap
         int256 oldTakerOpenNotional =
             IAccountBalance(_accountBalance).getTakerOpenNotional(params.trader, params.baseToken);
         InternalSwapResponse memory response = _swap(params);
 
-        // TODO: is isOverPriceLimit required?
-        //        if (!params.isClose) {
-        //            // over price limit after swap
-        //            require(!_isOverPriceLimitWithTick(params.baseToken, response.tick), "EX_OPLAS");
-        //        }
+        // over price limit after swap
+        require(!_isOverPriceLimit(params.baseToken), "EX_OPLAS");
 
         // when takerPositionSize < 0, it's a short position
         bool isReducingPosition = takerPositionSize == 0 ? false : takerPositionSize < 0 != params.isBaseToQuote;
@@ -156,7 +171,7 @@ contract ExchangePerpdex is IExchangePerpdex, BlockContext, ClearingHouseCallee,
                 insuranceFundFee: response.insuranceFundFee,
                 pnlToBeRealized: pnlToBeRealized,
                 sqrtPriceAfterX96: sqrtPriceX96,
-                isPartialClose: isPartialClose
+                isPartialClose: false
             });
     }
 
@@ -201,9 +216,6 @@ contract ExchangePerpdex is IExchangePerpdex, BlockContext, ClearingHouseCallee,
             _lastPriceCumulativeTimestampMap[baseToken] = blockTimestamp;
 
             emit FundingUpdated(baseToken, markTwap, indexTwap);
-
-            // update tick for price limit checks
-            //            _lastUpdatedTickMap[baseToken] = _getTick(baseToken);
         }
 
         return (fundingPayment, fundingGrowthGlobal);
@@ -378,6 +390,21 @@ contract ExchangePerpdex is IExchangePerpdex, BlockContext, ClearingHouseCallee,
     //
     // INTERNAL VIEW
     //
+
+    function _isOverPriceLimit(address baseToken) internal view returns (bool) {
+        uint160 sqrtMarkPriceX96 = getSqrtMarkPriceX96(baseToken);
+        return _isOverPriceLimitWithPrice(baseToken, sqrtMarkPriceX96);
+    }
+
+    function _isOverPriceLimitWithPrice(address baseToken, uint160 sqrtMarkPriceX96) internal view returns (bool) {
+        uint256 maxRoc = _maxPriceRocX96WithinBlockMap[baseToken];
+        uint256 lastPrice = _lastUpdatedSqrtMarkPriceX96Map[baseToken].formatSqrtPriceX96ToPriceX96();
+        uint256 price = sqrtMarkPriceX96.formatSqrtPriceX96ToPriceX96();
+        uint256 change = FullMath.mulDiv(lastPrice, maxRoc, FixedPoint96.Q96);
+        uint256 upperBound = lastPrice.add(change);
+        uint256 lowerBound = lastPrice.sub(change);
+        return (price < lowerBound || upperBound < price);
+    }
 
     /// @dev this function calculates the up-to-date globalFundingGrowth and twaps and pass them out
     /// @return fundingGrowthGlobal the up-to-date globalFundingGrowth
