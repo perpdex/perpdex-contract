@@ -539,10 +539,7 @@ contract ClearingHousePerpdex is
         require(!IAccountBalance(_accountBalance).hasOrder(trader), "CH_CLWTISO");
 
         // CH_EAV: enough account value
-        require(
-            getAccountValue(trader) < IAccountBalance(_accountBalance).getMarginRequirementForLiquidation(trader),
-            "CH_EAV"
-        );
+        require(!_isMarginEnoughForMaintenance(trader), "CH_EAV");
 
         // must settle funding first
         _settleFunding(trader, baseToken);
@@ -641,22 +638,18 @@ contract ClearingHousePerpdex is
                 params.baseToken,
                 response.pnlToBeRealized
             );
-
-            // if realized pnl is not zero, that means trader is reducing or closing position
-            // trader cannot reduce/close position if bad debt happen
-            // unless it's a liquidation from backstop liquidity provider
-            // CH_BD: trader has bad debt after reducing/closing position
-            require(
-                (params.isLiquidation &&
-                    IClearingHouseConfig(_clearingHouseConfig).isBackstopLiquidityProvider(_msgSender())) ||
-                    getAccountValue(params.trader) >= 0,
-                "CH_BD"
-            );
         }
 
+        // initial margin ratio (same as FTX rule)
         // if not closing a position, check margin ratio after swap
         if (!params.isClose) {
             _requireEnoughFreeCollateral(params.trader);
+        }
+
+        // maintenance margin ratio (same as FTX rule)
+        if (!params.isLiquidation) {
+            // CH_NEMM: not enough margin by mmRatio
+            require(_isMarginEnoughForMaintenance(params.trader), "CH_NEMM");
         }
 
         int256 openNotional = IAccountBalance(_accountBalance).getTakerOpenNotional(params.trader, params.baseToken);
@@ -748,6 +741,10 @@ contract ClearingHousePerpdex is
             _getFreeCollateralByRatio(trader, IClearingHouseConfig(_clearingHouseConfig).getImRatio()) >= 0,
             "CH_NEFCI"
         );
+    }
+
+    function _isMarginEnoughForMaintenance(address trader) internal view returns (bool) {
+        return getAccountValue(trader) >= IAccountBalance(_accountBalance).getMarginRequirementForLiquidation(trader);
     }
 
     function _getPartialOppositeAmount(uint256 oppositeAmountBound, bool isPartialClose)
