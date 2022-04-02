@@ -424,34 +424,12 @@ contract ClearingHousePerpdex is
     }
 
     /// @inheritdoc IClearingHousePerpdex
-    function liquidate(address trader, address baseToken) external override whenNotPaused nonReentrant {
-        _liquidate(trader, baseToken);
-    }
-
-    /// @inheritdoc IClearingHousePerpdex
-    function cancelExcessOrders(
-        address maker,
-        address baseToken,
-        bytes32[] calldata orderIds
-    ) external override whenNotPaused nonReentrant {
-        require(false, "not implemented");
-        // input requirement checks:
-        //   maker: in _cancelExcessOrders()
-        //   baseToken: in Exchange.settleFunding()
-        //   orderIds: in OrderBook.removeLiquidityByIds()
-        //        _cancelExcessOrders(maker, baseToken, orderIds);
-    }
-
-    /// @inheritdoc IClearingHousePerpdex
     function cancelAllExcessOrders(address maker, address baseToken) external override whenNotPaused nonReentrant {
-        require(false, "not implemented");
-
         // input requirement checks:
         //   maker: in _cancelExcessOrders()
         //   baseToken: in Exchange.settleFunding()
         //   orderIds: in OrderBook.removeLiquidityByIds()
-        //        bytes32[] memory orderIds = IOrderBook(_orderBook).getOpenOrderIds(maker, baseToken);
-        //        _cancelExcessOrders(maker, baseToken, orderIds);
+        _cancelExcessOrders(maker, baseToken);
     }
 
     //
@@ -546,17 +524,8 @@ contract ClearingHousePerpdex is
         IExchangePerpdex.SwapResponse memory response =
             _closePosition(InternalClosePositionParams({ trader: trader, baseToken: baseToken, isLiquidation: true }));
 
-        // trader's pnl-- as liquidation penalty
-        uint256 liquidationFee =
-            response.exchangedPositionNotional.abs().mulRatio(
-                IClearingHouseConfig(_clearingHouseConfig).getLiquidationPenaltyRatio()
-            );
-
-        IAccountBalance(_accountBalance).modifyOwedRealizedPnl(trader, liquidationFee.neg256());
-
-        // increase liquidator's pnl liquidation reward
         address liquidator = _msgSender();
-        IAccountBalance(_accountBalance).modifyOwedRealizedPnl(liquidator, liquidationFee.toInt256());
+        uint256 liquidationFee = _processLiquidationFee(trader, liquidator, response.exchangedPositionNotional);
 
         emit PositionLiquidated(
             trader,
@@ -568,6 +537,89 @@ contract ClearingHousePerpdex is
         );
 
         return (response.base, response.quote, response.isPartialClose);
+    }
+
+    /// @dev only cancel open orders if there are not enough free collateral with mmRatio
+    /// or account is able to being liquidated.
+    function _cancelExcessOrders(address maker, address baseToken) internal {
+        // only cancel open orders if there are not enough free collateral with mmRatio
+        // or account is able to being liquidated.
+        // CH_NEXO: not excess orders
+        require(
+            (_getFreeCollateralByRatio(maker, IClearingHouseConfig(_clearingHouseConfig).getMmRatio()) < 0) ||
+                getAccountValue(maker) < IAccountBalance(_accountBalance).getMarginRequirementForLiquidation(maker),
+            "CH_NEXO"
+        );
+
+        // must settle funding first
+        _settleFunding(maker, baseToken);
+
+        address[] memory tokens = new address[](1);
+        tokens[0] = baseToken;
+        if (!IOrderBookUniswapV2(_orderBook).hasOrder(maker, tokens)) {
+            return;
+        }
+
+        IOrderBookUniswapV2.RemoveLiquidityResponse memory removeLiquidityResponse;
+
+        {
+            OpenOrder.Info memory order = IOrderBookUniswapV2(_orderBook).getOpenOrder(maker, baseToken);
+
+            removeLiquidityResponse = IOrderBookUniswapV2(_orderBook).removeLiquidity(
+                IOrderBookUniswapV2.RemoveLiquidityParams({
+                    maker: maker,
+                    baseToken: baseToken,
+                    liquidity: order.liquidity
+                })
+            );
+
+            emit LiquidityChanged(
+                maker,
+                baseToken,
+                _quoteToken,
+                removeLiquidityResponse.base.neg256(),
+                removeLiquidityResponse.quote.neg256(),
+                order.liquidity.neg128(),
+                removeLiquidityResponse.fee
+            );
+        }
+
+        int256 realizedPnl = _settleBalanceAndRealizePnl(maker, baseToken, removeLiquidityResponse);
+
+        address liquidator = _msgSender();
+        _processLiquidationFee(maker, liquidator, removeLiquidityResponse.takerQuote);
+
+        int256 takerOpenNotional = IAccountBalance(_accountBalance).getTakerOpenNotional(maker, baseToken);
+        uint256 sqrtPrice = IExchangePerpdex(_exchange).getSqrtMarkPriceX96(baseToken);
+        emit PositionChanged(
+            maker,
+            baseToken,
+            removeLiquidityResponse.takerBase, // exchangedPositionSize
+            removeLiquidityResponse.takerQuote, // exchangedPositionNotional
+            0,
+            takerOpenNotional, // openNotional
+            realizedPnl, // realizedPnl
+            sqrtPrice
+        );
+    }
+
+    function _processLiquidationFee(
+        address trader,
+        address liquidator,
+        int256 exchangedPositionNotional
+    ) internal returns (uint256) {
+        // trader's pnl-- as liquidation penalty
+        uint256 liquidationFee =
+            exchangedPositionNotional.abs().mulRatio(
+                IClearingHouseConfig(_clearingHouseConfig).getLiquidationPenaltyRatio()
+            );
+
+        IAccountBalance(_accountBalance).modifyOwedRealizedPnl(trader, liquidationFee.neg256());
+
+        // increase liquidator's pnl liquidation reward
+        IAccountBalance(_accountBalance).modifyOwedRealizedPnl(liquidator, liquidationFee.toInt256());
+
+        return liquidationFee;
     }
 
     /// @dev Calculate how much profit/loss we should settled,

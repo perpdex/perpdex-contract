@@ -200,24 +200,6 @@ interface IClearingHousePerpdex {
             bool isPartialClose
         );
 
-    /// @notice If trader is underwater, any one can call `liquidate` to liquidate this trader
-    /// @dev This function will be deprecated in the future, recommend to use the function `liquidate()` above
-    /// @dev If trader has open orders, need to call `cancelAllExcessOrders` first
-    /// @param trader The address of trader
-    /// @param baseToken The address of baseToken
-    function liquidate(address trader, address baseToken) external;
-
-    /// @notice Cancel excess order of a maker
-    /// @dev Order id can get from `OrderBook.getOpenOrderIds`
-    /// @param maker The address of Maker
-    /// @param baseToken The address of baseToken
-    /// @param orderIds The id of the order
-    function cancelExcessOrders(
-        address maker,
-        address baseToken,
-        bytes32[] calldata orderIds
-    ) external;
-
     /// @notice Cancel all excess orders of a maker if the maker is underwater
     /// @dev This function won't fail if the maker has no order but fails when maker is not underwater
     /// @param maker The address of maker
