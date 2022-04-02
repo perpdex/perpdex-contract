@@ -8,12 +8,13 @@ import { SignedSafeMathUpgradeable } from "@openzeppelin/contracts-upgradeable/m
 import { ClearingHouseCallee } from "./base/ClearingHouseCallee.sol";
 import { PerpSafeCast } from "./lib/PerpSafeCast.sol";
 import { PerpMath } from "./lib/PerpMath.sol";
-import { IIndexPrice } from "./interface/IIndexPrice.sol";
 import { IOrderBookUniswapV2 } from "./interface/IOrderBookUniswapV2.sol";
 import { IClearingHouseConfig } from "./interface/IClearingHouseConfig.sol";
 import { AccountBalanceStorageV1, AccountMarket } from "./storage/AccountBalanceStorage.sol";
 import { BlockContext } from "./base/BlockContext.sol";
 import { IAccountBalance } from "./interface/IAccountBalance.sol";
+import { IExchangePerpdex } from "./interface/IExchangePerpdex.sol";
+import { UniswapV2Broker } from "./lib/UniswapV2Broker.sol";
 
 // never inherit any new stateful contract. never change the orders of parent stateful contracts
 contract AccountBalancePerpdex is IAccountBalance, BlockContext, ClearingHouseCallee, AccountBalanceStorageV1 {
@@ -212,8 +213,8 @@ contract AccountBalancePerpdex is IAccountBalance, BlockContext, ClearingHouseCa
             int256 baseDebtValue;
             // baseDebt = baseBalance when it's negative
             if (baseBalance < 0) {
-                // baseDebtValue = baseDebt * indexPrice
-                baseDebtValue = baseBalance.mulDiv(_getIndexPrice(baseToken).toInt256(), 1e18);
+                // baseDebtValue = baseDebt * markPrice
+                baseDebtValue = baseBalance.mulDiv(_getMarkPrice(baseToken).toInt256(), 1e18);
             }
             totalBaseDebtValue = totalBaseDebtValue.add(baseDebtValue);
 
@@ -308,7 +309,7 @@ contract AccountBalancePerpdex is IAccountBalance, BlockContext, ClearingHouseCa
         int256 positionSize = getTotalPositionSize(trader, baseToken);
         if (positionSize == 0) return 0;
 
-        uint256 indexTwap = _getIndexPrice(baseToken);
+        uint256 indexTwap = _getMarkPrice(baseToken);
         // both positionSize & indexTwap are in 10^18 already
         // overflow inspection:
         // only overflow when position value in USD(18 decimals) > 2^255 / 10^18
@@ -396,8 +397,10 @@ contract AccountBalancePerpdex is IAccountBalance, BlockContext, ClearingHouseCa
     // INTERNAL VIEW
     //
 
-    function _getIndexPrice(address baseToken) internal view returns (uint256) {
-        return IIndexPrice(baseToken).getIndexPrice(IClearingHouseConfig(_clearingHouseConfig).getTwapInterval());
+    function _getMarkPrice(address baseToken) internal view returns (uint256) {
+        address exchange = IOrderBookUniswapV2(_orderBook).getExchange();
+        uint160 sqrtPriceX96 = IExchangePerpdex(exchange).getSqrtMarkPriceX96(baseToken);
+        return sqrtPriceX96.formatSqrtPriceX96ToPriceX96();
     }
 
     /// @return netQuoteBalance = quote.balance + totalQuoteInPools
