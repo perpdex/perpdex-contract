@@ -17,7 +17,7 @@ import { AccountMarket } from "./lib/AccountMarket.sol";
 import { IIndexPrice } from "./interface/IIndexPrice.sol";
 import { ClearingHouseCallee } from "./base/ClearingHouseCallee.sol";
 import { IOrderBook } from "./interface/IOrderBook.sol";
-import { IMarketRegistry } from "./interface/IMarketRegistry.sol";
+import { IMarketRegistryPerpdex } from "./interface/IMarketRegistryPerpdex.sol";
 import { IAccountBalance } from "./interface/IAccountBalance.sol";
 import { IClearingHouseConfig } from "./interface/IClearingHouseConfig.sol";
 import { ExchangePerpdexStorageV1 } from "./storage/ExchangePerpdexStorage.sol";
@@ -79,7 +79,7 @@ contract ExchangePerpdex is IExchangePerpdex, BlockContext, ClearingHouseCallee,
         __ClearingHouseCallee_init();
 
         // E_MRNC: MarketRegistiry is not contract
-        require(_marketRegistry.isContract(), "E_MRNC");
+        require(marketRegistryArg.isContract(), "E_MRNC");
         // E_OBNC: OrderBook is not contract
         require(orderBookArg.isContract(), "E_OBNC");
         // E_CHNC: CH is not contract
@@ -103,15 +103,15 @@ contract ExchangePerpdex is IExchangePerpdex, BlockContext, ClearingHouseCallee,
     /// trader reducing liquidity. It is used to prevent the malicious behavior of the malicious traders.
     /// The restriction is applied in _isOverPriceLimitWithPrice()
     /// @param baseToken The base token address
-    /// @param maxPriceRocX96WithinBlock The maximum price changes can be occured within a block
-    function setMaxPriceRocWithinBlock(address baseToken, uint256 maxPriceRocX96WithinBlock) external onlyOwner {
+    /// @param maxPriceRocWithinBlockX96 The maximum price changes can be occured within a block
+    function setMaxPriceRocWithinBlock(address baseToken, uint256 maxPriceRocWithinBlockX96) external onlyOwner {
         // EX_BNC: baseToken is not contract
         require(baseToken.isContract(), "EX_BNC");
         // EX_BTNE: base token does not exists
-        require(IMarketRegistry(_marketRegistry).hasPool(baseToken), "EX_BTNE");
+        require(IMarketRegistryPerpdex(_marketRegistry).hasPool(baseToken), "EX_BTNE");
 
-        _maxPriceRocX96WithinBlockMap[baseToken] = maxPriceRocX96WithinBlock;
-        emit MaxPriceRocWithinBlockChanged(baseToken, maxPriceRocX96WithinBlock);
+        _maxPriceRocWithinBlockX96Map[baseToken] = maxPriceRocWithinBlockX96;
+        emit MaxPriceRocWithinBlockChanged(baseToken, maxPriceRocWithinBlockX96);
     }
 
     /// @inheritdoc IExchangePerpdex
@@ -156,8 +156,8 @@ contract ExchangePerpdex is IExchangePerpdex, BlockContext, ClearingHouseCallee,
             );
         }
 
-        address router = IMarketRegistry(_marketRegistry).getUniswapV2Router02();
-        address quoteToken = IMarketRegistry(_marketRegistry).getQuoteToken();
+        address router = IMarketRegistryPerpdex(_marketRegistry).getUniswapV2Router02();
+        address quoteToken = IMarketRegistryPerpdex(_marketRegistry).getQuoteToken();
         uint256 sqrtPriceX96 =
             UniswapV2Broker.getSqrtMarkPriceX96(IUniswapV2Router02(router).factory(), params.baseToken, quoteToken);
 
@@ -183,7 +183,7 @@ contract ExchangePerpdex is IExchangePerpdex, BlockContext, ClearingHouseCallee,
     {
         _requireOnlyClearingHouse();
         // EX_BTNE: base token does not exists
-        require(IMarketRegistry(_marketRegistry).hasPool(baseToken), "EX_BTNE");
+        require(IMarketRegistryPerpdex(_marketRegistry).hasPool(baseToken), "EX_BTNE");
 
         uint256 markTwap;
         uint256 indexTwap;
@@ -302,8 +302,8 @@ contract ExchangePerpdex is IExchangePerpdex, BlockContext, ClearingHouseCallee,
 
     /// @inheritdoc IExchangePerpdex
     function getSqrtMarkPriceX96(address baseToken) public view override returns (uint160) {
-        address router = IMarketRegistry(_marketRegistry).getUniswapV2Router02();
-        address quoteToken = IMarketRegistry(_marketRegistry).getQuoteToken();
+        address router = IMarketRegistryPerpdex(_marketRegistry).getUniswapV2Router02();
+        address quoteToken = IMarketRegistryPerpdex(_marketRegistry).getQuoteToken();
         return UniswapV2Broker.getSqrtMarkPriceX96(IUniswapV2Router02(router).factory(), baseToken, quoteToken);
     }
 
@@ -313,8 +313,8 @@ contract ExchangePerpdex is IExchangePerpdex, BlockContext, ClearingHouseCallee,
 
     /// @dev customized fee: https://www.notion.so/perp/Customise-fee-tier-on-B2QFee-1b7244e1db63416c8651e8fa04128cdb
     function _swap(SwapParams memory params) internal returns (InternalSwapResponse memory) {
-        address router = IMarketRegistry(_marketRegistry).getUniswapV2Router02();
-        address quoteToken = IMarketRegistry(_marketRegistry).getQuoteToken();
+        address router = IMarketRegistryPerpdex(_marketRegistry).getUniswapV2Router02();
+        address quoteToken = IMarketRegistryPerpdex(_marketRegistry).getQuoteToken();
 
         (Funding.Growth memory fundingGrowthGlobal, , , , ) = _getFundingGrowthGlobalAndTwaps(params.baseToken);
 
@@ -397,7 +397,7 @@ contract ExchangePerpdex is IExchangePerpdex, BlockContext, ClearingHouseCallee,
     }
 
     function _isOverPriceLimitWithPrice(address baseToken, uint160 sqrtMarkPriceX96) internal view returns (bool) {
-        uint256 maxRoc = _maxPriceRocX96WithinBlockMap[baseToken];
+        uint256 maxRoc = _maxPriceRocWithinBlockX96Map[baseToken];
         uint256 lastPrice = _lastUpdatedSqrtMarkPriceX96Map[baseToken].formatSqrtPriceX96ToPriceX96();
         uint256 price = sqrtMarkPriceX96.formatSqrtPriceX96ToPriceX96();
         uint256 change = FullMath.mulDiv(lastPrice, maxRoc, FixedPoint96.Q96);
@@ -433,8 +433,8 @@ contract ExchangePerpdex is IExchangePerpdex, BlockContext, ClearingHouseCallee,
         }
 
         {
-            address router = IMarketRegistry(_marketRegistry).getUniswapV2Router02();
-            address quoteToken = IMarketRegistry(_marketRegistry).getQuoteToken();
+            address router = IMarketRegistryPerpdex(_marketRegistry).getUniswapV2Router02();
+            address quoteToken = IMarketRegistryPerpdex(_marketRegistry).getQuoteToken();
             (priceCumulative, blockTimestamp) = UniswapV2Broker.getCurrentCumulativePrice(
                 IUniswapV2Router02(router).factory(),
                 baseToken,

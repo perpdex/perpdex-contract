@@ -20,7 +20,7 @@ abstract contract ExchangePerpdexStorageV1 {
 
     // key: base token
     // value: a threshold to limit the price impact per block when reducing or closing the position
-    mapping(address => uint256) internal _maxPriceRocX96WithinBlockMap;
+    mapping(address => uint256) internal _maxPriceRocWithinBlockX96Map;
 
     // first key: trader, second key: baseToken
     // value: the last timestamp when a trader exceeds price limit when closing a position/being liquidated

@@ -51,8 +51,8 @@ interface IExchangePerpdex {
 
     /// @notice Emitted when maxPriceRocWithinBlock is updated
     /// @param baseToken Address of the base token
-    /// @param maxPriceRocX96WithinBlock Max price changes allowed to be occured within block when reducing position
-    event MaxPriceRocWithinBlockChanged(address indexed baseToken, uint256 maxPriceRocX96WithinBlock);
+    /// @param maxPriceRocWithinBlockX96 Max price changes allowed to be occured within block when reducing position
+    event MaxPriceRocWithinBlockChanged(address indexed baseToken, uint256 maxPriceRocWithinBlockX96);
 
     /// @notice Emitted when accountBalance is updated
     /// @param accountBalance The address of accountBalance contract
