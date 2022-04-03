@@ -547,7 +547,7 @@ contract ClearingHousePerpdex is
         // CH_NEXO: not excess orders
         require(
             (_getFreeCollateralByRatio(maker, IClearingHouseConfig(_clearingHouseConfig).getMmRatio()) < 0) ||
-                getAccountValue(maker) < IAccountBalance(_accountBalance).getMarginRequirementForLiquidation(maker),
+                !_isMarginEnoughForMaintenance(maker),
             "CH_NEXO"
         );
 
@@ -585,9 +585,6 @@ contract ClearingHousePerpdex is
         }
 
         int256 realizedPnl = _settleBalanceAndRealizePnl(maker, baseToken, removeLiquidityResponse);
-
-        address liquidator = _msgSender();
-        _processLiquidationFee(maker, liquidator, removeLiquidityResponse.takerQuote);
 
         int256 takerOpenNotional = IAccountBalance(_accountBalance).getTakerOpenNotional(maker, baseToken);
         uint256 sqrtPrice = IExchangePerpdex(_exchange).getSqrtMarkPriceX96(baseToken);
