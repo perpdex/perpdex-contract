@@ -613,8 +613,12 @@ contract ClearingHousePerpdex is
 
         IAccountBalance(_accountBalance).modifyOwedRealizedPnl(trader, liquidationFee.neg256());
 
+        uint256 liquidatorReward = liquidationFee / 2;
+        uint256 insuranceFundReward = liquidationFee - liquidatorReward;
+
         // increase liquidator's pnl liquidation reward
-        IAccountBalance(_accountBalance).modifyOwedRealizedPnl(liquidator, liquidationFee.toInt256());
+        IAccountBalance(_accountBalance).modifyOwedRealizedPnl(liquidator, liquidatorReward.toInt256());
+        IAccountBalance(_accountBalance).modifyOwedRealizedPnl(_insuranceFund, insuranceFundReward.toInt256());
 
         return liquidationFee;
     }
