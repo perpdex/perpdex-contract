@@ -27,9 +27,14 @@ describe("BaseToken", async () => {
         await bandPriceFeed.update()
     }
 
+    async function updateChainlinkPrice(): Promise<void> {
+        await chainlinkPriceFeed.update()
+    }
+
     beforeEach(async () => {
         const _fixture = await loadFixture(baseTokenFixture)
         baseToken = _fixture.baseToken
+        chainlinkPriceFeed = _fixture.chainlinkPriceFeed
         mockedAggregator = _fixture.mockedAggregator
         bandPriceFeed = _fixture.bandPriceFeed
         mockedStdReference = _fixture.mockedStdReference
@@ -53,23 +58,6 @@ describe("BaseToken", async () => {
             // [rate, lastUpdatedBase, lastUpdatedQuote]
         ]
 
-        currentTime += 0
-        chainlinkRoundData.push([0, parseUnits("400", 6), currentTime, currentTime, 0])
-        bandReferenceData.push([parseUnits("400", 18), currentTime, currentTime])
-        await updateBandPrice()
-
-        currentTime += 15
-        await setNextBlockTimestamp(currentTime)
-        chainlinkRoundData.push([1, parseUnits("405", 6), currentTime, currentTime, 1])
-        bandReferenceData.push([parseUnits("405", 18), currentTime, currentTime])
-        await updateBandPrice()
-
-        currentTime += 15
-        await setNextBlockTimestamp(currentTime)
-        chainlinkRoundData.push([2, parseUnits("410", 6), currentTime, currentTime, 2])
-        bandReferenceData.push([parseUnits("410", 18), currentTime, currentTime])
-        await updateBandPrice()
-
         mockedAggregator.smocked.latestRoundData.will.return.with(async () => {
             return chainlinkRoundData[chainlinkRoundData.length - 1]
         })
@@ -77,6 +65,26 @@ describe("BaseToken", async () => {
         mockedAggregator.smocked.getRoundData.will.return.with((round: BigNumber) => {
             return chainlinkRoundData[round.toNumber()]
         })
+
+        currentTime += 0
+        chainlinkRoundData.push([0, parseUnits("400", 6), currentTime, currentTime, 0])
+        bandReferenceData.push([parseUnits("400", 18), currentTime, currentTime])
+        await updateBandPrice()
+        await updateChainlinkPrice()
+
+        currentTime += 15
+        await setNextBlockTimestamp(currentTime)
+        chainlinkRoundData.push([1, parseUnits("405", 6), currentTime, currentTime, 1])
+        bandReferenceData.push([parseUnits("405", 18), currentTime, currentTime])
+        await updateBandPrice()
+        await updateChainlinkPrice()
+
+        currentTime += 15
+        await setNextBlockTimestamp(currentTime)
+        chainlinkRoundData.push([2, parseUnits("410", 6), currentTime, currentTime, 2])
+        bandReferenceData.push([parseUnits("410", 18), currentTime, currentTime])
+        await updateBandPrice()
+        await updateChainlinkPrice()
 
         currentTime += 15
         await setNextBlockTimestamp(currentTime)

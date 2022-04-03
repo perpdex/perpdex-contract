@@ -253,6 +253,7 @@ export async function mockedBaseTokenTo(longerThan: boolean, targetAddr: string)
         const chainlinkPriceFeedFactory = await ethers.getContractFactory("ChainlinkPriceFeed")
         const chainlinkPriceFeed = (await chainlinkPriceFeedFactory.deploy(
             mockedAggregator.address,
+            15 * 60,
         )) as ChainlinkPriceFeed
 
         const baseTokenFactory = await ethers.getContractFactory("BaseToken")

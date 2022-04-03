@@ -22,7 +22,10 @@ export async function baseTokenFixture(): Promise<BaseTokenFixture> {
     })
 
     const chainlinkPriceFeedFactory = await ethers.getContractFactory("ChainlinkPriceFeed")
-    const chainlinkPriceFeed = (await chainlinkPriceFeedFactory.deploy(mockedAggregator.address)) as ChainlinkPriceFeed
+    const chainlinkPriceFeed = (await chainlinkPriceFeedFactory.deploy(
+        mockedAggregator.address,
+        15 * 60,
+    )) as ChainlinkPriceFeed
 
     // BandPriceFeed
     const stdReferenceFactory = await ethers.getContractFactory("TestStdReference")
@@ -31,7 +34,11 @@ export async function baseTokenFixture(): Promise<BaseTokenFixture> {
 
     const baseAsset = "ETH"
     const bandPriceFeedFactory = await ethers.getContractFactory("BandPriceFeed")
-    const bandPriceFeed = (await bandPriceFeedFactory.deploy(mockedStdReference.address, baseAsset)) as BandPriceFeed
+    const bandPriceFeed = (await bandPriceFeedFactory.deploy(
+        mockedStdReference.address,
+        baseAsset,
+        15 * 60,
+    )) as BandPriceFeed
 
     const baseTokenFactory = await ethers.getContractFactory("BaseToken")
     const baseToken = (await baseTokenFactory.deploy()) as BaseToken
