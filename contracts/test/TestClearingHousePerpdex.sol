@@ -4,11 +4,11 @@ pragma abicoder v2;
 
 import { PerpSafeCast } from "../lib/PerpSafeCast.sol";
 import { SignedSafeMathUpgradeable } from "@openzeppelin/contracts-upgradeable/math/SignedSafeMathUpgradeable.sol";
-import "../ClearingHouse.sol";
-import "./TestAccountBalance.sol";
-import "./TestExchange.sol";
+import "../ClearingHousePerpdex.sol";
+import "./TestAccountBalancePerpdex.sol";
+import "./TestExchangePerpdex.sol";
 
-contract TestClearingHouse is ClearingHouse {
+contract TestClearingHousePerpdex is ClearingHousePerpdex {
     using PerpSafeCast for uint256;
     using SignedSafeMathUpgradeable for int256;
 
@@ -23,7 +23,7 @@ contract TestClearingHouse is ClearingHouse {
         address accountBalanceArg,
         address insuranceFundArg
     ) external initializer {
-        ClearingHouse.initialize(
+        ClearingHousePerpdex.initialize(
             configArg,
             vaultArg,
             quoteTokenArg,
@@ -36,8 +36,8 @@ contract TestClearingHouse is ClearingHouse {
     }
 
     function setBlockTimestamp(uint256 blockTimestamp) external {
-        TestAccountBalance(_accountBalance).setBlockTimestamp(blockTimestamp);
-        TestExchange(_exchange).setBlockTimestamp(blockTimestamp);
+        TestAccountBalancePerpdex(_accountBalance).setBlockTimestamp(blockTimestamp);
+        TestExchangePerpdex(_exchange).setBlockTimestamp(blockTimestamp);
         _testBlockTimestamp = blockTimestamp;
     }
 
@@ -61,19 +61,18 @@ contract TestClearingHouse is ClearingHouse {
         uint160 sqrtPriceLimitX96; // price slippage protection
     }
 
-    function swap(SwapParams memory params) external nonReentrant() returns (IExchange.SwapResponse memory) {
+    function swap(SwapParams memory params) external nonReentrant() returns (IExchangePerpdex.SwapResponse memory) {
         IAccountBalance(_accountBalance).registerBaseToken(_msgSender(), params.baseToken);
 
-        IExchange.SwapResponse memory response =
-            IExchange(_exchange).swap(
-                IExchange.SwapParams({
+        IExchangePerpdex.SwapResponse memory response =
+            IExchangePerpdex(_exchange).swap(
+                IExchangePerpdex.SwapParams({
                     trader: _msgSender(),
                     baseToken: params.baseToken,
                     isBaseToQuote: params.isBaseToQuote,
                     isExactInput: params.isExactInput,
                     isClose: false,
-                    amount: params.amount,
-                    sqrtPriceLimitX96: params.sqrtPriceLimitX96
+                    amount: params.amount
                 })
             );
 

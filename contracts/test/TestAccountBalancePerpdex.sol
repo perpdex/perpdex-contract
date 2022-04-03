@@ -2,10 +2,10 @@
 pragma solidity 0.7.6;
 pragma abicoder v2;
 
-import "../AccountBalance.sol";
+import "../AccountBalancePerpdex.sol";
 import "../lib/Funding.sol";
 
-contract TestAccountBalance is AccountBalance {
+contract TestAccountBalancePerpdex is AccountBalancePerpdex {
     using AddressUpgradeable for address;
 
     uint256 private _testBlockTimestamp;
