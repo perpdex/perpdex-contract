@@ -5,6 +5,6 @@ pragma solidity 0.7.6;
 /// contract which implements MarketRegistryStorageV1 and following the naming convention
 /// MarketRegistryStorageVX.
 abstract contract MarketRegistryPerpdexStorageV1 {
-    address internal _uniswapV2Router02;
+    address internal _uniswapV2Factory;
     address internal _quoteToken;
 }

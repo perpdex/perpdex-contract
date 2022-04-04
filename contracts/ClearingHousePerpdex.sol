@@ -23,6 +23,8 @@ import { BlockContext } from "./base/BlockContext.sol";
 import { IClearingHousePerpdex } from "./interface/IClearingHousePerpdex.sol";
 import { AccountMarket } from "./lib/AccountMarket.sol";
 import { OpenOrder } from "./lib/OpenOrder.sol";
+import { IERC20 } from "./amm/uniswap_v2/interfaces/IERC20.sol";
+import { IUniswapV2Factory } from "./amm/uniswap_v2/interfaces/IUniswapV2Factory.sol";
 
 // never inherit any new stateful contract. never change the orders of parent stateful contracts
 contract ClearingHousePerpdex is
@@ -103,7 +105,7 @@ contract ClearingHousePerpdex is
         address clearingHouseConfigArg,
         address vaultArg,
         address quoteTokenArg,
-        address uniV2Router02Arg,
+        address uniV2FactoryArg,
         address exchangeArg,
         address accountBalanceArg,
         address insuranceFundArg
@@ -115,7 +117,7 @@ contract ClearingHousePerpdex is
         // CH_QDN18: QuoteToken decimals is not 18
         require(IERC20Metadata(quoteTokenArg).decimals() == 18, "CH_QDN18");
         // CH_UANC: UniV2Factory address is not contract
-        require(uniV2Router02Arg.isContract(), "CH_UANC");
+        require(uniV2FactoryArg.isContract(), "CH_UANC");
         // ClearingHouseConfig address is not contract
         require(clearingHouseConfigArg.isContract(), "CH_CCNC");
         // AccountBalance is not contract
@@ -135,7 +137,7 @@ contract ClearingHousePerpdex is
         _clearingHouseConfig = clearingHouseConfigArg;
         _vault = vaultArg;
         _quoteToken = quoteTokenArg;
-        _uniswapV2Router02 = uniV2Router02Arg;
+        _uniswapV2Factory = uniV2FactoryArg;
         _exchange = exchangeArg;
         _orderBook = orderBookArg;
         _accountBalance = accountBalanceArg;
@@ -173,6 +175,10 @@ contract ClearingHousePerpdex is
 
         // must settle funding first
         Funding.Growth memory fundingGrowthGlobal = _settleFunding(trader, params.baseToken);
+
+        // approve
+        IERC20(params.baseToken).approve(_orderBook, type(uint256).max);
+        IERC20(_quoteToken).approve(_orderBook, type(uint256).max);
 
         // note that we no longer check available tokens here because CH will always auto-mint in UniswapV3MintCallback
         IOrderBookUniswapV2.AddLiquidityResponse memory response =
@@ -233,6 +239,10 @@ contract ClearingHousePerpdex is
 
         // must settle funding first
         _settleFunding(trader, params.baseToken);
+
+        // approve
+        address pair = IUniswapV2Factory(_uniswapV2Factory).getPair(params.baseToken, _quoteToken);
+        IERC20(pair).approve(_orderBook, type(uint256).max);
 
         IOrderBookUniswapV2.RemoveLiquidityResponse memory response =
             IOrderBookUniswapV2(_orderBook).removeLiquidity(
@@ -442,8 +452,8 @@ contract ClearingHousePerpdex is
     }
 
     /// @inheritdoc IClearingHousePerpdex
-    function getUniswapV2Router02() external view override returns (address) {
-        return _uniswapV2Router02;
+    function getUniswapV2Factory() external view override returns (address) {
+        return _uniswapV2Factory;
     }
 
     /// @inheritdoc IClearingHousePerpdex
@@ -662,6 +672,10 @@ contract ClearingHousePerpdex is
         internal
         returns (IExchangePerpdex.SwapResponse memory)
     {
+        // approve
+        IERC20(params.baseToken).approve(_exchange, type(uint256).max);
+        IERC20(_quoteToken).approve(_exchange, type(uint256).max);
+
         IExchangePerpdex.SwapResponse memory response =
             IExchangePerpdex(_exchange).swap(
                 IExchangePerpdex.SwapParams({
@@ -788,7 +802,7 @@ contract ClearingHousePerpdex is
         return IVault(_vault).getFreeCollateralByRatio(trader, ratio);
     }
 
-    function _requireEnoughFreeCollateral(address trader) internal view {
+    function _requireEnoughFreeCollateral(address trader) internal {
         // CH_NEFCI: not enough free collateral by imRatio
         require(
             _getFreeCollateralByRatio(trader, IClearingHouseConfig(_clearingHouseConfig).getImRatio()) >= 0,

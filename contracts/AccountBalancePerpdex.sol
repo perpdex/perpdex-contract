@@ -15,6 +15,7 @@ import { BlockContext } from "./base/BlockContext.sol";
 import { IAccountBalance } from "./interface/IAccountBalance.sol";
 import { IExchangePerpdex } from "./interface/IExchangePerpdex.sol";
 import { UniswapV2Broker } from "./lib/UniswapV2Broker.sol";
+import { FixedPoint96 } from "@uniswap/v3-core/contracts/libraries/FixedPoint96.sol";
 
 // never inherit any new stateful contract. never change the orders of parent stateful contracts
 contract AccountBalancePerpdex is IAccountBalance, BlockContext, ClearingHouseCallee, AccountBalanceStorageV1 {
@@ -214,7 +215,7 @@ contract AccountBalancePerpdex is IAccountBalance, BlockContext, ClearingHouseCa
             // baseDebt = baseBalance when it's negative
             if (baseBalance < 0) {
                 // baseDebtValue = baseDebt * markPrice
-                baseDebtValue = baseBalance.mulDiv(_getMarkPrice(baseToken).toInt256(), 1e18);
+                baseDebtValue = baseBalance.mulDiv(_getMarkPriceX96(baseToken).toInt256(), FixedPoint96.Q96);
             }
             totalBaseDebtValue = totalBaseDebtValue.add(baseDebtValue);
 
@@ -309,11 +310,11 @@ contract AccountBalancePerpdex is IAccountBalance, BlockContext, ClearingHouseCa
         int256 positionSize = getTotalPositionSize(trader, baseToken);
         if (positionSize == 0) return 0;
 
-        uint256 indexTwap = _getMarkPrice(baseToken);
+        uint256 indexTwap = _getMarkPriceX96(baseToken);
         // both positionSize & indexTwap are in 10^18 already
         // overflow inspection:
         // only overflow when position value in USD(18 decimals) > 2^255 / 10^18
-        return positionSize.mulDiv(indexTwap.toInt256(), 1e18);
+        return positionSize.mulDiv(indexTwap.toInt256(), FixedPoint96.Q96);
     }
 
     /// @inheritdoc IAccountBalance
@@ -397,7 +398,7 @@ contract AccountBalancePerpdex is IAccountBalance, BlockContext, ClearingHouseCa
     // INTERNAL VIEW
     //
 
-    function _getMarkPrice(address baseToken) internal view returns (uint256) {
+    function _getMarkPriceX96(address baseToken) internal view returns (uint256) {
         address exchange = IOrderBookUniswapV2(_orderBook).getExchange();
         uint160 sqrtPriceX96 = IExchangePerpdex(exchange).getSqrtMarkPriceX96(baseToken);
         return sqrtPriceX96.formatSqrtPriceX96ToPriceX96();

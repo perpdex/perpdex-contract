@@ -23,7 +23,7 @@ import { IClearingHouseConfig } from "./interface/IClearingHouseConfig.sol";
 import { ExchangePerpdexStorageV1 } from "./storage/ExchangePerpdexStorage.sol";
 import { IExchangePerpdex } from "./interface/IExchangePerpdex.sol";
 import { OpenOrder } from "./lib/OpenOrder.sol";
-import { IUniswapV2Router02 } from "./amm/uniswap_v2_periphery/interfaces/IUniswapV2Router02.sol";
+import { IUniswapV2Factory } from "./amm/uniswap_v2/interfaces/IUniswapV2Factory.sol";
 import { Math } from "./amm/uniswap_v2/libraries/Math.sol";
 import { FixedPoint96 } from "@uniswap/v3-core/contracts/libraries/FixedPoint96.sol";
 
@@ -108,7 +108,13 @@ contract ExchangePerpdex is IExchangePerpdex, BlockContext, ClearingHouseCallee,
         // EX_BNC: baseToken is not contract
         require(baseToken.isContract(), "EX_BNC");
         // EX_BTNE: base token does not exists
-        require(IMarketRegistryPerpdex(_marketRegistry).hasPool(baseToken), "EX_BTNE");
+        //        require(IMarketRegistryPerpdex(_marketRegistry).hasPool(baseToken), "EX_BTNE");
+
+        address factory = IMarketRegistryPerpdex(_marketRegistry).getUniswapV2Factory();
+        address quoteToken = IMarketRegistryPerpdex(_marketRegistry).getQuoteToken();
+        if (IUniswapV2Factory(factory).getPair(baseToken, quoteToken) == address(0)) {
+            IUniswapV2Factory(factory).createPair(baseToken, quoteToken);
+        }
 
         _maxPriceRocWithinBlockX96Map[baseToken] = maxPriceRocWithinBlockX96;
         emit MaxPriceRocWithinBlockChanged(baseToken, maxPriceRocWithinBlockX96);
@@ -123,7 +129,10 @@ contract ExchangePerpdex is IExchangePerpdex, BlockContext, ClearingHouseCallee,
 
         // update price for price limit checks
         uint256 timestamp = _blockTimestamp();
-        if (_lastUpdatedSqrtMarkPriceX96TimestampMap[params.baseToken] != timestamp) {
+        if (
+            _lastUpdatedSqrtMarkPriceX96TimestampMap[params.baseToken] != timestamp ||
+            _lastUpdatedSqrtMarkPriceX96Map[params.baseToken] == 0
+        ) {
             _lastUpdatedSqrtMarkPriceX96Map[params.baseToken] = getSqrtMarkPriceX96(params.baseToken);
             _lastUpdatedSqrtMarkPriceX96TimestampMap[params.baseToken] = timestamp;
         }
@@ -156,10 +165,9 @@ contract ExchangePerpdex is IExchangePerpdex, BlockContext, ClearingHouseCallee,
             );
         }
 
-        address router = IMarketRegistryPerpdex(_marketRegistry).getUniswapV2Router02();
+        address factory = IMarketRegistryPerpdex(_marketRegistry).getUniswapV2Factory();
         address quoteToken = IMarketRegistryPerpdex(_marketRegistry).getQuoteToken();
-        uint256 sqrtPriceX96 =
-            UniswapV2Broker.getSqrtMarkPriceX96(IUniswapV2Router02(router).factory(), params.baseToken, quoteToken);
+        uint256 sqrtPriceX96 = UniswapV2Broker.getSqrtMarkPriceX96(factory, params.baseToken, quoteToken);
 
         return
             SwapResponse({
@@ -302,9 +310,9 @@ contract ExchangePerpdex is IExchangePerpdex, BlockContext, ClearingHouseCallee,
 
     /// @inheritdoc IExchangePerpdex
     function getSqrtMarkPriceX96(address baseToken) public view override returns (uint160) {
-        address router = IMarketRegistryPerpdex(_marketRegistry).getUniswapV2Router02();
+        address factory = IMarketRegistryPerpdex(_marketRegistry).getUniswapV2Factory();
         address quoteToken = IMarketRegistryPerpdex(_marketRegistry).getQuoteToken();
-        return UniswapV2Broker.getSqrtMarkPriceX96(IUniswapV2Router02(router).factory(), baseToken, quoteToken);
+        return UniswapV2Broker.getSqrtMarkPriceX96(factory, baseToken, quoteToken);
     }
 
     //
@@ -313,7 +321,7 @@ contract ExchangePerpdex is IExchangePerpdex, BlockContext, ClearingHouseCallee,
 
     /// @dev customized fee: https://www.notion.so/perp/Customise-fee-tier-on-B2QFee-1b7244e1db63416c8651e8fa04128cdb
     function _swap(SwapParams memory params) internal returns (InternalSwapResponse memory) {
-        address router = IMarketRegistryPerpdex(_marketRegistry).getUniswapV2Router02();
+        address factory = IMarketRegistryPerpdex(_marketRegistry).getUniswapV2Factory();
         address quoteToken = IMarketRegistryPerpdex(_marketRegistry).getQuoteToken();
 
         (Funding.Growth memory fundingGrowthGlobal, , , , ) = _getFundingGrowthGlobalAndTwaps(params.baseToken);
@@ -321,7 +329,7 @@ contract ExchangePerpdex is IExchangePerpdex, BlockContext, ClearingHouseCallee,
         UniswapV2Broker.SwapResponse memory response =
             UniswapV2Broker.swap(
                 UniswapV2Broker.SwapParams(
-                    router,
+                    factory,
                     params.baseToken,
                     quoteToken,
                     _clearingHouse, // recipient
@@ -433,10 +441,10 @@ contract ExchangePerpdex is IExchangePerpdex, BlockContext, ClearingHouseCallee,
         }
 
         {
-            address router = IMarketRegistryPerpdex(_marketRegistry).getUniswapV2Router02();
+            address factory = IMarketRegistryPerpdex(_marketRegistry).getUniswapV2Factory();
             address quoteToken = IMarketRegistryPerpdex(_marketRegistry).getQuoteToken();
             (priceCumulative, blockTimestamp) = UniswapV2Broker.getCurrentCumulativePrice(
-                IUniswapV2Router02(router).factory(),
+                factory,
                 baseToken,
                 quoteToken
             );
@@ -444,7 +452,7 @@ contract ExchangePerpdex is IExchangePerpdex, BlockContext, ClearingHouseCallee,
 
         uint256 lastSettledTimestamp = _lastSettledTimestampMap[baseToken];
         Funding.Growth storage lastFundingGrowthGlobal = _globalFundingGrowthX96Map[baseToken];
-        if (timestamp <= lastSettledTimestamp + twapInterval || lastSettledTimestamp == 0) {
+        if (priceCumulative == 0 || timestamp <= lastSettledTimestamp + twapInterval || lastSettledTimestamp == 0) {
             // if this is the latest updated timestamp, values in _globalFundingGrowthX96Map are up-to-date already
             fundingGrowthGlobal = lastFundingGrowthGlobal;
         } else {

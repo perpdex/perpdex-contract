@@ -7,7 +7,7 @@ pragma solidity 0.7.6;
 abstract contract ClearingHousePerpdexStorageV1 {
     // --------- IMMUTABLE ---------
     address internal _quoteToken;
-    address internal _uniswapV2Router02;
+    address internal _uniswapV2Factory;
 
     // cache the settlement token's decimals for gas optimization
     uint8 internal _settlementTokenDecimals;

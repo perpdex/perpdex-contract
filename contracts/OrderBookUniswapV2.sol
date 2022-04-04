@@ -22,7 +22,6 @@ import { IMarketRegistryPerpdex } from "./interface/IMarketRegistryPerpdex.sol";
 import { OrderBookUniswapV2StorageV1 } from "./storage/OrderBookUniswapV2Storage.sol";
 import { IOrderBookUniswapV2 } from "./interface/IOrderBookUniswapV2.sol";
 import { OpenOrder } from "./lib/OpenOrder.sol";
-import { IUniswapV2Router02 } from "./amm/uniswap_v2_periphery/interfaces/IUniswapV2Router02.sol";
 
 // never inherit any new stateful contract. never change the orders of parent stateful contracts
 contract OrderBookUniswapV2 is IOrderBookUniswapV2, ClearingHouseCallee, OrderBookUniswapV2StorageV1 {
@@ -55,7 +54,7 @@ contract OrderBookUniswapV2 is IOrderBookUniswapV2, ClearingHouseCallee, OrderBo
 
     struct InternalRemoveLiquidityParams {
         address maker;
-        address router;
+        address factory;
         address baseToken;
         address quoteToken;
         uint128 liquidity;
@@ -93,7 +92,7 @@ contract OrderBookUniswapV2 is IOrderBookUniswapV2, ClearingHouseCallee, OrderBo
     /// @inheritdoc IOrderBookUniswapV2
     function addLiquidity(AddLiquidityParams calldata params) external override returns (AddLiquidityResponse memory) {
         _requireOnlyClearingHouse();
-        address router = IMarketRegistryPerpdex(_marketRegistry).getUniswapV2Router02();
+        address factory = IMarketRegistryPerpdex(_marketRegistry).getUniswapV2Factory();
         address quoteToken = IMarketRegistryPerpdex(_marketRegistry).getQuoteToken();
         //        uint256 feeGrowthGlobalX128 = _feeGrowthGlobalX128Map[params.baseToken];
         //        mapping(int24 => Tick.GrowthInfo) storage tickMap = _growthOutsideTickMap[params.baseToken];
@@ -102,7 +101,14 @@ contract OrderBookUniswapV2 is IOrderBookUniswapV2, ClearingHouseCallee, OrderBo
         {
             // add liquidity to pool
             response = UniswapV2Broker.addLiquidity(
-                UniswapV2Broker.AddLiquidityParams(router, params.baseToken, quoteToken, params.base, params.quote)
+                UniswapV2Broker.AddLiquidityParams(
+                    factory,
+                    params.baseToken,
+                    quoteToken,
+                    params.base,
+                    params.quote,
+                    msg.sender
+                )
             );
 
             //            a = feeGrowthGlobalX128;
@@ -140,14 +146,14 @@ contract OrderBookUniswapV2 is IOrderBookUniswapV2, ClearingHouseCallee, OrderBo
         returns (RemoveLiquidityResponse memory)
     {
         _requireOnlyClearingHouse();
-        address router = IMarketRegistryPerpdex(_marketRegistry).getUniswapV2Router02();
+        address factory = IMarketRegistryPerpdex(_marketRegistry).getUniswapV2Factory();
         address quoteToken = IMarketRegistryPerpdex(_marketRegistry).getQuoteToken();
         bytes32 orderId = OpenOrder.calcOrderKey(params.maker, params.baseToken, 0, 0);
         return
             _removeLiquidity(
                 InternalRemoveLiquidityParams({
                     maker: params.maker,
-                    router: router,
+                    factory: factory,
                     baseToken: params.baseToken,
                     quoteToken: quoteToken,
                     liquidity: params.liquidity
@@ -166,7 +172,6 @@ contract OrderBookUniswapV2 is IOrderBookUniswapV2, ClearingHouseCallee, OrderBo
         //        bytes32[] memory orderIds = _openOrderIdsMap[trader][baseToken];
         //        mapping(int24 => Tick.GrowthInfo) storage tickMap = _growthOutsideTickMap[baseToken];
         //        address pool = IMarketRegistryPerpdex(_marketRegistry).getPool(baseToken);
-        address router = IMarketRegistryPerpdex(_marketRegistry).getUniswapV2Router02();
 
         // funding of liquidity coefficient
         //        uint256 orderIdLength = orderIds.length;
@@ -341,10 +346,10 @@ contract OrderBookUniswapV2 is IOrderBookUniswapV2, ClearingHouseCallee, OrderBo
         UniswapV2Broker.RemoveLiquidityResponse memory response =
             UniswapV2Broker.removeLiquidity(
                 UniswapV2Broker.RemoveLiquidityParams(
-                    params.router,
+                    params.factory,
                     params.baseToken,
                     params.quoteToken,
-                    _exchange,
+                    msg.sender,
                     params.liquidity
                 )
             );
@@ -452,7 +457,7 @@ contract OrderBookUniswapV2 is IOrderBookUniswapV2, ClearingHouseCallee, OrderBo
     ) internal view returns (uint256 tokenAmount, uint256 pendingFee) {
         //        bytes32[] memory orderIds = _openOrderIdsMap[trader][baseToken];
 
-        address router = IMarketRegistryPerpdex(_marketRegistry).getUniswapV2Router02();
+        address factory = IMarketRegistryPerpdex(_marketRegistry).getUniswapV2Factory();
         address quoteToken = IMarketRegistryPerpdex(_marketRegistry).getQuoteToken();
 
         //        uint256 orderIdLength = orderIds.length;
@@ -464,12 +469,7 @@ contract OrderBookUniswapV2 is IOrderBookUniswapV2, ClearingHouseCallee, OrderBo
             uint256 amount;
             {
                 (uint256 baseAmount, uint256 quoteAmount) =
-                    UniswapV2Broker.getLiquidityValue(
-                        IUniswapV2Router02(router).factory(),
-                        baseToken,
-                        quoteToken,
-                        order.liquidity
-                    );
+                    UniswapV2Broker.getLiquidityValue(factory, baseToken, quoteToken, order.liquidity);
 
                 if (fetchBase) {
                     amount = baseAmount;

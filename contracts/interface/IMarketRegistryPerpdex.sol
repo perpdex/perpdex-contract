@@ -7,9 +7,9 @@ interface IMarketRegistryPerpdex {
     /// @return quoteToken The address of the quote token
     function getQuoteToken() external view returns (address quoteToken);
 
-    /// @notice Get Uniswap V2 router 02 address
-    /// @return router The address of the Uniswap router
-    function getUniswapV2Router02() external view returns (address router);
+    /// @notice Get Uniswap V2 factory address
+    /// @return factory The address of the Uniswap V2 factory
+    function getUniswapV2Factory() external view returns (address factory);
 
     /// @notice Check if a pool exist by given base token address
     /// @return hasPool True if the pool exist, false otherwise

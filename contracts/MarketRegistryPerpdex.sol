@@ -9,7 +9,6 @@ import { IVirtualToken } from "./interface/IVirtualToken.sol";
 import { MarketRegistryPerpdexStorageV1 } from "./storage/MarketRegistryPerpdexStorage.sol";
 import { IMarketRegistryPerpdex } from "./interface/IMarketRegistryPerpdex.sol";
 import { IUniswapV2Factory } from "./amm/uniswap_v2/interfaces/IUniswapV2Factory.sol";
-import { IUniswapV2Router02 } from "./amm/uniswap_v2_periphery/interfaces/IUniswapV2Router02.sol";
 
 // never inherit any new stateful contract. never change the orders of parent stateful contracts
 contract MarketRegistryPerpdex is IMarketRegistryPerpdex, ClearingHouseCallee, MarketRegistryPerpdexStorageV1 {
@@ -23,16 +22,16 @@ contract MarketRegistryPerpdex is IMarketRegistryPerpdex, ClearingHouseCallee, M
     // EXTERNAL NON-VIEW
     //
 
-    function initialize(address uniswapV2Router02Arg, address quoteTokenArg) external initializer {
+    function initialize(address uniswapV2FactoryArg, address quoteTokenArg) external initializer {
         __ClearingHouseCallee_init();
 
-        // UniswapV2Router02 is not contract
-        require(uniswapV2Router02Arg.isContract(), "MR_URNC");
+        // UniswapV2Factory is not contract
+        require(uniswapV2FactoryArg.isContract(), "MR_UFNC");
         // QuoteToken is not contract
         require(quoteTokenArg.isContract(), "MR_QTNC");
 
         // update states
-        _uniswapV2Router02 = uniswapV2Router02Arg;
+        _uniswapV2Factory = uniswapV2FactoryArg;
         _quoteToken = quoteTokenArg;
     }
 
@@ -46,13 +45,12 @@ contract MarketRegistryPerpdex is IMarketRegistryPerpdex, ClearingHouseCallee, M
     }
 
     /// @inheritdoc IMarketRegistryPerpdex
-    function getUniswapV2Router02() external view override returns (address) {
-        return _uniswapV2Router02;
+    function getUniswapV2Factory() external view override returns (address) {
+        return _uniswapV2Factory;
     }
 
     /// @inheritdoc IMarketRegistryPerpdex
     function hasPool(address baseToken) external view override returns (bool) {
-        address factory = IUniswapV2Router02(_uniswapV2Router02).factory();
-        return IUniswapV2Factory(factory).getPair(baseToken, _quoteToken) != address(0);
+        return IUniswapV2Factory(_uniswapV2Factory).getPair(baseToken, _quoteToken) != address(0);
     }
 }

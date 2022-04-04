@@ -216,9 +216,9 @@ interface IClearingHousePerpdex {
     /// @return quoteToken The quote token address
     function getQuoteToken() external view returns (address quoteToken);
 
-    /// @notice Get IUniswapV2Router02 address
-    /// @return router IUniswapV2Router02 address
-    function getUniswapV2Router02() external view returns (address router);
+    /// @notice Get IUniswapV2Factory address
+    /// @return factory IUniswapV2Factory address
+    function getUniswapV2Factory() external view returns (address factory);
 
     /// @notice Get ClearingHouseConfig address
     /// @return clearingHouseConfig ClearingHouseConfig address
