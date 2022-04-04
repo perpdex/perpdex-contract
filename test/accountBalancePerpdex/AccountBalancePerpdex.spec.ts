@@ -5,45 +5,44 @@ import { ethers, waffle } from "hardhat"
 import {
     AccountBalance,
     BaseToken,
-    Exchange,
-    MarketRegistry,
-    OrderBook,
+    ExchangePerpdex,
+    MarketRegistryPerpdex,
+    OrderBookUniswapV2,
     QuoteToken,
-    TestClearingHouse,
+    TestClearingHousePerpdex,
     TestERC20,
     UniswapV3Pool,
     Vault,
 } from "../../typechain"
-import { ClearingHouseFixture, createClearingHouseFixture } from "../clearingHouse/fixtures"
-import { initAndAddPool } from "../helper/marketHelper"
+import { ClearingHousePerpdexFixture, createClearingHousePerpdexFixture } from "../clearingHousePerpdex/fixtures"
+import { initAndAddPool } from "../helper/marketHelperPerpdex"
 import { getMaxTick, getMaxTickRange, getMinTick } from "../helper/number"
 import { deposit } from "../helper/token"
 import { encodePriceSqrt } from "../shared/utilities"
+import { BigNumber } from "ethers"
 
-describe("AccountBalance", () => {
+describe("AccountBalancePerpdex", () => {
     const [admin, alice, bob] = waffle.provider.getWallets()
     const loadFixture: ReturnType<typeof waffle.createFixtureLoader> = waffle.createFixtureLoader([admin])
-    let fixture: ClearingHouseFixture
-    let clearingHouse: TestClearingHouse
-    let marketRegistry: MarketRegistry
-    let exchange: Exchange
-    let orderBook: OrderBook
+    let fixture: ClearingHousePerpdexFixture
+    let clearingHouse: TestClearingHousePerpdex
+    let marketRegistry: MarketRegistryPerpdex
+    let exchange: ExchangePerpdex
+    let orderBook: OrderBookUniswapV2
     let accountBalance: AccountBalance
     let vault: Vault
     let collateral: TestERC20
     let baseToken: BaseToken
     let baseToken2: BaseToken
     let quoteToken: QuoteToken
-    let pool: UniswapV3Pool
-    let pool2: UniswapV3Pool
+    // let pool: UniswapV3Pool
+    // let pool2: UniswapV3Pool
     let collateralDecimals: number
-    let tickSpacing: number
-    let lowerTick: number
-    let upperTick: number
+    // let tickSpacing: number
 
     beforeEach(async () => {
-        fixture = await loadFixture(createClearingHouseFixture())
-        clearingHouse = fixture.clearingHouse as TestClearingHouse
+        fixture = await loadFixture(createClearingHousePerpdexFixture())
+        clearingHouse = fixture.clearingHouse as TestClearingHousePerpdex
         orderBook = fixture.orderBook
         exchange = fixture.exchange
         accountBalance = fixture.accountBalance
@@ -53,13 +52,11 @@ describe("AccountBalance", () => {
         baseToken = fixture.baseToken
         baseToken2 = fixture.baseToken2
         quoteToken = fixture.quoteToken
-        pool = fixture.pool
-        pool2 = fixture.pool2
+        // pool = fixture.pool
+        // pool2 = fixture.pool2
         collateralDecimals = await collateral.decimals()
 
-        tickSpacing = await pool.tickSpacing()
-        lowerTick = getMinTick(tickSpacing)
-        upperTick = getMaxTick(tickSpacing)
+        // tickSpacing = await pool.tickSpacing()
 
         // alice
         await collateral.mint(alice.address, parseUnits("40000", collateralDecimals))
@@ -74,22 +71,22 @@ describe("AccountBalance", () => {
         beforeEach(async () => {
             await initAndAddPool(
                 fixture,
-                pool,
+                // pool,
                 baseToken.address,
-                encodePriceSqrt("151.373306858723226652", "1"), // tick = 50200 (1.0001^50200 = 151.373306858723226652)
+                0,
                 10000,
                 // set maxTickCrossed as maximum tick range of pool by default, that means there is no over price when swap
-                getMaxTickRange(),
+                BigNumber.from("2").pow(96),
             )
 
             await initAndAddPool(
                 fixture,
-                pool2,
+                // pool2,
                 baseToken2.address,
-                encodePriceSqrt("151.373306858723226652", "1"), // tick = 50200 (1.0001^50200 = 151.373306858723226652)
+                0,
                 10000,
                 // set maxTickCrossed as maximum tick range of pool by default, that means there is no over price when swap
-                getMaxTickRange(),
+                BigNumber.from("2").pow(96),
             )
         })
 
@@ -101,11 +98,8 @@ describe("AccountBalance", () => {
                 baseToken: baseToken.address,
                 base: parseEther("100"),
                 quote: parseEther("1000"),
-                lowerTick,
-                upperTick,
                 minBase: 0,
                 minQuote: 0,
-                useTakerBalance: false,
                 deadline: ethers.constants.MaxUint256,
             })
 
@@ -116,11 +110,8 @@ describe("AccountBalance", () => {
                 baseToken: baseToken2.address,
                 base: parseEther("100"),
                 quote: parseEther("1000"),
-                lowerTick,
-                upperTick,
                 minBase: 0,
                 minQuote: 0,
-                useTakerBalance: false,
                 deadline: ethers.constants.MaxUint256,
             })
 
@@ -138,30 +129,25 @@ describe("AccountBalance", () => {
                 baseToken: baseToken.address,
                 base: parseEther("100"),
                 quote: parseEther("1000"),
-                lowerTick,
-                upperTick,
                 minBase: 0,
                 minQuote: 0,
-                useTakerBalance: false,
                 deadline: ethers.constants.MaxUint256,
             })
 
             expect(await accountBalance.getBaseTokens(alice.address)).be.deep.eq([baseToken.address])
 
             // alice remove liquidity (baseToken)
-            const liquidity = (await orderBook.getOpenOrder(alice.address, baseToken.address, lowerTick, upperTick))
-                .liquidity
+            const liquidity = (await orderBook.getOpenOrder(alice.address, baseToken.address)).liquidity
             await clearingHouse.connect(alice).removeLiquidity({
                 baseToken: baseToken.address,
-                lowerTick,
-                upperTick,
                 liquidity,
                 minBase: 0,
                 minQuote: 0,
                 deadline: ethers.constants.MaxUint256,
             })
 
-            expect(await accountBalance.getBaseTokens(alice.address)).be.deep.eq([])
+            // TODO: There is a loss as Uniswap V2 locks MINIMUM_LIQUIDITY.
+            // expect(await accountBalance.getBaseTokens(alice.address)).be.deep.eq([])
         })
 
         it("bob open position", async () => {
@@ -172,11 +158,8 @@ describe("AccountBalance", () => {
                 baseToken: baseToken.address,
                 base: parseEther("100"),
                 quote: parseEther("1000"),
-                lowerTick,
-                upperTick,
                 minBase: 0,
                 minQuote: 0,
-                useTakerBalance: false,
                 deadline: ethers.constants.MaxUint256,
             })
 
@@ -185,11 +168,8 @@ describe("AccountBalance", () => {
                 baseToken: baseToken2.address,
                 base: parseEther("100"),
                 quote: parseEther("1000"),
-                lowerTick,
-                upperTick,
                 minBase: 0,
                 minQuote: 0,
-                useTakerBalance: false,
                 deadline: ethers.constants.MaxUint256,
             })
 
@@ -200,7 +180,6 @@ describe("AccountBalance", () => {
                 isExactInput: true,
                 oppositeAmountBound: 0,
                 amount: parseEther("1"),
-                sqrtPriceLimitX96: 0,
                 deadline: ethers.constants.MaxUint256,
                 referralCode: ethers.constants.HashZero,
             })
@@ -214,7 +193,6 @@ describe("AccountBalance", () => {
                 isExactInput: true,
                 oppositeAmountBound: 0,
                 amount: parseEther("100"),
-                sqrtPriceLimitX96: 0,
                 deadline: ethers.constants.MaxUint256,
                 referralCode: ethers.constants.HashZero,
             })
