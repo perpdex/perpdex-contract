@@ -27,6 +27,10 @@ const config: HardhatUserConfig = {
         hardhat: {
             allowUnlimitedContractSize: true,
         },
+        rinkeby: {
+            url: "https://rinkeby.infura.io/v3/" + process.env.INFURA_PROJECT_ID,
+            accounts: [process.env.TESTNET_PRIVATE_KEY],
+        },
     },
     dependencyCompiler: {
         // We have to compile from source since UniswapV3 doesn't provide artifacts in their npm package
