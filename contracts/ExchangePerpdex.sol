@@ -93,8 +93,8 @@ contract ExchangePerpdex is IExchangePerpdex, BlockContext, ClearingHouseCallee,
 
     /// @param accountBalanceArg: AccountBalance contract address
     function setAccountBalance(address accountBalanceArg) external onlyOwner {
-        // accountBalance is 0
-        require(accountBalanceArg != address(0), "E_AB0");
+        // E_ABNC: AccountBalance is not contract
+        require(accountBalanceArg.isContract(), "E_ABNC");
         _accountBalance = accountBalanceArg;
         emit AccountBalanceChanged(accountBalanceArg);
     }
