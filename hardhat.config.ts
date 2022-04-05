@@ -27,10 +27,6 @@ const config: HardhatUserConfig = {
         hardhat: {
             allowUnlimitedContractSize: true,
         },
-        rinkeby: {
-            url: "https://rinkeby.infura.io/v3/" + process.env.INFURA_PROJECT_ID,
-            accounts: [process.env.TESTNET_PRIVATE_KEY],
-        },
     },
     dependencyCompiler: {
         // We have to compile from source since UniswapV3 doesn't provide artifacts in their npm package
@@ -56,6 +52,20 @@ const config: HardhatUserConfig = {
         timeout: 120000,
         color: true,
     },
+}
+
+if (process.env.TESTNET_PRIVATE_KEY) {
+    if (process.env.INFURA_PROJECT_ID) {
+        config.networks.rinkeby = {
+            url: "https://rinkeby.infura.io/v3/" + process.env.INFURA_PROJECT_ID,
+            accounts: [process.env.TESTNET_PRIVATE_KEY],
+        }
+    }
+
+    config.networks.mumbai = {
+        url: "https://rpc-mumbai.maticvigil.com",
+        accounts: [process.env.ROPSTEN_PRIVATE_KEY],
+    }
 }
 
 export default config

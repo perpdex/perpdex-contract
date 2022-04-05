@@ -38,6 +38,13 @@ const config = {
             ethUsd: "0x8A753747A1Fa494EC906cE90E9f37563A8AF630e",
         },
     },
+    mumbai: {
+        weth: "0xA6FA4fB5f76172d178d61B04b0ecd319C5d1C0aa",
+        usdc: "0xe6b8a5CF854791412c1f6EFC7CAf629f5Df1c747",
+        chainlinkDataFeed: {
+            ethUsd: "0x0715A7794a1dc8e42615F059dD6e406A6594651A",
+        },
+    },
 }[hre.network.name]
 
 async function main() {
@@ -82,7 +89,6 @@ async function main() {
     const exchangeFactory = await ethers.getContractFactory("ExchangePerpdex")
     const exchange = (await exchangeFactory.deploy()) as ExchangePerpdex
     await exchange.initialize(marketRegistry.address, orderBook.address, clearingHouseConfig.address)
-    await exchange.setAccountBalance(accountBalance.address)
     await orderBook.setExchange(exchange.address)
     console.log("exchange " + exchange.address)
 
@@ -121,6 +127,10 @@ async function main() {
     await exchange.setClearingHouse(clearingHouse.address)
     await accountBalance.setClearingHouse(clearingHouse.address)
     await vault.setClearingHouse(clearingHouse.address)
+
+    // TODO: Investigate an issue where setAccountBalance fails only with rinkeby
+    console.log("call setAccountBalance")
+    await exchange.setAccountBalance(accountBalance.address)
 
     console.log("deploy finished")
 }
