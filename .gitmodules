@@ -1,3 +1,0 @@
-[submodule "deps/perpdex-oracle-contract"]
-	path = deps/perpdex-oracle-contract
-	url = https://github.com/perpdex/perpdex-oracle-contract.git
