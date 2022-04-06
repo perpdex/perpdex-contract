@@ -1,6 +1,6 @@
 import { MockContract, smockit } from "@eth-optimism/smock"
 import { ethers } from "hardhat"
-import { BaseToken, QuoteToken, UniswapV3Factory, UniswapV3Pool, VirtualToken } from "../../typechain"
+import { BaseToken, QuoteToken, UniswapV2Factory, UniswapV3Factory, UniswapV3Pool, VirtualToken } from "../../typechain"
 import { ChainlinkPriceFeed, EmergencyPriceFeed } from "../../typechain/perp-oracle"
 import { isAscendingTokenOrder } from "./utilities"
 
@@ -45,6 +45,7 @@ export function createBaseTokenFixture(name: string, symbol: string): () => Prom
         const chainlinkPriceFeedFactory = await ethers.getContractFactory("ChainlinkPriceFeed")
         const chainlinkPriceFeed = (await chainlinkPriceFeedFactory.deploy(
             mockedAggregator.address,
+            15 * 60,
         )) as ChainlinkPriceFeed
 
         const baseTokenFactory = await ethers.getContractFactory("BaseToken")
@@ -58,6 +59,11 @@ export function createBaseTokenFixture(name: string, symbol: string): () => Prom
 export async function uniswapV3FactoryFixture(): Promise<UniswapV3Factory> {
     const factoryFactory = await ethers.getContractFactory("UniswapV3Factory")
     return (await factoryFactory.deploy()) as UniswapV3Factory
+}
+
+export async function uniswapV2FactoryFixture(): Promise<UniswapV2Factory> {
+    const factoryFactory = await ethers.getContractFactory("UniswapV2Factory")
+    return (await factoryFactory.deploy(ethers.constants.AddressZero)) as UniswapV2Factory
 }
 
 // assume isAscendingTokensOrder() == true/ token0 < token1

@@ -51,7 +51,7 @@ contract VirtualToken is IVirtualToken, SafeOwnable, ERC20Upgradeable {
         // `from` == address(0) when mint()
         if (from != address(0)) {
             // not whitelisted
-            require(_whitelistMap[from], "VT_NW");
+            //            require(_whitelistMap[from], "VT_NW");
         }
     }
 }
