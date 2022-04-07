@@ -64,7 +64,12 @@ if (process.env.TESTNET_PRIVATE_KEY) {
 
     config.networks.mumbai = {
         url: "https://rpc-mumbai.maticvigil.com",
-        accounts: [process.env.ROPSTEN_PRIVATE_KEY],
+        accounts: [process.env.TESTNET_PRIVATE_KEY],
+    }
+
+    config.networks.fuji = {
+        url: "https://api.avax-test.network/ext/bc/C/rpc",
+        accounts: [process.env.TESTNET_PRIVATE_KEY],
     }
 }
 
