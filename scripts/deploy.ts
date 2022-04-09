@@ -40,7 +40,7 @@ const config = {
     },
     mumbai: {
         weth: "0xA6FA4fB5f76172d178d61B04b0ecd319C5d1C0aa",
-        usdc: "0xe6b8a5CF854791412c1f6EFC7CAf629f5Df1c747",
+        usdc: "0xe11A86849d99F524cAC3E7A0Ec1241828e332C62",
         chainlinkDataFeed: {
             ethUsd: "0x0715A7794a1dc8e42615F059dD6e406A6594651A",
         },
@@ -55,22 +55,27 @@ const config = {
 }[hre.network.name]
 
 async function main() {
+    console.log(config)
+
     const chainlinkPriceFeedFactory = await ethers.getContractFactory("ChainlinkPriceFeed")
     const chainlinkPriceFeed = (await chainlinkPriceFeedFactory.deploy(
         config.chainlinkDataFeed.ethUsd,
         15 * 60,
     )) as ChainlinkPriceFeed
     await chainlinkPriceFeed.deployed()
+    console.log("chainlinkPriceFeed " + chainlinkPriceFeed.address)
 
     const quoteTokenFactory = await ethers.getContractFactory("QuoteToken")
     const quoteToken = (await quoteTokenFactory.deploy()) as QuoteToken
     await quoteToken.deployed()
     await quoteToken.initialize(quoteTokenName, quoteTokenSymbol)
+    console.log("quoteToken " + quoteToken.address)
 
     const baseTokenFactory = await ethers.getContractFactory("BaseToken")
     const baseToken = (await baseTokenFactory.deploy()) as BaseToken
     await baseToken.deployed()
     await baseToken.initialize(baseTokenName, baseTokenSymbol, chainlinkPriceFeed.address)
+    console.log("baseToken " + baseToken.address)
 
     const factoryFactory = await ethers.getContractFactory("UniswapV2Factory")
     const uniV2Factory = (await factoryFactory.deploy(ethers.constants.AddressZero)) as UniswapV2Factory
