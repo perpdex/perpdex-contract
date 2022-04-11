@@ -440,9 +440,9 @@ contract ExchangePerpdex is IExchangePerpdex, BlockContext, ClearingHouseCallee,
             twapInterval = twapInterval > deltaTimestamp ? deltaTimestamp : twapInterval;
         }
 
+        address quoteToken = IMarketRegistryPerpdex(_marketRegistry).getQuoteToken();
         {
             address factory = IMarketRegistryPerpdex(_marketRegistry).getUniswapV2Factory();
-            address quoteToken = IMarketRegistryPerpdex(_marketRegistry).getQuoteToken();
             (priceCumulative, blockTimestamp) = UniswapV2Broker.getCurrentCumulativePrice(
                 factory,
                 baseToken,
@@ -461,7 +461,18 @@ contract ExchangePerpdex is IExchangePerpdex, BlockContext, ClearingHouseCallee,
                     ((1 << (112 - 96)) * (blockTimestamp - _lastPriceCumulativeTimestampMap[baseToken]));
             uint256 sqrtMarkTwapX96 = Math.sqrt(markTwapX96.mul(FixedPoint96.Q96));
             markTwap = markTwapX96.formatX96ToX10_18();
-            indexTwap = IIndexPrice(baseToken).getIndexPrice(twapInterval);
+
+            {
+                uint256 baseIndexTwap = IIndexPrice(baseToken).getIndexPrice(twapInterval);
+                uint256 quoteIndexTwap = IIndexPrice(quoteToken).getIndexPrice(twapInterval);
+                if (baseIndexTwap == 0) {
+                    baseIndexTwap = 1e18;
+                }
+                if (quoteIndexTwap == 0) {
+                    quoteIndexTwap = 1e18;
+                }
+                indexTwap = FullMath.mulDiv(baseIndexTwap, 1e18, quoteIndexTwap);
+            }
 
             // deltaTwPremium = (markTwap - indexTwap) * (now - lastSettledTimestamp)
             int256 deltaTwPremiumX96 =
