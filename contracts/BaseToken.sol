@@ -24,13 +24,15 @@ contract BaseToken is IBaseToken, IIndexPrice, VirtualToken, BaseTokenStorageV1 
     ) external initializer {
         __VirtualToken_init(nameArg, symbolArg);
 
-        uint8 priceFeedDecimals = IPriceFeed(priceFeedArg).decimals();
+        if (priceFeedArg != address(0)) {
+            uint8 priceFeedDecimals = IPriceFeed(priceFeedArg).decimals();
 
-        // invalid price feed decimals
-        require(priceFeedDecimals <= decimals(), "BT_IPFD");
+            // invalid price feed decimals
+            require(priceFeedDecimals <= decimals(), "BT_IPFD");
 
-        _priceFeed = priceFeedArg;
-        _priceFeedDecimals = priceFeedDecimals;
+            _priceFeed = priceFeedArg;
+            _priceFeedDecimals = priceFeedDecimals;
+        }
     }
 
     /// @dev This function is only used for emergency shutdown, to set priceFeed to an emergencyPriceFeed
