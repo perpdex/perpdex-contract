@@ -15,11 +15,11 @@ import {
 import { ChainlinkPriceFeed } from "../typechain/perp-oracle"
 import { config, safeVerify } from "./common"
 
-const quoteTokenName = "QuoteToken"
-const quoteTokenSymbol = "QUOTE"
+const quoteTokenName = "QuoteTokenEth"
+const quoteTokenSymbol = "QUOTEETH"
 
-const baseTokenName = "BaseTokenEth"
-const baseTokenSymbol = "BASEETH"
+const baseTokenName = "BaseTokenUsd"
+const baseTokenSymbol = "BASEUSD"
 
 async function main() {
     console.log(config)
@@ -36,13 +36,14 @@ async function main() {
     const quoteTokenFactory = await ethers.getContractFactory("QuoteToken")
     const quoteToken = (await quoteTokenFactory.deploy()) as QuoteToken
     await quoteToken.deployed()
-    await quoteToken.initialize(quoteTokenName, quoteTokenSymbol)
+    await (await quoteToken.initialize(quoteTokenName, quoteTokenSymbol)).wait()
+    await quoteToken.setPriceFeed(chainlinkPriceFeed.address)
     console.log("quoteToken " + quoteToken.address)
 
     const baseTokenFactory = await ethers.getContractFactory("BaseToken")
     const baseToken = (await baseTokenFactory.deploy()) as BaseToken
     await baseToken.deployed()
-    await baseToken.initialize(baseTokenName, baseTokenSymbol, chainlinkPriceFeed.address)
+    await baseToken.initialize(baseTokenName, baseTokenSymbol, ethers.constants.AddressZero)
     console.log("baseToken " + baseToken.address)
 
     const factoryFactory = await ethers.getContractFactory("UniswapV2Factory")
@@ -84,7 +85,7 @@ async function main() {
     const insuranceFundFactory = await ethers.getContractFactory("InsuranceFund")
     const insuranceFund = (await insuranceFundFactory.deploy()) as InsuranceFund
     await insuranceFund.deployed()
-    await insuranceFund.initialize(config.usdc)
+    await insuranceFund.initialize(config.weth)
     console.log("insuranceFund " + insuranceFund.address)
 
     const vaultFactory = await ethers.getContractFactory("Vault")
