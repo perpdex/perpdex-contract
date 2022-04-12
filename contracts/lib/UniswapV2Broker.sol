@@ -169,7 +169,26 @@ library UniswapV2Broker {
         address quoteToken,
         uint256 liquidityAmount
     ) internal view returns (uint256 baseAmount, uint256 quoteAmount) {
-        return UniswapV2LiquidityMathLibrary.getLiquidityValue(factory, baseToken, quoteToken, liquidityAmount);
+        // based on UniswapV2LiquidityMathLibrary.getLiquidityValue
+
+        (uint256 reservesA, uint256 reservesB) = UniswapV2Library.getReserves(factory, baseToken, quoteToken);
+        if (reservesA == 0 || reservesB == 0) {
+            return (0, 0);
+        }
+
+        IUniswapV2Pair pair = IUniswapV2Pair(UniswapV2Library.pairFor(factory, baseToken, quoteToken));
+        bool feeOn = IUniswapV2Factory(factory).feeTo() != address(0);
+        uint256 kLast = feeOn ? pair.kLast() : 0;
+        uint256 totalSupply = pair.totalSupply();
+        return
+            UniswapV2LiquidityMathLibrary.computeLiquidityValue(
+                reservesA,
+                reservesB,
+                totalSupply,
+                liquidityAmount,
+                feeOn,
+                kLast
+            );
     }
 
     function getSqrtMarkPriceX96(
