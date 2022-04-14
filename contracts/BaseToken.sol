@@ -55,6 +55,7 @@ contract BaseToken is IBaseToken, IIndexPrice, VirtualToken, BaseTokenStorageV1 
 
     /// @inheritdoc IIndexPrice
     function getIndexPrice(uint256 interval) external view override returns (uint256) {
+        if (_priceFeed == address(0)) return 0;
         return _formatDecimals(IPriceFeed(_priceFeed).getPrice(interval));
     }
 

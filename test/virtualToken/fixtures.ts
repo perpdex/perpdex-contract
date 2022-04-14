@@ -11,6 +11,10 @@ interface BaseTokenFixture {
     mockedStdReference: MockContract
 }
 
+interface BaseTokenEmptyFixture {
+    baseToken: BaseToken
+}
+
 export async function baseTokenFixture(): Promise<BaseTokenFixture> {
     // ChainlinkPriceFeed
     const aggregatorFactory = await ethers.getContractFactory("TestAggregatorV3")
@@ -45,4 +49,12 @@ export async function baseTokenFixture(): Promise<BaseTokenFixture> {
     await baseToken.initialize("RandomTestToken0", "RandomTestToken0", chainlinkPriceFeed.address)
 
     return { baseToken, chainlinkPriceFeed, mockedAggregator, bandPriceFeed, mockedStdReference }
+}
+
+export async function baseTokenEmptyFixture(): Promise<BaseTokenEmptyFixture> {
+    const baseTokenFactory = await ethers.getContractFactory("BaseToken")
+    const baseToken = (await baseTokenFactory.deploy()) as BaseToken
+    await baseToken.initialize("RandomTestToken0", "RandomTestToken0", ethers.constants.AddressZero)
+
+    return { baseToken }
 }
