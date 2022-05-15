@@ -42,17 +42,6 @@ jobs:
             - name: Build contract package
               run: npm run build
 
-            - name: Build deps
-              run: |
-                cd deps/perpdex-oracle-contract
-                npm install
-                npm run build
-                cd ../../
-                mkdir -p typechain/perp-oracle
-                cp -r deps/perpdex-oracle-contract/typechain/* typechain/perp-oracle/
-                ls -la typechain
-                ls -la deps/perpdex-oracle-contract/typechain
-
             - name: Run contract tests
               run: npm run test
               env:

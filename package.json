@@ -1,5 +1,5 @@
 {
-  "name": "@perp/curie-contract",
+  "name": "@perpdex/perpdex-contract",
   "version": "1.0.15",
   "description": "Perpetual Protocol Curie (v2) core contracts",
   "license": "GPL-3.0-or-later",
@@ -29,7 +29,7 @@
   "scripts": {
     "typechain": "npm run typechain-openzeppelin && npm run typechain-perp-oracle",
     "typechain-openzeppelin": "typechain --target ethers-v5 --out-dir ./typechain/openzeppelin './node_modules/@openzeppelin/contracts/build/contracts/**/*.json'",
-    "typechain-perp-oracle": "typechain --target ethers-v5 --out-dir ./typechain/perp-oracle './deps/perpdex-oracle-contract/artifacts/contracts/**/*[!dbg].json'",
+    "typechain-perp-oracle": "typechain --target ethers-v5 --out-dir ./typechain/perp-oracle './node_modules/@perpdex/perpdex-oracle-contract/artifacts/contracts/**/*.json'",
     "clean": "rm -rf typechain && rm -rf artifacts && rm -rf cache",
     "test": "hardhat test",
     "parallel-test": "hardhat test --parallel",
@@ -39,6 +39,7 @@
     "lint-contracts": "solhint 'contracts/**/*.sol'",
     "lint-tests": "if grep -qr 'test' -e '.only('; then echo 'found .only() in tests'; exit 1; else echo 'not found .only() in tests'; fi",
     "lint-staged": "lint-staged",
+    "postinstall": "npm run build",
     "prepack": "ts-node --files scripts/prepack.ts",
     "flatten": "ts-node --files scripts/flatten.ts",
     "slither": "ts-node --files scripts/slither.ts",
@@ -59,7 +60,7 @@
     "@openzeppelin/contracts": "3.4.0",
     "@openzeppelin/contracts-upgradeable": "3.4.2",
     "@openzeppelin/hardhat-upgrades": "1.10.0",
-    "@perp/perp-oracle-contract": "0.3.0",
+    "@perpdex/perpdex-oracle-contract": "github:perpdex/perpdex-oracle-contract#e9db1f09400b42cba2abdfe73ab85b88dfff6e90",
     "@typechain/ethers-v5": "7.0.0",
     "@typechain/hardhat": "2.0.1",
     "@types/chai": "4.2.18",
