@@ -155,6 +155,19 @@ contract AccountBalancePerpdex is IAccountBalance, BlockContext, ClearingHouseCa
         _accountMarketMap[trader][baseToken].lastTwPremiumGrowthGlobalX96 = lastTwPremiumGrowthGlobalX96;
     }
 
+    function settlePositionInClosedMarket(address trader, address baseToken)
+        external
+        override
+        returns (
+            int256 positionNotional,
+            int256 openNotional,
+            int256 realizedPnl,
+            uint256 closedPrice
+        )
+    {
+        require(false, "not implemented");
+    }
+
     //
     // EXTERNAL VIEW
     //

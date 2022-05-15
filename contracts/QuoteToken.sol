@@ -29,6 +29,10 @@ contract QuoteToken is IIndexPrice, IBaseToken, VirtualToken, QuoteTokenStorageV
         emit PriceFeedChanged(_priceFeed);
     }
 
+    function close() external override {
+        require(false, "not implemented");
+    }
+
     //
     // EXTERNAL VIEW
     //
@@ -41,6 +45,30 @@ contract QuoteToken is IIndexPrice, IBaseToken, VirtualToken, QuoteTokenStorageV
 
     function getPriceFeed() external view override returns (address) {
         return _priceFeed;
+    }
+
+    function getPausedTimestamp() external view override returns (uint256) {
+        require(false, "not implemented");
+    }
+
+    function getPausedIndexPrice() external view override returns (uint256) {
+        require(false, "not implemented");
+    }
+
+    function getClosedPrice() external view override returns (uint256) {
+        require(false, "not implemented");
+    }
+
+    function isOpen() external view override returns (bool) {
+        require(false, "not implemented");
+    }
+
+    function isPaused() external view override returns (bool) {
+        require(false, "not implemented");
+    }
+
+    function isClosed() external view override returns (bool) {
+        require(false, "not implemented");
     }
 
     //
