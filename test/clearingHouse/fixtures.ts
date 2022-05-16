@@ -83,9 +83,15 @@ export function createClearingHouseFixture(
         const aggregatorFactory = await ethers.getContractFactory("TestAggregatorV3")
         const aggregator = await aggregatorFactory.deploy()
         const chainlinkPriceFeedFactory = await ethers.getContractFactory("ChainlinkPriceFeed")
-        const wethPriceFeed = (await chainlinkPriceFeedFactory.deploy(aggregator.address)) as ChainlinkPriceFeed
+        const wethPriceFeed = (await chainlinkPriceFeedFactory.deploy(
+            aggregator.address,
+            15 * 60,
+        )) as ChainlinkPriceFeed
         const mockedWethPriceFeed = await smockit(wethPriceFeed)
-        const wbtcPriceFeed = (await chainlinkPriceFeedFactory.deploy(aggregator.address)) as ChainlinkPriceFeed
+        const wbtcPriceFeed = (await chainlinkPriceFeedFactory.deploy(
+            aggregator.address,
+            15 * 60,
+        )) as ChainlinkPriceFeed
         const mockedWbtcPriceFeed = await smockit(wbtcPriceFeed)
         mockedWethPriceFeed.smocked.decimals.will.return.with(18)
         mockedWbtcPriceFeed.smocked.decimals.will.return.with(18)

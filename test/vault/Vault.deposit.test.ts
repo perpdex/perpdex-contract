@@ -140,10 +140,10 @@ describe("Vault deposit test", () => {
         it("force error, not enough balance", async () => {
             const amount = parseUnits("1100", await usdc.decimals())
             await expect(vault.connect(alice).deposit(usdc.address, amount)).to.be.revertedWith(
-                "revert ERC20: transfer amount exceeds balance",
+                "ERC20: transfer amount exceeds balance",
             )
             await expect(vault.connect(alice).depositFor(bob.address, usdc.address, amount)).to.be.revertedWith(
-                "revert ERC20: transfer amount exceeds balance",
+                "ERC20: transfer amount exceeds balance",
             )
         })
 

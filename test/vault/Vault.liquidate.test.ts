@@ -263,7 +263,10 @@ describe("Vault test", () => {
             const aggregatorFactory = await ethers.getContractFactory("TestAggregatorV3")
             const aggregator = await aggregatorFactory.deploy()
             const chainlinkPriceFeedFactory = await ethers.getContractFactory("ChainlinkPriceFeed")
-            const xxxPriceFeed = (await chainlinkPriceFeedFactory.deploy(aggregator.address)) as ChainlinkPriceFeed
+            const xxxPriceFeed = (await chainlinkPriceFeedFactory.deploy(
+                aggregator.address,
+                15 * 60,
+            )) as ChainlinkPriceFeed
             const mockedXxxPriceFeed = await smockit(xxxPriceFeed)
 
             // set xxx oracle price with 18 decimals
@@ -306,10 +309,10 @@ describe("Vault test", () => {
                 vault
                     .connect(david)
                     .liquidateCollateral(alice.address, weth.address, parseUnits("1", usdcDecimals), true),
-            ).to.be.revertedWith("revert ERC20: transfer amount exceeds balance")
+            ).to.be.revertedWith("ERC20: transfer amount exceeds balance")
             await expect(
                 vault.connect(david).liquidateCollateral(alice.address, weth.address, parseEther("0.01"), false),
-            ).to.be.revertedWith("revert ERC20: transfer amount exceeds balance")
+            ).to.be.revertedWith("ERC20: transfer amount exceeds balance")
         })
 
         describe("# liquidateCollateral by settlement token", async () => {

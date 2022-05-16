@@ -68,7 +68,7 @@ describe("CollateralManager spec", () => {
         const aggregatorFactory = await ethers.getContractFactory("TestAggregatorV3")
         const aggregator = await aggregatorFactory.deploy()
         const chainlinkPriceFeedFactory = await ethers.getContractFactory("ChainlinkPriceFeed")
-        priceFeed = (await chainlinkPriceFeedFactory.deploy(aggregator.address)) as ChainlinkPriceFeed
+        priceFeed = (await chainlinkPriceFeedFactory.deploy(aggregator.address, 15 * 60)) as ChainlinkPriceFeed
         fixture = await loadFixture(createClearingHouseFixture())
         clearingHouseConfig = fixture.clearingHouseConfig
         vault = fixture.vault
@@ -417,7 +417,10 @@ describe("CollateralManager spec", () => {
             const aggregatorFactory = await ethers.getContractFactory("TestAggregatorV3")
             const aggregator = await aggregatorFactory.deploy()
             const chainlinkPriceFeedFactory = await ethers.getContractFactory("ChainlinkPriceFeed")
-            const newPriceFeed = (await chainlinkPriceFeedFactory.deploy(aggregator.address)) as ChainlinkPriceFeed
+            const newPriceFeed = (await chainlinkPriceFeedFactory.deploy(
+                aggregator.address,
+                15 * 60,
+            )) as ChainlinkPriceFeed
 
             await expect(collateralManager.setPriceFeed(USDT.address, newPriceFeed.address)).to.emit(
                 collateralManager,
