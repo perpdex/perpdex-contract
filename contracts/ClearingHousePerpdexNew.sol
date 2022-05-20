@@ -21,17 +21,18 @@ contract ClearingHousePerpdex is IClearingHousePerpdex, ReentrancyGuard {
     mapping(address => PerpdexStructs.AccountInfo) public accountInfos;
     // baseToken
     mapping(address => PerpdexStructs.PriceLimitInfo) public priceLimitInfos;
+    PerpdexStructs.InsuranceFundInfo public insuranceFundInfo;
 
     // config
     address immutable quoteToken;
     address immutable uniV2Factory;
     PerpdexStructs public priceLimitConfig;
     uint8 public maxMarketsPerAccount;
-    uint24 public imRatioMicro;
-    uint24 public mmRatioMicro;
-    uint24 public liquidationRewardRatioMicro;
+    uint24 public imRatio;
+    uint24 public mmRatio;
+    uint24 public liquidationRewardRatio;
     uint32 public twapInterval;
-    uint24 public maxFundingRateMicro;
+    uint24 public maxFundingRateRatio;
 
     //
     // MODIFIER
@@ -223,17 +224,23 @@ contract ClearingHousePerpdex is IClearingHousePerpdex, ReentrancyGuard {
         address baseToken,
         uint256 oppositeAmountBound
     ) external override nonReentrant returns (uint256 base, uint256 quote) {
+        address liquidator = _msgSender();
+
         TakerLibrary.LiquidateResponse memory response =
             TakerLibrary.liquidate(
                 accountInfos[trader],
+                accountInfos[liquidator],
                 priceLimitInfos[params.baseToken],
+                insuranceFundInfo,
                 TakerLibrary.LiquidateParams({
                     baseToken: params.baseToken,
                     amount: params.amount,
                     oppositeAmountBound: params.oppositeAmountBound,
                     deadline: params.deadline,
                     poolFactory: uniV2Factory,
-                    priceLimitConfig: priceLimitConfig
+                    priceLimitConfig: priceLimitConfig,
+                    mmRatio: mmRatio,
+                    liquidationRewardRatio: liquidationRewardRatio
                 })
             );
 

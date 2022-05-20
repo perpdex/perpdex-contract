@@ -25,6 +25,10 @@ library PerpdexStructs {
         VaultInfo vaultInfo;
     }
 
+    struct InsuranceFundInfo {
+        int256 balance;
+    }
+
     struct PriceLimitInfo {
         uint256 referencePrice;
         uint256 referenceTimestamp;

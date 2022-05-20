@@ -34,7 +34,7 @@ library PriceLimitLibrary {
         uint256 referencePrice,
         uint256 price,
         uint256 priceLimitMicro
-    ) internal view returns (bool) {
+    ) private view returns (bool) {
         uint256 maxChange = FullMath.mulDiv(referencePrice, priceLimitMicro, 1e6);
         uint256 upperBound = referencePrice.add(maxChange);
         uint256 lowerBound = referencePrice.sub(maxChange);

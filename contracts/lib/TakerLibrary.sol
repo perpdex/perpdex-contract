@@ -40,6 +40,15 @@ library TakerLibrary {
         PerpdexStructs.PriceLimitConfig priceLimitConfig;
     }
 
+    struct ClosePositionResponse {
+        address baseToken;
+        address quoteToken;
+        uint256 oppositeAmountBound;
+        uint256 deadline;
+        address poolFactory;
+        PerpdexStructs.PriceLimitConfig priceLimitConfig;
+    }
+
     struct LiquidateParams {
         address baseToken;
         address quoteToken;
@@ -48,6 +57,8 @@ library TakerLibrary {
         uint256 deadline;
         address poolFactory;
         PerpdexStructs.PriceLimitConfig priceLimitConfig;
+        uint256 mmRatio;
+        uint256 liquidationRewardRatio;
     }
 
     modifier checkDeadline(uint256 deadline) {
@@ -65,7 +76,7 @@ library TakerLibrary {
 
         uint256 price;
         PriceLimitLibrary.update(priceLimitInfo, price);
-        require(PriceLimitLibrary.isNormalOrderAllowed(priceLimitInfo, params.priceLimitConfig, price));
+        //        require(PriceLimitLibrary.isNormalOrderAllowed(priceLimitInfo, params.priceLimitConfig, price));
 
         _doSwap(
             accountInfo.takerInfo[params.baseToken],
@@ -93,7 +104,7 @@ library TakerLibrary {
 
         uint256 price;
         PriceLimitLibrary.update(priceLimitInfo, price);
-        require(PriceLimitLibrary.isNormalOrderAllowed(priceLimitInfo, params.priceLimitConfig, price));
+        //        require(PriceLimitLibrary.isNormalOrderAllowed(priceLimitInfo, params.priceLimitConfig, price));
 
         PerpdexStructs.TakerInfo storage takerInfo = accountInfo.takerInfo[params.baseToken];
         bool isLong = takerInfo.baseBalanceShare > 0 ? true : false;
@@ -116,14 +127,16 @@ library TakerLibrary {
 
     function liquidate(
         PerpdexStructs.AccountInfo storage accountInfo,
+        PerpdexStructs.AccountInfo storage liquidatorAccountInfo,
         PerpdexStructs.PriceLimitInfo storage priceLimitInfo,
+        PerpdexStructs.InsuranceFundInfo storage insuranceFundInfo,
         LiquidateParams memory params
     ) public checkDeadline(params.deadline) returns (uint256) {
         require(AccountLibrary.isLiquidatable(accountInfo));
 
         uint256 price;
         PriceLimitLibrary.update(priceLimitInfo, price);
-        require(PriceLimitLibrary.isLiquidationAllowed(priceLimitInfo, params.priceLimitConfig, price));
+        //        require(PriceLimitLibrary.isLiquidationAllowed(priceLimitInfo, params.priceLimitConfig, price));
 
         PerpdexStructs.TakerInfo storage takerInfo = accountInfo.takerInfo[params.baseToken];
         bool isLong = takerInfo.baseBalanceShare > 0 ? true : false;
@@ -142,10 +155,32 @@ library TakerLibrary {
 
         require(PriceLimitLibrary.isLiquidationAllowed(priceLimitInfo, params.priceLimitConfig, price));
 
-        // TODO: liquidation
-        //        _processLiquidationFee();
+        _processLiquidationFee(
+            accountInfo.vaultInfo,
+            liquidatorAccountInfo.vaultInfo,
+            insuranceFundInfo,
+            params.mmRatio,
+            params.liquidationRewardRatio,
+            quote.abs()
+        );
 
         return 0;
+    }
+
+    function addToTakerBalance(
+        PerpdexStructs.TakerInfo storage takerInfo,
+        address baseToken,
+        int256 baseBalance,
+        int256 quoteBalance
+    ) public {
+        int256 share;
+        if (baseBalance < 0) {
+            share = -IBaseToken(baseToken).balanceToShare((-baseBalance));
+        } else {
+            share = IBaseToken(baseToken).balanceToShare(baseBalance);
+        }
+        takerInfo.baseBalanceShare = takerInfo.baseBalanceShare.add(share);
+        takerInfo.quoteBalance = takerInfo.quoteBalance.add(quoteBalance);
     }
 
     function _doSwap(
@@ -187,42 +222,22 @@ library TakerLibrary {
         return (exchangedPositionSize, exchangedPositionNotional);
     }
 
-    //    function _processLiquidationFee(
-    //        address trader,
-    //        address liquidator,
-    //        int256 exchangedPositionNotional
-    //    ) private returns (uint256) {
-    //        // trader's pnl-- as liquidation penalty
-    //        uint256 liquidationFee =
-    //        exchangedPositionNotional.abs().mulRatio(
-    //            IClearingHouseConfig(_clearingHouseConfig).getLiquidationPenaltyRatio()
-    //        );
-    //
-    //        IAccountBalance(_accountBalance).modifyOwedRealizedPnl(trader, liquidationFee.neg256());
-    //
-    //        uint256 liquidatorReward = liquidationFee / 2;
-    //        uint256 insuranceFundReward = liquidationFee - liquidatorReward;
-    //
-    //        // increase liquidator's pnl liquidation reward
-    //        IAccountBalance(_accountBalance).modifyOwedRealizedPnl(liquidator, liquidatorReward.toInt256());
-    //        IAccountBalance(_accountBalance).modifyOwedRealizedPnl(_insuranceFund, insuranceFundReward.toInt256());
-    //
-    //        return liquidationFee;
-    //    }
+    function _processLiquidationFee(
+        PerpdexStructs.VaultInfo storage vaultInfo,
+        PerpdexStructs.VaultInfo storage liquidatorVaultInfo,
+        PerpdexStructs.InsuranceFundInfo storage insuranceFundInfo,
+        uint256 mmRatio,
+        uint256 liquidatorRewardRatio,
+        uint256 exchangedQuote
+    ) private returns (uint256) {
+        uint256 penalty = exchangedQuote.mulRatio(mmRatio);
+        uint256 liquidatorReward = penalty.mulRatio(liquidatorRewardRatio);
+        uint256 insuranceFundReward = penalty.sub(liquidatorReward);
 
-    function addToTakerBalance(
-        PerpdexStructs.TakerInfo storage takerInfo,
-        address baseToken,
-        int256 baseBalance,
-        int256 quoteBalance
-    ) public {
-        int256 share;
-        if (baseBalance < 0) {
-            share = -IBaseToken(baseToken).balanceToShare((-baseBalance));
-        } else {
-            share = IBaseToken(baseToken).balanceToShare(baseBalance);
-        }
-        takerInfo.baseBalanceShare = takerInfo.baseBalanceShare.add(share);
-        takerInfo.quoteBalance = takerInfo.quoteBalance.add(quoteBalance);
+        vaultInfo.collateralBalance = vaultInfo.collateralBalance.sub(penalty);
+        liquidatorVaultInfo.collateralBalance = liquidatorVaultInfo.collateralBalance.add(insuranceFundReward);
+        insuranceFundInfo.balance = insuranceFundInfo.balance.add(insuranceFundReward);
+
+        return penalty;
     }
 }
