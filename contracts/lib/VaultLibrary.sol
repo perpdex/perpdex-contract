@@ -1,13 +1,21 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity 0.7.6;
+pragma abicoder v2;
 
+import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
+import { SignedSafeMath } from "@openzeppelin/contracts/math/SignedSafeMath.sol";
 import { IERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import { SafeERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/SafeERC20Upgradeable.sol";
 import { IERC20Metadata } from "../interface/IERC20Metadata.sol";
+import { PerpSafeCast } from "./PerpSafeCast.sol";
 import "./AccountLibrary.sol";
 import "./PerpdexStructs.sol";
 
 library VaultLibrary {
+    using PerpSafeCast for uint256;
+    using SafeMath for uint256;
+    using SignedSafeMath for int256;
+
     struct DepositParams {
         address token;
         uint256 amount;
@@ -20,13 +28,13 @@ library VaultLibrary {
         address to;
     }
 
-    function deposit(PerpdexStructs.AccountInfo storage accountInfo, DepositParams memory params) public {
+    function deposit(PerpdexStructs.AccountInfo storage accountInfo, DepositParams calldata params) public {
         _transferTokenIn(params.token, params.from, params.amount);
-        accountInfo.vaultInfo.collateralBalance = accountInfo.vaultInfo.collateralBalance.add(params.amount);
+        accountInfo.vaultInfo.collateralBalance = accountInfo.vaultInfo.collateralBalance.add(params.amount.toInt256());
     }
 
-    function withdraw(PerpdexStructs.AccountInfo storage accountInfo, WithdrawParams memory params) public {
-        accountInfo.vaultInfo.collateralBalance = accountInfo.vaultInfo.collateralBalance.sub(params.amount);
+    function withdraw(PerpdexStructs.AccountInfo storage accountInfo, WithdrawParams calldata params) public {
+        accountInfo.vaultInfo.collateralBalance = accountInfo.vaultInfo.collateralBalance.sub(params.amount.toInt256());
         require(AccountLibrary.hasEnoughInitialMargin(accountInfo));
 
         SafeERC20Upgradeable.safeTransfer(IERC20Upgradeable(params.token), params.to, params.amount);

@@ -5,16 +5,20 @@ pragma abicoder v2;
 import { AddressUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
 import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import { IERC20Metadata } from "./interface/IERC20Metadata.sol";
-import { BlockContext } from "./base/BlockContext.sol";
-import { IClearingHousePerpdex } from "./interface/IClearingHousePerpdex.sol";
+import { IClearingHousePerpdexNew } from "./interface/IClearingHousePerpdexNew.sol";
 import { PerpdexStructs } from "./lib/PerpdexStructs.sol";
+import { AccountLibrary } from "./lib/AccountLibrary.sol";
 import { MakerLibrary } from "./lib/MakerLibrary.sol";
 import { TakerLibrary } from "./lib/TakerLibrary.sol";
 import { VaultLibrary } from "./lib/VaultLibrary.sol";
+import { PerpMath } from "./lib/PerpMath.sol";
+import { PerpSafeCast } from "./lib/PerpSafeCast.sol";
 
 // never inherit any new stateful contract. never change the orders of parent stateful contracts
-contract ClearingHousePerpdex is IClearingHousePerpdex, ReentrancyGuard {
+contract ClearingHousePerpdexNew is IClearingHousePerpdexNew, ReentrancyGuard {
     using AddressUpgradeable for address;
+    using PerpMath for uint256;
+    using PerpSafeCast for uint256;
 
     // states
     // trader
@@ -26,7 +30,7 @@ contract ClearingHousePerpdex is IClearingHousePerpdex, ReentrancyGuard {
     // config
     address immutable quoteToken;
     address immutable uniV2Factory;
-    PerpdexStructs public priceLimitConfig;
+    PerpdexStructs.PriceLimitConfig public priceLimitConfig;
     uint8 public maxMarketsPerAccount;
     uint24 public imRatio;
     uint24 public mmRatio;
@@ -55,100 +59,27 @@ contract ClearingHousePerpdex is IClearingHousePerpdex, ReentrancyGuard {
     }
 
     function deposit(address token, uint256 amount) external override nonReentrant {
-        VaultLibrary.deposit(VaultLibrary.DepositParams({ token: token, amount: amount }));
+        address trader = _msgSender();
+        VaultLibrary.deposit(
+            accountInfos[trader],
+            VaultLibrary.DepositParams({ token: token, amount: amount, from: trader })
+        );
     }
 
     function withdraw(address token, uint256 amount) external override nonReentrant {
-        VaultLibrary.withdraw(VaultLibrary.WithdrawParams({ token: token, amount: amount }));
-    }
-
-    /// @inheritdoc IClearingHousePerpdex
-    function addLiquidity(AddLiquidityParams calldata params)
-        external
-        override
-        nonReentrant
-        returns (AddLiquidityResponse memory)
-    {
-        address maker = _msgSender();
-
-        MakerLibrary.AddLiquidityResponse memory response =
-            MakerLibrary.addLiquidity(
-                accountInfos[maker],
-                priceLimitInfos[params.baseToken],
-                TakerLibrary.OpenPositionParams({
-                    baseToken: params.baseToken,
-                    isBaseToQuote: params.isBaseToQuote,
-                    isExactInput: params.isExactInput,
-                    amount: params.amount,
-                    oppositeAmountBound: params.oppositeAmountBound,
-                    deadline: params.deadline,
-                    poolFactory: uniV2Factory,
-                    priceLimitConfig: priceLimitConfig
-                })
-            );
-
-        emit LiquidityChanged(
-            maker,
-            params.baseToken,
-            quoteToken,
-            response.base.toInt256(),
-            response.quote.toInt256(),
-            response.liquidity.toInt128(),
-            response.fee
+        address trader = _msgSender();
+        VaultLibrary.withdraw(
+            accountInfos[trader],
+            VaultLibrary.WithdrawParams({ token: token, amount: amount, to: trader })
         );
-
-        return response;
     }
 
-    /// @inheritdoc IClearingHousePerpdex
-    function removeLiquidity(RemoveLiquidityParams calldata params)
+    /// @inheritdoc IClearingHousePerpdexNew
+    function openPosition(OpenPositionParams calldata params)
         external
         override
         nonReentrant
-        returns (RemoveLiquidityResponse memory)
-    {
-        address maker = _msgSender();
-
-        RemoveLiquidityResponse memory response = MakerLibrary.removeLiquidity(accountInfos[maker], params);
-
-        emit LiquidityChanged(
-            maker,
-            params.baseToken,
-            quoteToken,
-            response.base.toInt256(),
-            response.quote.toInt256(),
-            response.liquidity.toInt128(),
-            response.fee
-        );
-
-        //        emit PositionChanged(
-        //            maker,
-        //            params.baseToken,
-        //            response.takerBase, // exchangedPositionSize
-        //            response.takerQuote, // exchangedPositionNotional
-        //            0,
-        //            takerOpenNotional, // openNotional
-        //            realizedPnl, // realizedPnl
-        //            sqrtPrice
-        //        );
-
-        return response;
-    }
-
-    /// @inheritdoc IClearingHousePerpdex
-    function liquidateMaker(address maker, address baseToken) external override nonReentrant {
-        //        MakerLibrary.liquidate(
-        //            accountInfos[maker],
-        //            params
-        //        );
-    }
-
-    /// @inheritdoc IClearingHousePerpdex
-    function openPosition(OpenPositionParams memory params)
-        external
-        override
-        nonReentrant
-        returns (uint256 base, uint256 quote)
+        returns (int256 base, int256 quote)
     {
         address trader = _msgSender();
 
@@ -158,45 +89,10 @@ contract ClearingHousePerpdex is IClearingHousePerpdex, ReentrancyGuard {
                 priceLimitInfos[params.baseToken],
                 TakerLibrary.OpenPositionParams({
                     baseToken: params.baseToken,
+                    quoteToken: quoteToken,
                     isBaseToQuote: params.isBaseToQuote,
                     isExactInput: params.isExactInput,
                     amount: params.amount,
-                    oppositeAmountBound: params.oppositeAmountBound,
-                    deadline: params.deadline,
-                    poolFactory: uniV2Factory,
-                    priceLimitConfig: priceLimitConfig
-                })
-            );
-
-        //        emit PositionChanged(
-        //            trader,
-        //            params.baseToken,
-        //            response.exchangedPositionSize,
-        //            response.exchangedPositionNotional,
-        //            response.fee,
-        //            openNotional,
-        //            response.pnlToBeRealized,
-        //            response.sqrtPriceAfterX96
-        //        );
-
-        return (response.base, response.quote);
-    }
-
-    /// @inheritdoc IClearingHousePerpdex
-    function closePosition(ClosePositionParams calldata params)
-        external
-        override
-        nonReentrant
-        returns (uint256 base, uint256 quote)
-    {
-        address trader = _msgSender();
-
-        TakerLibrary.ClosePositionResponse memory response =
-            TakerLibrary.closePosition(
-                accountInfos[trader],
-                priceLimitInfos[params.baseToken],
-                TakerLibrary.ClosePositionParams({
-                    baseToken: params.baseToken,
                     oppositeAmountBound: params.oppositeAmountBound,
                     deadline: params.deadline,
                     poolFactory: uniV2Factory,
@@ -207,23 +103,24 @@ contract ClearingHousePerpdex is IClearingHousePerpdex, ReentrancyGuard {
         emit PositionChanged(
             trader,
             params.baseToken,
-            response.exchangedPositionSize,
-            response.exchangedPositionNotional,
-            response.fee,
-            openNotional,
-            response.pnlToBeRealized,
-            response.sqrtPriceAfterX96
+            response.exchangedBase,
+            response.exchangedQuote,
+            accountInfos[trader].takerInfo[params.baseToken].quoteBalance,
+            response.realizedPnL,
+            response.priceAfterX96
         );
 
-        return (response.base, response.quote);
+        return (response.exchangedBase, response.exchangedQuote);
     }
 
-    /// @inheritdoc IClearingHousePerpdex
-    function liquidateTaker(
-        address trader,
-        address baseToken,
-        uint256 oppositeAmountBound
-    ) external override nonReentrant returns (uint256 base, uint256 quote) {
+    /// @inheritdoc IClearingHousePerpdexNew
+    function liquidate(LiquidateParams calldata params)
+        external
+        override
+        nonReentrant
+        returns (int256 base, int256 quote)
+    {
+        address trader = params.trader;
         address liquidator = _msgSender();
 
         TakerLibrary.LiquidateResponse memory response =
@@ -234,6 +131,7 @@ contract ClearingHousePerpdex is IClearingHousePerpdex, ReentrancyGuard {
                 insuranceFundInfo,
                 TakerLibrary.LiquidateParams({
                     baseToken: params.baseToken,
+                    quoteToken: quoteToken,
                     amount: params.amount,
                     oppositeAmountBound: params.oppositeAmountBound,
                     deadline: params.deadline,
@@ -247,42 +145,122 @@ contract ClearingHousePerpdex is IClearingHousePerpdex, ReentrancyGuard {
         emit PositionChanged(
             trader,
             params.baseToken,
-            response.exchangedPositionSize,
-            response.exchangedPositionNotional,
-            response.fee,
-            openNotional,
-            response.pnlToBeRealized,
-            response.sqrtPriceAfterX96
+            response.exchangedBase,
+            response.exchangedQuote,
+            accountInfos[trader].takerInfo[params.baseToken].quoteBalance,
+            response.realizedPnL,
+            response.priceAfterX96
         );
 
-        return (response.base, response.quote);
+        return (response.exchangedBase, response.exchangedQuote);
+    }
+
+    /// @inheritdoc IClearingHousePerpdexNew
+    function addLiquidity(AddLiquidityParams calldata params)
+        external
+        override
+        nonReentrant
+        returns (AddLiquidityResponse memory)
+    {
+        address maker = _msgSender();
+
+        MakerLibrary.AddLiquidityResponse memory response =
+            MakerLibrary.addLiquidity(
+                accountInfos[maker],
+                MakerLibrary.AddLiquidityParams({
+                    baseToken: params.baseToken,
+                    quoteToken: quoteToken,
+                    base: params.base,
+                    quote: params.quote,
+                    minBase: params.minBase,
+                    minQuote: params.minQuote,
+                    deadline: params.deadline,
+                    poolFactory: uniV2Factory
+                })
+            );
+
+        emit LiquidityChanged(
+            maker,
+            params.baseToken,
+            quoteToken,
+            response.base.toInt256(),
+            response.quote.toInt256(),
+            response.liquidity.toInt256()
+        );
+
+        return AddLiquidityResponse({ base: response.base, quote: response.quote, liquidity: response.liquidity });
+    }
+
+    /// @inheritdoc IClearingHousePerpdexNew
+    function removeLiquidity(RemoveLiquidityParams calldata params)
+        external
+        override
+        returns (RemoveLiquidityResponse memory)
+    {
+        return removeLiquidity(params, _msgSender());
+    }
+
+    /// @inheritdoc IClearingHousePerpdexNew
+    function removeLiquidity(RemoveLiquidityParams calldata params, address maker)
+        public
+        override
+        nonReentrant
+        returns (RemoveLiquidityResponse memory)
+    {
+        MakerLibrary.RemoveLiquidityResponse memory response =
+            MakerLibrary.removeLiquidity(
+                accountInfos[maker],
+                MakerLibrary.RemoveLiquidityParams({
+                    baseToken: params.baseToken,
+                    quoteToken: quoteToken,
+                    liquidity: params.liquidity,
+                    minBase: params.minBase,
+                    minQuote: params.minQuote,
+                    deadline: params.deadline,
+                    poolFactory: uniV2Factory,
+                    makerIsSender: maker == _msgSender()
+                })
+            );
+
+        emit LiquidityChanged(
+            maker,
+            params.baseToken,
+            quoteToken,
+            response.base.neg256(),
+            response.quote.neg256(),
+            params.liquidity.neg256()
+        );
+
+        emit PositionChanged(
+            maker,
+            params.baseToken,
+            response.takerBase, // exchangedPositionSize
+            response.takerQuote, // exchangedPositionNotional
+            accountInfos[maker].takerInfo[params.baseToken].quoteBalance,
+            response.realizedPnL, // realizedPnl
+            response.priceAfterX96
+        );
+
+        return RemoveLiquidityResponse({ base: response.base, quote: response.quote });
     }
 
     //
     // EXTERNAL VIEW
     //
 
-    //    /// @inheritdoc IClearingHousePerpdex
-    //    function getQuoteToken() external view override returns (address) {
-    //        return _quoteToken;
-    //    }
-    //
-    //    /// @inheritdoc IClearingHousePerpdex
-    //    function getUniswapV2Factory() external view override returns (address) {
-    //        return _uniswapV2Factory;
-    //    }
+    // all raw information can be retrieved through getters (including default getters)
 
-    /// @inheritdoc IClearingHousePerpdex
-    function getClearingHouseConfig() external view override returns (address) {
-        return _clearingHouseConfig;
+    function getTakerInfo(address trader, address baseToken) external returns (PerpdexStructs.TakerInfo memory) {
+        return accountInfos[trader].takerInfo[baseToken];
     }
 
-    /// @inheritdoc IClearingHousePerpdex
-    function getInsuranceFund() external view override returns (address) {
-        return _insuranceFund;
+    function getOrderInfo(address trader, address baseToken) external returns (PerpdexStructs.OrderInfo memory) {
+        return accountInfos[trader].orderInfo[baseToken];
     }
 
-    /// @inheritdoc IClearingHousePerpdex
+    // convenient getters
+
+    /// @inheritdoc IClearingHousePerpdexNew
     function getAccountValue(address trader) public view override returns (int256) {
         return AccountLibrary.getAccountValue(accountInfos[trader]);
     }

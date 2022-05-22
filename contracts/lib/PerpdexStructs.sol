@@ -8,9 +8,9 @@ library PerpdexStructs {
     }
 
     struct OrderInfo {
-        int256 baseDebtShare;
-        int256 quoteDebt;
-        uint128 liquidity;
+        uint256 baseDebtShare;
+        uint256 quoteDebt;
+        uint256 liquidity;
     }
 
     struct VaultInfo {
