@@ -3,11 +3,12 @@ pragma solidity 0.7.6;
 pragma abicoder v2;
 
 import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
-import "@uniswap/lib/contracts/libraries/FullMath.sol";
+import { PerpMath } from "./PerpMath.sol";
 import "./PerpdexStructs.sol";
 
 // internal
 library PriceLimitLibrary {
+    using PerpMath for uint256;
     using SafeMath for uint256;
 
     function isNormalOrderAllowed(
@@ -15,7 +16,7 @@ library PriceLimitLibrary {
         PerpdexStructs.PriceLimitConfig calldata config,
         uint256 price
     ) internal view returns (bool) {
-        return _isWithinPriceLimit(priceLimitInfo.referencePrice, price, config.priceLimitNormalOrderMicro);
+        return _isWithinPriceLimit(priceLimitInfo.referencePrice, price, config.priceLimitNormalOrderRatio);
     }
 
     function isLiquidationAllowed(
@@ -23,7 +24,7 @@ library PriceLimitLibrary {
         PerpdexStructs.PriceLimitConfig calldata config,
         uint256 price
     ) internal view returns (bool) {
-        return _isWithinPriceLimit(priceLimitInfo.referencePrice, price, config.priceLimitLiquidationMicro);
+        return _isWithinPriceLimit(priceLimitInfo.referencePrice, price, config.priceLimitLiquidationRatio);
     }
 
     // should call before all price changes
@@ -37,9 +38,9 @@ library PriceLimitLibrary {
     function _isWithinPriceLimit(
         uint256 referencePrice,
         uint256 price,
-        uint256 priceLimitMicro
+        uint24 priceLimitRatio
     ) private pure returns (bool) {
-        uint256 maxChange = FullMath.mulDiv(referencePrice, priceLimitMicro, 1e6);
+        uint256 maxChange = referencePrice.mulRatio(priceLimitRatio);
         uint256 upperBound = referencePrice.add(maxChange);
         uint256 lowerBound = referencePrice.sub(maxChange);
         return (lowerBound <= price && price <= upperBound);

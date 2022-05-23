@@ -33,6 +33,7 @@ library TakerLibrary {
         bool isBaseTokenAllowed;
         uint24 mmRatio;
         uint24 imRatio;
+        uint8 maxMarketsPerAccount;
     }
 
     struct OpenPositionResponse {
@@ -52,6 +53,7 @@ library TakerLibrary {
         PerpdexStructs.PriceLimitConfig priceLimitConfig;
         uint24 mmRatio;
         uint24 liquidationRewardRatio;
+        uint8 maxMarketsPerAccount;
     }
 
     struct LiquidateResponse {
@@ -89,7 +91,8 @@ library TakerLibrary {
                 params.quoteToken,
                 params.isBaseToQuote,
                 params.isExactInput,
-                params.amount
+                params.amount,
+                params.maxMarketsPerAccount
             );
 
         if (!params.isBaseTokenAllowed) {
@@ -128,9 +131,12 @@ library TakerLibrary {
             )
         );
 
-        PerpdexStructs.TakerInfo storage takerInfo = accountInfo.takerInfo[params.baseToken];
-        bool isLong = takerInfo.baseBalanceShare > 0 ? true : false;
-        require(params.amount <= IBaseTokenNew(params.baseToken).shareToBalance(takerInfo.baseBalanceShare.abs()));
+        bool isLong;
+        {
+            PerpdexStructs.TakerInfo storage takerInfo = accountInfo.takerInfo[params.baseToken];
+            isLong = takerInfo.baseBalanceShare > 0 ? true : false;
+            require(params.amount <= IBaseTokenNew(params.baseToken).shareToBalance(takerInfo.baseBalanceShare.abs()));
+        }
 
         (int256 exchangedBase, int256 exchangedQuote, int256 realizedPnL) =
             _doSwap(
@@ -141,7 +147,8 @@ library TakerLibrary {
                 params.quoteToken,
                 isLong, // isBaseToQuote,
                 isLong, // isExactInput,
-                params.amount
+                params.amount,
+                params.maxMarketsPerAccount
             );
 
         uint256 priceAfterX96 = _getPriceX96(params.poolFactory, params.baseToken, params.quoteToken);
@@ -170,7 +177,8 @@ library TakerLibrary {
         address baseToken,
         int256 baseBalance,
         int256 quoteBalance,
-        int256 quoteFee
+        int256 quoteFee,
+        uint8 maxMarketsPerAccount
     ) public returns (int256) {
         require(baseBalance.sign() * quoteBalance.sign() == -1);
 
@@ -178,22 +186,28 @@ library TakerLibrary {
         PerpdexStructs.TakerInfo storage takerInfo = accountInfo.takerInfo[baseToken];
 
         int256 realizedPnL;
-        uint256 FULLY_CLOSED_RATIO = 1e18;
-        uint256 closedRatio = FullMath.mulDiv(baseShare.abs(), FULLY_CLOSED_RATIO, takerInfo.baseBalanceShare.abs());
 
-        if (closedRatio <= FULLY_CLOSED_RATIO) {
-            int256 reducedOpenNotional = takerInfo.quoteBalance.mulDiv(closedRatio.toInt256(), FULLY_CLOSED_RATIO);
-            realizedPnL = quoteBalance.add(reducedOpenNotional).add(quoteFee);
+        if (takerInfo.baseBalanceShare.sign() * baseShare.sign() == -1) {
+            uint256 FULLY_CLOSED_RATIO = 1e18;
+            uint256 closedRatio =
+                FullMath.mulDiv(baseShare.abs(), FULLY_CLOSED_RATIO, takerInfo.baseBalanceShare.abs());
+
+            if (closedRatio <= FULLY_CLOSED_RATIO) {
+                int256 reducedOpenNotional = takerInfo.quoteBalance.mulDiv(closedRatio.toInt256(), FULLY_CLOSED_RATIO);
+                realizedPnL = quoteBalance.add(reducedOpenNotional).add(quoteFee);
+            } else {
+                int256 closedPositionNotional = quoteBalance.mulDiv(int256(FULLY_CLOSED_RATIO), closedRatio);
+                realizedPnL = takerInfo.quoteBalance.add(closedPositionNotional).add(quoteFee);
+            }
         } else {
-            int256 closedPositionNotional = quoteBalance.mulDiv(int256(FULLY_CLOSED_RATIO), closedRatio);
-            realizedPnL = takerInfo.quoteBalance.add(closedPositionNotional).add(quoteFee);
+            realizedPnL = quoteFee;
         }
 
         takerInfo.baseBalanceShare = takerInfo.baseBalanceShare.add(baseShare);
         takerInfo.quoteBalance = takerInfo.quoteBalance.add(quoteBalance).add(quoteFee).sub(realizedPnL);
         accountInfo.vaultInfo.collateralBalance = accountInfo.vaultInfo.collateralBalance.add(realizedPnL);
 
-        AccountLibrary.updateBaseTokens(accountInfo, baseToken);
+        AccountLibrary.updateBaseTokens(accountInfo, baseToken, maxMarketsPerAccount);
 
         return realizedPnL;
     }
@@ -214,7 +228,8 @@ library TakerLibrary {
         address quoteToken,
         bool isBaseToQuote,
         bool isExactInput,
-        uint256 amount
+        uint256 amount,
+        uint8 maxMarketsPerAccount
     )
         private
         returns (
@@ -228,33 +243,43 @@ library TakerLibrary {
             PriceLimitLibrary.update(priceLimitInfo, priceBeforeX96);
         }
 
-        UniswapV2Broker.SwapResponse memory response =
-            UniswapV2Broker.swap(
-                UniswapV2Broker.SwapParams(
-                    poolFactory,
-                    baseToken,
-                    quoteToken,
-                    address(this), // recipient
-                    isBaseToQuote,
-                    isExactInput,
-                    amount // amount
-                )
-            );
-
         int256 exchangedPositionSize;
         int256 exchangedPositionNotional;
-        if (isBaseToQuote) {
-            // short: exchangedPositionSize <= 0 && exchangedPositionNotional >= 0
-            exchangedPositionSize = response.base.neg256();
-            exchangedPositionNotional = response.quote.toInt256();
-        } else {
-            // long: exchangedPositionSize >= 0 && exchangedPositionNotional <= 0
-            exchangedPositionSize = response.base.toInt256();
-            exchangedPositionNotional = response.quote.neg256();
+
+        {
+            UniswapV2Broker.SwapResponse memory response =
+                UniswapV2Broker.swap(
+                    UniswapV2Broker.SwapParams(
+                        poolFactory,
+                        baseToken,
+                        quoteToken,
+                        address(this), // recipient
+                        isBaseToQuote,
+                        isExactInput,
+                        amount // amount
+                    )
+                );
+
+            if (isBaseToQuote) {
+                // short: exchangedPositionSize <= 0 && exchangedPositionNotional >= 0
+                exchangedPositionSize = response.base.neg256();
+                exchangedPositionNotional = response.quote.toInt256();
+            } else {
+                // long: exchangedPositionSize >= 0 && exchangedPositionNotional <= 0
+                exchangedPositionSize = response.base.toInt256();
+                exchangedPositionNotional = response.quote.neg256();
+            }
         }
 
         int256 realizedPnL =
-            addToTakerBalance(accountInfo, baseToken, exchangedPositionSize, exchangedPositionNotional, 0);
+            addToTakerBalance(
+                accountInfo,
+                baseToken,
+                exchangedPositionSize,
+                exchangedPositionNotional,
+                0,
+                maxMarketsPerAccount
+            );
 
         return (exchangedPositionSize, exchangedPositionNotional, realizedPnL);
     }

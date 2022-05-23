@@ -36,7 +36,6 @@ contract ClearingHousePerpdexNew is IClearingHousePerpdexNew, ReentrancyGuard, O
     uint24 public imRatio;
     uint24 public mmRatio;
     uint24 public liquidationRewardRatio;
-    uint32 public twapInterval;
     uint24 public maxFundingRateRatio;
     mapping(address => bool) isBaseTokenAllowed;
 
@@ -58,6 +57,14 @@ contract ClearingHousePerpdexNew is IClearingHousePerpdexNew, ReentrancyGuard, O
 
         quoteToken = quoteTokenArg;
         uniV2Factory = uniV2FactoryArg;
+
+        priceLimitConfig.priceLimitLiquidationRatio = 10e4;
+        priceLimitConfig.priceLimitLiquidationRatio = 5e4;
+        maxMarketsPerAccount = 16;
+        imRatio = 10e4;
+        mmRatio = 5e4;
+        liquidationRewardRatio = 20e4;
+        maxFundingRateRatio = 5e4;
     }
 
     function deposit(address token, uint256 amount) external override nonReentrant {
@@ -107,7 +114,8 @@ contract ClearingHousePerpdexNew is IClearingHousePerpdexNew, ReentrancyGuard, O
                     priceLimitConfig: priceLimitConfig,
                     isBaseTokenAllowed: isBaseTokenAllowed[params.baseToken],
                     mmRatio: mmRatio,
-                    imRatio: imRatio
+                    imRatio: imRatio,
+                    maxMarketsPerAccount: maxMarketsPerAccount
                 })
             );
 
@@ -149,7 +157,8 @@ contract ClearingHousePerpdexNew is IClearingHousePerpdexNew, ReentrancyGuard, O
                     poolFactory: uniV2Factory,
                     priceLimitConfig: priceLimitConfig,
                     mmRatio: mmRatio,
-                    liquidationRewardRatio: liquidationRewardRatio
+                    liquidationRewardRatio: liquidationRewardRatio,
+                    maxMarketsPerAccount: maxMarketsPerAccount
                 })
             );
 
@@ -188,7 +197,8 @@ contract ClearingHousePerpdexNew is IClearingHousePerpdexNew, ReentrancyGuard, O
                     deadline: params.deadline,
                     poolFactory: uniV2Factory,
                     isBaseTokenAllowed: isBaseTokenAllowed[params.baseToken],
-                    imRatio: imRatio
+                    imRatio: imRatio,
+                    maxMarketsPerAccount: maxMarketsPerAccount
                 })
             );
 
@@ -232,7 +242,8 @@ contract ClearingHousePerpdexNew is IClearingHousePerpdexNew, ReentrancyGuard, O
                     deadline: params.deadline,
                     poolFactory: uniV2Factory,
                     makerIsSender: maker == _msgSender(),
-                    mmRatio: mmRatio
+                    mmRatio: mmRatio,
+                    maxMarketsPerAccount: maxMarketsPerAccount
                 })
             );
 
@@ -281,10 +292,6 @@ contract ClearingHousePerpdexNew is IClearingHousePerpdexNew, ReentrancyGuard, O
 
     function setLiquidationRewardRatio(uint24 value) external override onlyOwner nonReentrant {
         liquidationRewardRatio = value;
-    }
-
-    function setTwapInterval(uint32 value) external override onlyOwner nonReentrant {
-        twapInterval = value;
     }
 
     function setMaxFundingRateRatio(uint24 value) external override onlyOwner nonReentrant {

@@ -36,7 +36,7 @@ library PerpdexStructs {
     }
 
     struct PriceLimitConfig {
-        uint256 priceLimitNormalOrderMicro;
-        uint256 priceLimitLiquidationMicro;
+        uint24 priceLimitNormalOrderRatio;
+        uint24 priceLimitLiquidationRatio;
     }
 }

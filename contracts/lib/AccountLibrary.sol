@@ -137,7 +137,11 @@ library AccountLibrary {
             totalOpenPositionNotional.mulRatio(imRatio).toInt256();
     }
 
-    function updateBaseTokens(PerpdexStructs.AccountInfo storage accountInfo, address baseToken) public {
+    function updateBaseTokens(
+        PerpdexStructs.AccountInfo storage accountInfo,
+        address baseToken,
+        uint8 maxMarketsPerAccount
+    ) public {
         bool enabled =
             accountInfo.takerInfo[baseToken].baseBalanceShare != 0 || accountInfo.makerInfo[baseToken].liquidity != 0;
         address[] storage baseTokens = accountInfo.baseTokens;
@@ -152,5 +156,6 @@ library AccountLibrary {
             }
         }
         baseTokens.push(baseToken);
+        require(baseTokens.length <= maxMarketsPerAccount);
     }
 }
