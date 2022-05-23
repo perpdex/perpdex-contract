@@ -323,6 +323,10 @@ contract ClearingHousePerpdexNew is IClearingHousePerpdexNew, ReentrancyGuard, O
         return accountInfos[trader].makerInfo[baseToken];
     }
 
+    function getAccountBaseTokens(address trader) external returns (address[] memory) {
+        return accountInfos[trader].baseTokens;
+    }
+
     // convenient getters
 
     function getTotalAccountValue(address trader) external view override returns (int256) {

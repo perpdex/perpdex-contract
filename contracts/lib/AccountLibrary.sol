@@ -143,6 +143,8 @@ library AccountLibrary {
         address baseToken,
         uint8 maxMarketsPerAccount
     ) internal {
+        require(baseToken != address(0));
+
         bool enabled =
             accountInfo.takerInfo[baseToken].baseBalanceShare != 0 || accountInfo.makerInfo[baseToken].liquidity != 0;
         address[] storage baseTokens = accountInfo.baseTokens;
