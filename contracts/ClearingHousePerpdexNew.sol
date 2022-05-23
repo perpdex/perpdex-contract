@@ -283,18 +283,24 @@ contract ClearingHousePerpdexNew is IClearingHousePerpdexNew, ReentrancyGuard, O
     }
 
     function setImRatio(uint24 value) external override onlyOwner nonReentrant {
+        require(value < 1e6);
+        require(value >= mmRatio);
         imRatio = value;
     }
 
     function setMmRatio(uint24 value) external override onlyOwner nonReentrant {
+        require(value <= imRatio);
+        require(value > 0);
         mmRatio = value;
     }
 
     function setLiquidationRewardRatio(uint24 value) external override onlyOwner nonReentrant {
+        require(value < 1e6);
         liquidationRewardRatio = value;
     }
 
     function setMaxFundingRateRatio(uint24 value) external override onlyOwner nonReentrant {
+        require(value < 1e6);
         maxFundingRateRatio = value;
     }
 
