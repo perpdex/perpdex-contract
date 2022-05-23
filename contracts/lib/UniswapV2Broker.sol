@@ -191,6 +191,15 @@ library UniswapV2Broker {
             );
     }
 
+    function getMarkPriceX96(
+        address factory,
+        address baseToken,
+        address quoteToken
+    ) internal view returns (uint256 markPrice) {
+        (uint256 baseAmount, uint256 quoteAmount) = UniswapV2Library.getReserves(factory, baseToken, quoteToken);
+        return FullMath.mulDiv(quoteAmount, FixedPoint96.Q96, baseAmount);
+    }
+
     function getSqrtMarkPriceX96(
         address factory,
         address baseToken,
