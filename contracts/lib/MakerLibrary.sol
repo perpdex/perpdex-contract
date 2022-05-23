@@ -7,6 +7,7 @@ import "./PerpdexStructs.sol";
 import "./TakerLibrary.sol";
 
 library MakerLibrary {
+    using PerpMath for int256;
     using PerpSafeCast for uint256;
     using SafeMath for uint256;
     using SignedSafeMath for int256;
@@ -124,10 +125,20 @@ library MakerLibrary {
             _removeLiquidityFromOrder(accountInfo.makerInfo[params.baseToken], params.liquidity);
         AccountLibrary.updateBaseTokens(accountInfo, params.baseToken);
 
+        uint256 priceAfterX96 =
+            UniswapV2Broker.getMarkPriceX96(params.poolFactory, params.baseToken, params.quoteToken);
         int256 takerBase =
             response.base.toInt256().sub(IBaseTokenNew(params.baseToken).shareToBalance(baseDebtShare).toInt256());
         int256 takerQuote = response.quote.toInt256().sub(quoteDebt.toInt256());
-        int256 realizedPnL = TakerLibrary.addToTakerBalance(accountInfo, params.baseToken, takerBase, takerQuote);
+        int256 takerQuoteCalculatedAtCurrentPrice = -takerBase.mulDiv(priceAfterX96.toInt256(), FixedPoint96.Q96);
+        int256 realizedPnL =
+            TakerLibrary.addToTakerBalance(
+                accountInfo,
+                params.baseToken,
+                takerBase,
+                takerQuoteCalculatedAtCurrentPrice,
+                takerQuote.sub(takerQuoteCalculatedAtCurrentPrice)
+            );
 
         return
             RemoveLiquidityResponse({
@@ -136,7 +147,7 @@ library MakerLibrary {
                 takerBase: takerBase,
                 takerQuote: takerQuote,
                 realizedPnL: realizedPnL,
-                priceAfterX96: UniswapV2Broker.getMarkPriceX96(params.poolFactory, params.baseToken, params.quoteToken)
+                priceAfterX96: priceAfterX96
             });
     }
 

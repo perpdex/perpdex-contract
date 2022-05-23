@@ -169,16 +169,32 @@ library TakerLibrary {
         PerpdexStructs.AccountInfo storage accountInfo,
         address baseToken,
         int256 baseBalance,
-        int256 quoteBalance
+        int256 quoteBalance,
+        int256 quoteFee
     ) public returns (int256) {
-        int256 share = BaseTokenLibrary.balanceToShare(baseToken, baseBalance);
+        require(baseBalance.sign() * quoteBalance.sign() == -1);
+
+        int256 baseShare = BaseTokenLibrary.balanceToShare(baseToken, baseBalance);
         PerpdexStructs.TakerInfo storage takerInfo = accountInfo.takerInfo[baseToken];
-        takerInfo.baseBalanceShare = takerInfo.baseBalanceShare.add(share);
-        takerInfo.quoteBalance = takerInfo.quoteBalance.add(quoteBalance);
+
+        int256 realizedPnL;
+        uint256 FULLY_CLOSED_RATIO = 1e18;
+        uint256 closedRatio = FullMath.mulDiv(baseShare.abs(), FULLY_CLOSED_RATIO, takerInfo.baseBalanceShare.abs());
+
+        if (closedRatio <= FULLY_CLOSED_RATIO) {
+            int256 reducedOpenNotional = takerInfo.quoteBalance.mulDiv(closedRatio.toInt256(), FULLY_CLOSED_RATIO);
+            realizedPnL = quoteBalance.add(reducedOpenNotional).add(quoteFee);
+        } else {
+            int256 closedPositionNotional = quoteBalance.mulDiv(int256(FULLY_CLOSED_RATIO), closedRatio);
+            realizedPnL = takerInfo.quoteBalance.add(closedPositionNotional).add(quoteFee);
+        }
+
+        takerInfo.baseBalanceShare = takerInfo.baseBalanceShare.add(baseShare);
+        takerInfo.quoteBalance = takerInfo.quoteBalance.add(quoteBalance).add(quoteFee).sub(realizedPnL);
+        accountInfo.vaultInfo.collateralBalance = accountInfo.vaultInfo.collateralBalance.add(realizedPnL);
 
         AccountLibrary.updateBaseTokens(accountInfo, baseToken);
 
-        int256 realizedPnL; // TODO: implement
         return realizedPnL;
     }
 
@@ -238,7 +254,7 @@ library TakerLibrary {
         }
 
         int256 realizedPnL =
-            addToTakerBalance(accountInfo, baseToken, exchangedPositionSize, exchangedPositionNotional);
+            addToTakerBalance(accountInfo, baseToken, exchangedPositionSize, exchangedPositionNotional, 0);
 
         return (exchangedPositionSize, exchangedPositionNotional, realizedPnL);
     }
