@@ -6,6 +6,7 @@ import { UniswapV2Broker } from "./UniswapV2Broker.sol";
 import "./PerpdexStructs.sol";
 import "./TakerLibrary.sol";
 
+// internal
 library MakerLibrary {
     using PerpMath for int256;
     using PerpSafeCast for uint256;
@@ -59,8 +60,8 @@ library MakerLibrary {
         _;
     }
 
-    function addLiquidity(PerpdexStructs.AccountInfo storage accountInfo, AddLiquidityParams calldata params)
-        public
+    function addLiquidity(PerpdexStructs.AccountInfo storage accountInfo, AddLiquidityParams memory params)
+        internal
         checkDeadline(params.deadline)
         returns (AddLiquidityResponse memory)
     {
@@ -94,8 +95,8 @@ library MakerLibrary {
         return AddLiquidityResponse({ base: response.base, quote: response.quote, liquidity: response.liquidity });
     }
 
-    function removeLiquidity(PerpdexStructs.AccountInfo storage accountInfo, RemoveLiquidityParams calldata params)
-        public
+    function removeLiquidity(PerpdexStructs.AccountInfo storage accountInfo, RemoveLiquidityParams memory params)
+        internal
         checkDeadline(params.deadline)
         returns (RemoveLiquidityResponse memory funcResponse)
     {
