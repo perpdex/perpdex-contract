@@ -6,9 +6,14 @@ import "@typechain/hardhat"
 import "hardhat-contract-sizer"
 import "hardhat-dependency-compiler"
 import "hardhat-gas-reporter"
+import "hardhat-deploy"
 import { HardhatUserConfig } from "hardhat/config"
+import { config as dotenvConfig } from "dotenv"
+import { resolve } from "path"
 import "solidity-coverage"
 import "./mocha-test"
+
+dotenvConfig({ path: resolve(__dirname, "./.env") })
 
 const config: HardhatUserConfig = {
     solidity: {
@@ -23,6 +28,9 @@ const config: HardhatUserConfig = {
                 },
             },
         },
+    },
+    namedAccounts: {
+        deployer: 0,
     },
     networks: {
         hardhat: {
@@ -81,6 +89,13 @@ if (process.env.TESTNET_PRIVATE_KEY) {
 
     config.networks.fuji = {
         url: "https://api.avax-test.network/ext/bc/C/rpc",
+        accounts: [process.env.TESTNET_PRIVATE_KEY],
+        gasMultiplier: 2,
+    }
+
+    config.networks.shibuya = {
+        url: "https://evm.shibuya.astar.network",
+        chainId: 81,
         accounts: [process.env.TESTNET_PRIVATE_KEY],
         gasMultiplier: 2,
     }

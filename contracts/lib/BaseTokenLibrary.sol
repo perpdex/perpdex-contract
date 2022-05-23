@@ -5,6 +5,7 @@ import { IBaseTokenNew } from "../interface/IBaseTokenNew.sol";
 import { PerpMath } from "./PerpMath.sol";
 import { PerpSafeCast } from "./PerpSafeCast.sol";
 
+// internal
 library BaseTokenLibrary {
     using PerpMath for int256;
     using PerpMath for uint256;

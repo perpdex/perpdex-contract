@@ -173,8 +173,6 @@ interface IClearingHousePerpdexNew {
 
     function setLiquidationRewardRatio(uint24 value) external;
 
-    function setTwapInterval(uint32 value) external;
-
     function setMaxFundingRateRatio(uint24 value) external;
 
     function setIsBaseTokenAllowed(address baseToken, bool value) external;

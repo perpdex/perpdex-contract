@@ -14,6 +14,7 @@ import { TakerLibrary } from "./lib/TakerLibrary.sol";
 import { VaultLibrary } from "./lib/VaultLibrary.sol";
 import { PerpMath } from "./lib/PerpMath.sol";
 import { PerpSafeCast } from "./lib/PerpSafeCast.sol";
+import { QuoteTokenPerpdex } from "./QuoteTokenPerpdex.sol";
 
 // never inherit any new stateful contract. never change the orders of parent stateful contracts
 contract ClearingHousePerpdexNew is IClearingHousePerpdexNew, ReentrancyGuard, Ownable {
@@ -36,7 +37,6 @@ contract ClearingHousePerpdexNew is IClearingHousePerpdexNew, ReentrancyGuard, O
     uint24 public imRatio;
     uint24 public mmRatio;
     uint24 public liquidationRewardRatio;
-    uint32 public twapInterval;
     uint24 public maxFundingRateRatio;
     mapping(address => bool) isBaseTokenAllowed;
 
@@ -48,16 +48,24 @@ contract ClearingHousePerpdexNew is IClearingHousePerpdexNew, ReentrancyGuard, O
     // EXTERNAL NON-VIEW
     //
 
-    constructor(address quoteTokenArg, address uniV2FactoryArg) public {
-        // CH_QANC: QuoteToken address is not contract
-        require(quoteTokenArg.isContract(), "CH_QANC");
-        // CH_QDN18: QuoteToken decimals is not 18
-        require(IERC20Metadata(quoteTokenArg).decimals() == 18, "CH_QDN18");
+    constructor(
+        string memory quoteTokenName,
+        string memory quoteTokenSymbol,
+        address uniV2FactoryArg
+    ) public {
         // CH_UANC: UniV2Factory address is not contract
         require(uniV2FactoryArg.isContract(), "CH_UANC");
 
-        quoteToken = quoteTokenArg;
+        quoteToken = address(new QuoteTokenPerpdex{ salt: 0 }(quoteTokenName, quoteTokenSymbol, address(this)));
         uniV2Factory = uniV2FactoryArg;
+
+        priceLimitConfig.priceLimitLiquidationRatio = 10e4;
+        priceLimitConfig.priceLimitLiquidationRatio = 5e4;
+        maxMarketsPerAccount = 16;
+        imRatio = 10e4;
+        mmRatio = 5e4;
+        liquidationRewardRatio = 20e4;
+        maxFundingRateRatio = 5e4;
     }
 
     function deposit(address token, uint256 amount) external override nonReentrant {
@@ -107,7 +115,8 @@ contract ClearingHousePerpdexNew is IClearingHousePerpdexNew, ReentrancyGuard, O
                     priceLimitConfig: priceLimitConfig,
                     isBaseTokenAllowed: isBaseTokenAllowed[params.baseToken],
                     mmRatio: mmRatio,
-                    imRatio: imRatio
+                    imRatio: imRatio,
+                    maxMarketsPerAccount: maxMarketsPerAccount
                 })
             );
 
@@ -149,7 +158,8 @@ contract ClearingHousePerpdexNew is IClearingHousePerpdexNew, ReentrancyGuard, O
                     poolFactory: uniV2Factory,
                     priceLimitConfig: priceLimitConfig,
                     mmRatio: mmRatio,
-                    liquidationRewardRatio: liquidationRewardRatio
+                    liquidationRewardRatio: liquidationRewardRatio,
+                    maxMarketsPerAccount: maxMarketsPerAccount
                 })
             );
 
@@ -188,7 +198,8 @@ contract ClearingHousePerpdexNew is IClearingHousePerpdexNew, ReentrancyGuard, O
                     deadline: params.deadline,
                     poolFactory: uniV2Factory,
                     isBaseTokenAllowed: isBaseTokenAllowed[params.baseToken],
-                    imRatio: imRatio
+                    imRatio: imRatio,
+                    maxMarketsPerAccount: maxMarketsPerAccount
                 })
             );
 
@@ -232,7 +243,8 @@ contract ClearingHousePerpdexNew is IClearingHousePerpdexNew, ReentrancyGuard, O
                     deadline: params.deadline,
                     poolFactory: uniV2Factory,
                     makerIsSender: maker == _msgSender(),
-                    mmRatio: mmRatio
+                    mmRatio: mmRatio,
+                    maxMarketsPerAccount: maxMarketsPerAccount
                 })
             );
 
@@ -272,22 +284,24 @@ contract ClearingHousePerpdexNew is IClearingHousePerpdexNew, ReentrancyGuard, O
     }
 
     function setImRatio(uint24 value) external override onlyOwner nonReentrant {
+        require(value < 1e6);
+        require(value >= mmRatio);
         imRatio = value;
     }
 
     function setMmRatio(uint24 value) external override onlyOwner nonReentrant {
+        require(value <= imRatio);
+        require(value > 0);
         mmRatio = value;
     }
 
     function setLiquidationRewardRatio(uint24 value) external override onlyOwner nonReentrant {
+        require(value < 1e6);
         liquidationRewardRatio = value;
     }
 
-    function setTwapInterval(uint32 value) external override onlyOwner nonReentrant {
-        twapInterval = value;
-    }
-
     function setMaxFundingRateRatio(uint24 value) external override onlyOwner nonReentrant {
+        require(value < 1e6);
         maxFundingRateRatio = value;
     }
 

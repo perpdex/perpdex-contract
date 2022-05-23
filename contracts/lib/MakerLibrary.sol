@@ -23,6 +23,7 @@ library MakerLibrary {
         address poolFactory;
         bool isBaseTokenAllowed;
         uint24 imRatio;
+        uint8 maxMarketsPerAccount;
     }
 
     struct AddLiquidityResponse {
@@ -41,6 +42,7 @@ library MakerLibrary {
         address poolFactory;
         bool makerIsSender;
         uint24 mmRatio;
+        uint8 maxMarketsPerAccount;
     }
 
     struct RemoveLiquidityResponse {
@@ -83,7 +85,7 @@ library MakerLibrary {
         makerInfo.quoteDebt = makerInfo.quoteDebt.add(response.quote);
         makerInfo.liquidity = makerInfo.liquidity.add(response.liquidity);
 
-        AccountLibrary.updateBaseTokens(accountInfo, params.baseToken);
+        AccountLibrary.updateBaseTokens(accountInfo, params.baseToken, params.maxMarketsPerAccount);
 
         require(
             AccountLibrary.hasEnoughInitialMargin(accountInfo, params.poolFactory, params.quoteToken, params.imRatio)
@@ -95,7 +97,7 @@ library MakerLibrary {
     function removeLiquidity(PerpdexStructs.AccountInfo storage accountInfo, RemoveLiquidityParams calldata params)
         public
         checkDeadline(params.deadline)
-        returns (RemoveLiquidityResponse memory)
+        returns (RemoveLiquidityResponse memory funcResponse)
     {
         if (!params.makerIsSender) {
             require(
@@ -108,51 +110,55 @@ library MakerLibrary {
             );
         }
 
-        UniswapV2Broker.RemoveLiquidityResponse memory response =
-            UniswapV2Broker.removeLiquidity(
-                UniswapV2Broker.RemoveLiquidityParams(
-                    params.poolFactory,
-                    params.baseToken,
-                    params.quoteToken,
-                    address(this),
-                    params.liquidity
-                )
-            );
+        {
+            UniswapV2Broker.RemoveLiquidityResponse memory response =
+                UniswapV2Broker.removeLiquidity(
+                    UniswapV2Broker.RemoveLiquidityParams(
+                        params.poolFactory,
+                        params.baseToken,
+                        params.quoteToken,
+                        address(this),
+                        params.liquidity
+                    )
+                );
+            funcResponse.base = response.base;
+            funcResponse.quote = response.quote;
+        }
 
         // TODO: check slippage
 
-        (uint256 baseDebtShare, uint256 quoteDebt) =
-            _removeLiquidityFromOrder(accountInfo.makerInfo[params.baseToken], params.liquidity);
-        AccountLibrary.updateBaseTokens(accountInfo, params.baseToken);
+        {
+            (uint256 baseDebtShare, uint256 quoteDebt) =
+                _removeLiquidityFromOrder(accountInfo.makerInfo[params.baseToken], params.liquidity);
+            AccountLibrary.updateBaseTokens(accountInfo, params.baseToken, params.maxMarketsPerAccount);
 
-        uint256 priceAfterX96 =
-            UniswapV2Broker.getMarkPriceX96(params.poolFactory, params.baseToken, params.quoteToken);
-        int256 takerBase =
-            response.base.toInt256().sub(IBaseTokenNew(params.baseToken).shareToBalance(baseDebtShare).toInt256());
-        int256 takerQuote = response.quote.toInt256().sub(quoteDebt.toInt256());
-        int256 takerQuoteCalculatedAtCurrentPrice = -takerBase.mulDiv(priceAfterX96.toInt256(), FixedPoint96.Q96);
-        int256 realizedPnL =
-            TakerLibrary.addToTakerBalance(
+            funcResponse.priceAfterX96 = UniswapV2Broker.getMarkPriceX96(
+                params.poolFactory,
+                params.baseToken,
+                params.quoteToken
+            );
+            funcResponse.takerBase = funcResponse.base.toInt256().sub(
+                IBaseTokenNew(params.baseToken).shareToBalance(baseDebtShare).toInt256()
+            );
+            funcResponse.takerQuote = funcResponse.quote.toInt256().sub(quoteDebt.toInt256());
+        }
+
+        {
+            int256 takerQuoteCalculatedAtCurrentPrice =
+                -funcResponse.takerBase.mulDiv(funcResponse.priceAfterX96.toInt256(), FixedPoint96.Q96);
+            funcResponse.realizedPnL = TakerLibrary.addToTakerBalance(
                 accountInfo,
                 params.baseToken,
-                takerBase,
+                funcResponse.takerBase,
                 takerQuoteCalculatedAtCurrentPrice,
-                takerQuote.sub(takerQuoteCalculatedAtCurrentPrice)
+                funcResponse.takerQuote.sub(takerQuoteCalculatedAtCurrentPrice),
+                params.maxMarketsPerAccount
             );
-
-        return
-            RemoveLiquidityResponse({
-                base: response.base,
-                quote: response.quote,
-                takerBase: takerBase,
-                takerQuote: takerQuote,
-                realizedPnL: realizedPnL,
-                priceAfterX96: priceAfterX96
-            });
+        }
     }
 
     function _removeLiquidityFromOrder(PerpdexStructs.MakerInfo storage makerInfo, uint256 liquidity)
-        internal
+        private
         returns (uint256 baseDebtShare, uint256 quoteDebt)
     {
         if (liquidity != 0) {
