@@ -14,6 +14,7 @@ import { TakerLibrary } from "./lib/TakerLibrary.sol";
 import { VaultLibrary } from "./lib/VaultLibrary.sol";
 import { PerpMath } from "./lib/PerpMath.sol";
 import { PerpSafeCast } from "./lib/PerpSafeCast.sol";
+import { QuoteTokenPerpdex } from "./QuoteTokenPerpdex.sol";
 
 // never inherit any new stateful contract. never change the orders of parent stateful contracts
 contract ClearingHousePerpdexNew is IClearingHousePerpdexNew, ReentrancyGuard, Ownable {
@@ -47,15 +48,15 @@ contract ClearingHousePerpdexNew is IClearingHousePerpdexNew, ReentrancyGuard, O
     // EXTERNAL NON-VIEW
     //
 
-    constructor(address quoteTokenArg, address uniV2FactoryArg) public {
-        // CH_QANC: QuoteToken address is not contract
-        require(quoteTokenArg.isContract(), "CH_QANC");
-        // CH_QDN18: QuoteToken decimals is not 18
-        require(IERC20Metadata(quoteTokenArg).decimals() == 18, "CH_QDN18");
+    constructor(
+        string memory quoteTokenName,
+        string memory quoteTokenSymbol,
+        address uniV2FactoryArg
+    ) public {
         // CH_UANC: UniV2Factory address is not contract
         require(uniV2FactoryArg.isContract(), "CH_UANC");
 
-        quoteToken = quoteTokenArg;
+        quoteToken = address(new QuoteTokenPerpdex{ salt: 0 }(quoteTokenName, quoteTokenSymbol, address(this)));
         uniV2Factory = uniV2FactoryArg;
 
         priceLimitConfig.priceLimitLiquidationRatio = 10e4;
