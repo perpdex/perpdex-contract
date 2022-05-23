@@ -8,6 +8,7 @@ import { UniswapV2Broker } from "./UniswapV2Broker.sol";
 import { IBaseTokenNew } from "../interface/IBaseTokenNew.sol";
 import { PerpMath } from "./PerpMath.sol";
 import { PerpSafeCast } from "./PerpSafeCast.sol";
+import { BaseTokenLibrary } from "./BaseTokenLibrary.sol";
 import "./PerpdexStructs.sol";
 import "./AccountLibrary.sol";
 import "./PriceLimitLibrary.sol";
@@ -29,6 +30,9 @@ library TakerLibrary {
         uint256 deadline;
         address poolFactory;
         PerpdexStructs.PriceLimitConfig priceLimitConfig;
+        bool isBaseTokenAllowed;
+        uint24 mmRatio;
+        uint24 imRatio;
     }
 
     struct OpenPositionResponse {
@@ -67,11 +71,18 @@ library TakerLibrary {
         PerpdexStructs.PriceLimitInfo storage priceLimitInfo,
         OpenPositionParams calldata params
     ) public checkDeadline(params.deadline) returns (OpenPositionResponse memory) {
-        require(!AccountLibrary.isLiquidatable(accountInfo));
+        require(
+            !AccountLibrary.hasEnoughMaintenanceMargin(
+                accountInfo,
+                params.poolFactory,
+                params.quoteToken,
+                params.mmRatio
+            )
+        );
 
         (int256 exchangedBase, int256 exchangedQuote, int256 realizedPnL) =
             _doSwap(
-                accountInfo.takerInfo[params.baseToken],
+                accountInfo,
                 priceLimitInfo,
                 params.poolFactory,
                 params.baseToken,
@@ -81,10 +92,16 @@ library TakerLibrary {
                 params.amount
             );
 
+        if (!params.isBaseTokenAllowed) {
+            require(accountInfo.takerInfo[params.baseToken].baseBalanceShare.sign() * exchangedBase.sign() <= 0);
+        }
+
         uint256 priceAfterX96 = _getPriceX96(params.poolFactory, params.baseToken, params.quoteToken);
         require(PriceLimitLibrary.isNormalOrderAllowed(priceLimitInfo, params.priceLimitConfig, priceAfterX96));
 
-        require(AccountLibrary.hasEnoughInitialMargin(accountInfo));
+        require(
+            AccountLibrary.hasEnoughInitialMargin(accountInfo, params.poolFactory, params.quoteToken, params.imRatio)
+        );
 
         return
             OpenPositionResponse({
@@ -102,7 +119,14 @@ library TakerLibrary {
         PerpdexStructs.InsuranceFundInfo storage insuranceFundInfo,
         LiquidateParams calldata params
     ) public checkDeadline(params.deadline) returns (LiquidateResponse memory) {
-        require(AccountLibrary.isLiquidatable(accountInfo));
+        require(
+            !AccountLibrary.hasEnoughMaintenanceMargin(
+                accountInfo,
+                params.poolFactory,
+                params.quoteToken,
+                params.mmRatio
+            )
+        );
 
         PerpdexStructs.TakerInfo storage takerInfo = accountInfo.takerInfo[params.baseToken];
         bool isLong = takerInfo.baseBalanceShare > 0 ? true : false;
@@ -110,7 +134,7 @@ library TakerLibrary {
 
         (int256 exchangedBase, int256 exchangedQuote, int256 realizedPnL) =
             _doSwap(
-                takerInfo,
+                accountInfo,
                 priceLimitInfo,
                 params.poolFactory,
                 params.baseToken,
@@ -142,19 +166,20 @@ library TakerLibrary {
     }
 
     function addToTakerBalance(
-        PerpdexStructs.TakerInfo storage takerInfo,
+        PerpdexStructs.AccountInfo storage accountInfo,
         address baseToken,
         int256 baseBalance,
         int256 quoteBalance
-    ) public {
-        int256 share;
-        if (baseBalance < 0) {
-            share = IBaseTokenNew(baseToken).balanceToShare(baseBalance.abs()).neg256();
-        } else {
-            share = IBaseTokenNew(baseToken).balanceToShare(baseBalance.abs()).toInt256();
-        }
+    ) public returns (int256) {
+        int256 share = BaseTokenLibrary.balanceToShare(baseToken, baseBalance);
+        PerpdexStructs.TakerInfo storage takerInfo = accountInfo.takerInfo[baseToken];
         takerInfo.baseBalanceShare = takerInfo.baseBalanceShare.add(share);
         takerInfo.quoteBalance = takerInfo.quoteBalance.add(quoteBalance);
+
+        AccountLibrary.updateBaseTokens(accountInfo, baseToken);
+
+        int256 realizedPnL; // TODO: implement
+        return realizedPnL;
     }
 
     function _getPriceX96(
@@ -166,7 +191,7 @@ library TakerLibrary {
     }
 
     function _doSwap(
-        PerpdexStructs.TakerInfo storage takerInfo,
+        PerpdexStructs.AccountInfo storage accountInfo,
         PerpdexStructs.PriceLimitInfo storage priceLimitInfo,
         address poolFactory,
         address baseToken,
@@ -182,8 +207,10 @@ library TakerLibrary {
             int256
         )
     {
-        uint256 priceBeforeX96 = _getPriceX96(poolFactory, baseToken, quoteToken);
-        PriceLimitLibrary.update(priceLimitInfo, priceBeforeX96);
+        {
+            uint256 priceBeforeX96 = _getPriceX96(poolFactory, baseToken, quoteToken);
+            PriceLimitLibrary.update(priceLimitInfo, priceBeforeX96);
+        }
 
         UniswapV2Broker.SwapResponse memory response =
             UniswapV2Broker.swap(
@@ -210,9 +237,8 @@ library TakerLibrary {
             exchangedPositionNotional = response.quote.neg256();
         }
 
-        addToTakerBalance(takerInfo, baseToken, exchangedPositionSize, exchangedPositionNotional);
-
-        int256 realizedPnL = 0; // TODO: implement
+        int256 realizedPnL =
+            addToTakerBalance(accountInfo, baseToken, exchangedPositionSize, exchangedPositionNotional);
 
         return (exchangedPositionSize, exchangedPositionNotional, realizedPnL);
     }

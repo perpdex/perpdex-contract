@@ -4,6 +4,7 @@ pragma abicoder v2;
 
 import { AddressUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
 import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { IERC20Metadata } from "./interface/IERC20Metadata.sol";
 import { IClearingHousePerpdexNew } from "./interface/IClearingHousePerpdexNew.sol";
 import { PerpdexStructs } from "./lib/PerpdexStructs.sol";
@@ -15,7 +16,7 @@ import { PerpMath } from "./lib/PerpMath.sol";
 import { PerpSafeCast } from "./lib/PerpSafeCast.sol";
 
 // never inherit any new stateful contract. never change the orders of parent stateful contracts
-contract ClearingHousePerpdexNew is IClearingHousePerpdexNew, ReentrancyGuard {
+contract ClearingHousePerpdexNew is IClearingHousePerpdexNew, ReentrancyGuard, Ownable {
     using AddressUpgradeable for address;
     using PerpMath for uint256;
     using PerpSafeCast for uint256;
@@ -37,6 +38,7 @@ contract ClearingHousePerpdexNew is IClearingHousePerpdexNew, ReentrancyGuard {
     uint24 public liquidationRewardRatio;
     uint32 public twapInterval;
     uint24 public maxFundingRateRatio;
+    mapping(address => bool) isBaseTokenAllowed;
 
     //
     // MODIFIER
@@ -62,7 +64,7 @@ contract ClearingHousePerpdexNew is IClearingHousePerpdexNew, ReentrancyGuard {
         address trader = _msgSender();
         VaultLibrary.deposit(
             accountInfos[trader],
-            VaultLibrary.DepositParams({ token: token, amount: amount, from: trader })
+            VaultLibrary.DepositParams({ quoteToken: quoteToken, amount: amount, from: trader })
         );
     }
 
@@ -70,7 +72,13 @@ contract ClearingHousePerpdexNew is IClearingHousePerpdexNew, ReentrancyGuard {
         address trader = _msgSender();
         VaultLibrary.withdraw(
             accountInfos[trader],
-            VaultLibrary.WithdrawParams({ token: token, amount: amount, to: trader })
+            VaultLibrary.WithdrawParams({
+                quoteToken: quoteToken,
+                amount: amount,
+                to: trader,
+                poolFactory: uniV2Factory,
+                imRatio: imRatio
+            })
         );
     }
 
@@ -96,7 +104,10 @@ contract ClearingHousePerpdexNew is IClearingHousePerpdexNew, ReentrancyGuard {
                     oppositeAmountBound: params.oppositeAmountBound,
                     deadline: params.deadline,
                     poolFactory: uniV2Factory,
-                    priceLimitConfig: priceLimitConfig
+                    priceLimitConfig: priceLimitConfig,
+                    isBaseTokenAllowed: isBaseTokenAllowed[params.baseToken],
+                    mmRatio: mmRatio,
+                    imRatio: imRatio
                 })
             );
 
@@ -175,7 +186,9 @@ contract ClearingHousePerpdexNew is IClearingHousePerpdexNew, ReentrancyGuard {
                     minBase: params.minBase,
                     minQuote: params.minQuote,
                     deadline: params.deadline,
-                    poolFactory: uniV2Factory
+                    poolFactory: uniV2Factory,
+                    isBaseTokenAllowed: isBaseTokenAllowed[params.baseToken],
+                    imRatio: imRatio
                 })
             );
 
@@ -218,7 +231,8 @@ contract ClearingHousePerpdexNew is IClearingHousePerpdexNew, ReentrancyGuard {
                     minQuote: params.minQuote,
                     deadline: params.deadline,
                     poolFactory: uniV2Factory,
-                    makerIsSender: maker == _msgSender()
+                    makerIsSender: maker == _msgSender(),
+                    mmRatio: mmRatio
                 })
             );
 
@@ -244,6 +258,43 @@ contract ClearingHousePerpdexNew is IClearingHousePerpdexNew, ReentrancyGuard {
         return RemoveLiquidityResponse({ base: response.base, quote: response.quote });
     }
 
+    function setPriceLimitConfig(PerpdexStructs.PriceLimitConfig calldata value)
+        external
+        override
+        onlyOwner
+        nonReentrant
+    {
+        priceLimitConfig = value;
+    }
+
+    function setMaxMarketsPerAccount(uint8 value) external override onlyOwner nonReentrant {
+        maxMarketsPerAccount = value;
+    }
+
+    function setImRatio(uint24 value) external override onlyOwner nonReentrant {
+        imRatio = value;
+    }
+
+    function setMmRatio(uint24 value) external override onlyOwner nonReentrant {
+        mmRatio = value;
+    }
+
+    function setLiquidationRewardRatio(uint24 value) external override onlyOwner nonReentrant {
+        liquidationRewardRatio = value;
+    }
+
+    function setTwapInterval(uint32 value) external override onlyOwner nonReentrant {
+        twapInterval = value;
+    }
+
+    function setMaxFundingRateRatio(uint24 value) external override onlyOwner nonReentrant {
+        maxFundingRateRatio = value;
+    }
+
+    function setIsBaseTokenAllowed(address baseToken, bool value) external override onlyOwner nonReentrant {
+        isBaseTokenAllowed[baseToken] = value;
+    }
+
     //
     // EXTERNAL VIEW
     //
@@ -254,15 +305,46 @@ contract ClearingHousePerpdexNew is IClearingHousePerpdexNew, ReentrancyGuard {
         return accountInfos[trader].takerInfo[baseToken];
     }
 
-    function getOrderInfo(address trader, address baseToken) external returns (PerpdexStructs.OrderInfo memory) {
-        return accountInfos[trader].orderInfo[baseToken];
+    function getMakerInfo(address trader, address baseToken) external returns (PerpdexStructs.MakerInfo memory) {
+        return accountInfos[trader].makerInfo[baseToken];
     }
 
     // convenient getters
 
-    /// @inheritdoc IClearingHousePerpdexNew
-    function getAccountValue(address trader) public view override returns (int256) {
-        return AccountLibrary.getAccountValue(accountInfos[trader]);
+    function getTotalAccountValue(address trader) external view override returns (int256) {
+        return AccountLibrary.getTotalAccountValue(accountInfos[trader], uniV2Factory, quoteToken);
+    }
+
+    function getPositionSize(address trader, address baseToken) external view override returns (int256) {
+        return AccountLibrary.getPositionSize(accountInfos[trader], uniV2Factory, baseToken, quoteToken);
+    }
+
+    function getPositionNotional(address trader, address baseToken) external view override returns (int256) {
+        return AccountLibrary.getPositionNotional(accountInfos[trader], uniV2Factory, baseToken, quoteToken);
+    }
+
+    function getTotalPositionNotional(address trader) external view override returns (uint256) {
+        return AccountLibrary.getTotalPositionNotional(accountInfos[trader], uniV2Factory, quoteToken);
+    }
+
+    function getOpenPositionSize(address trader, address baseToken) external view override returns (uint256) {
+        return AccountLibrary.getOpenPositionSize(accountInfos[trader], uniV2Factory, baseToken, quoteToken);
+    }
+
+    function getOpenPositionNotional(address trader, address baseToken) external view override returns (uint256) {
+        return AccountLibrary.getOpenPositionNotional(accountInfos[trader], uniV2Factory, baseToken, quoteToken);
+    }
+
+    function getTotalOpenPositionNotional(address trader) external view override returns (uint256) {
+        return AccountLibrary.getTotalOpenPositionNotional(accountInfos[trader], uniV2Factory, quoteToken);
+    }
+
+    function hasEnoughMaintenanceMargin(address trader) external view override returns (bool) {
+        return AccountLibrary.hasEnoughMaintenanceMargin(accountInfos[trader], uniV2Factory, quoteToken, mmRatio);
+    }
+
+    function hasEnoughInitialMargin(address trader) external view override returns (bool) {
+        return AccountLibrary.hasEnoughInitialMargin(accountInfos[trader], uniV2Factory, quoteToken, imRatio);
     }
 
     //
@@ -272,8 +354,4 @@ contract ClearingHousePerpdexNew is IClearingHousePerpdexNew, ReentrancyGuard {
     //
     // INTERNAL VIEW
     //
-
-    function _msgSender() internal view returns (address payable) {
-        return msg.sender;
-    }
 }

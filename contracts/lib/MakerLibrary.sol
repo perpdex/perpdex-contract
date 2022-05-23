@@ -20,6 +20,8 @@ library MakerLibrary {
         uint256 minQuote;
         uint256 deadline;
         address poolFactory;
+        bool isBaseTokenAllowed;
+        uint24 imRatio;
     }
 
     struct AddLiquidityResponse {
@@ -37,6 +39,7 @@ library MakerLibrary {
         uint256 deadline;
         address poolFactory;
         bool makerIsSender;
+        uint24 mmRatio;
     }
 
     struct RemoveLiquidityResponse {
@@ -58,7 +61,7 @@ library MakerLibrary {
         checkDeadline(params.deadline)
         returns (AddLiquidityResponse memory)
     {
-        require(!AccountLibrary.isLiquidatable(accountInfo));
+        require(params.isBaseTokenAllowed);
 
         UniswapV2Broker.AddLiquidityResponse memory response =
             UniswapV2Broker.addLiquidity(
@@ -72,14 +75,18 @@ library MakerLibrary {
                 )
             );
 
-        PerpdexStructs.OrderInfo storage orderInfo = accountInfo.orderInfo[params.baseToken];
-        orderInfo.baseDebtShare = orderInfo.baseDebtShare.add(
+        PerpdexStructs.MakerInfo storage makerInfo = accountInfo.makerInfo[params.baseToken];
+        makerInfo.baseDebtShare = makerInfo.baseDebtShare.add(
             IBaseTokenNew(params.baseToken).balanceToShare(response.base)
         );
-        orderInfo.quoteDebt = orderInfo.quoteDebt.add(response.quote);
-        orderInfo.liquidity = orderInfo.liquidity.add(response.liquidity);
+        makerInfo.quoteDebt = makerInfo.quoteDebt.add(response.quote);
+        makerInfo.liquidity = makerInfo.liquidity.add(response.liquidity);
 
-        require(AccountLibrary.hasEnoughInitialMargin(accountInfo));
+        AccountLibrary.updateBaseTokens(accountInfo, params.baseToken);
+
+        require(
+            AccountLibrary.hasEnoughInitialMargin(accountInfo, params.poolFactory, params.quoteToken, params.imRatio)
+        );
 
         return AddLiquidityResponse({ base: response.base, quote: response.quote, liquidity: response.liquidity });
     }
@@ -90,7 +97,14 @@ library MakerLibrary {
         returns (RemoveLiquidityResponse memory)
     {
         if (!params.makerIsSender) {
-            require(AccountLibrary.isLiquidatable(accountInfo));
+            require(
+                !AccountLibrary.hasEnoughMaintenanceMargin(
+                    accountInfo,
+                    params.poolFactory,
+                    params.quoteToken,
+                    params.mmRatio
+                )
+            );
         }
 
         UniswapV2Broker.RemoveLiquidityResponse memory response =
@@ -107,17 +121,13 @@ library MakerLibrary {
         // TODO: check slippage
 
         (uint256 baseDebtShare, uint256 quoteDebt) =
-            _removeLiquidityFromOrder(accountInfo.orderInfo[params.baseToken], params.liquidity);
+            _removeLiquidityFromOrder(accountInfo.makerInfo[params.baseToken], params.liquidity);
+        AccountLibrary.updateBaseTokens(accountInfo, params.baseToken);
 
         int256 takerBase =
             response.base.toInt256().sub(IBaseTokenNew(params.baseToken).shareToBalance(baseDebtShare).toInt256());
         int256 takerQuote = response.quote.toInt256().sub(quoteDebt.toInt256());
-        TakerLibrary.addToTakerBalance(
-            accountInfo.takerInfo[params.baseToken],
-            params.baseToken,
-            takerBase,
-            takerQuote
-        );
+        int256 realizedPnL = TakerLibrary.addToTakerBalance(accountInfo, params.baseToken, takerBase, takerQuote);
 
         return
             RemoveLiquidityResponse({
@@ -125,25 +135,25 @@ library MakerLibrary {
                 quote: response.quote,
                 takerBase: takerBase,
                 takerQuote: takerQuote,
-                realizedPnL: 0, // TODO: implement
+                realizedPnL: realizedPnL,
                 priceAfterX96: UniswapV2Broker.getMarkPriceX96(params.poolFactory, params.baseToken, params.quoteToken)
             });
     }
 
-    function _removeLiquidityFromOrder(PerpdexStructs.OrderInfo storage orderInfo, uint256 liquidity)
+    function _removeLiquidityFromOrder(PerpdexStructs.MakerInfo storage makerInfo, uint256 liquidity)
         internal
         returns (uint256 baseDebtShare, uint256 quoteDebt)
     {
         if (liquidity != 0) {
-            if (orderInfo.baseDebtShare != 0) {
-                baseDebtShare = FullMath.mulDiv(orderInfo.baseDebtShare, liquidity, orderInfo.liquidity);
-                orderInfo.baseDebtShare = orderInfo.baseDebtShare.sub(baseDebtShare);
+            if (makerInfo.baseDebtShare != 0) {
+                baseDebtShare = FullMath.mulDiv(makerInfo.baseDebtShare, liquidity, makerInfo.liquidity);
+                makerInfo.baseDebtShare = makerInfo.baseDebtShare.sub(baseDebtShare);
             }
-            if (orderInfo.quoteDebt != 0) {
-                quoteDebt = FullMath.mulDiv(orderInfo.quoteDebt, liquidity, orderInfo.liquidity);
-                orderInfo.quoteDebt = orderInfo.quoteDebt.sub(quoteDebt);
+            if (makerInfo.quoteDebt != 0) {
+                quoteDebt = FullMath.mulDiv(makerInfo.quoteDebt, liquidity, makerInfo.liquidity);
+                makerInfo.quoteDebt = makerInfo.quoteDebt.sub(quoteDebt);
             }
-            orderInfo.liquidity = orderInfo.liquidity.sub(liquidity);
+            makerInfo.liquidity = makerInfo.liquidity.sub(liquidity);
         }
 
         return (baseDebtShare, quoteDebt);

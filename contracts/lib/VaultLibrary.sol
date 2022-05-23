@@ -17,27 +17,31 @@ library VaultLibrary {
     using SignedSafeMath for int256;
 
     struct DepositParams {
-        address token;
+        address quoteToken;
         uint256 amount;
         address from;
     }
 
     struct WithdrawParams {
-        address token;
+        address quoteToken;
         uint256 amount;
         address to;
+        address poolFactory;
+        uint24 imRatio;
     }
 
     function deposit(PerpdexStructs.AccountInfo storage accountInfo, DepositParams calldata params) public {
-        _transferTokenIn(params.token, params.from, params.amount);
+        _transferTokenIn(params.quoteToken, params.from, params.amount);
         accountInfo.vaultInfo.collateralBalance = accountInfo.vaultInfo.collateralBalance.add(params.amount.toInt256());
     }
 
     function withdraw(PerpdexStructs.AccountInfo storage accountInfo, WithdrawParams calldata params) public {
         accountInfo.vaultInfo.collateralBalance = accountInfo.vaultInfo.collateralBalance.sub(params.amount.toInt256());
-        require(AccountLibrary.hasEnoughInitialMargin(accountInfo));
+        require(
+            AccountLibrary.hasEnoughInitialMargin(accountInfo, params.poolFactory, params.quoteToken, params.imRatio)
+        );
 
-        SafeERC20Upgradeable.safeTransfer(IERC20Upgradeable(params.token), params.to, params.amount);
+        SafeERC20Upgradeable.safeTransfer(IERC20Upgradeable(params.quoteToken), params.to, params.amount);
     }
 
     function _transferTokenIn(

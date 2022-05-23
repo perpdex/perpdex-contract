@@ -25,8 +25,7 @@ library PriceLimitLibrary {
         return _isWithinPriceLimit(priceLimitInfo.referencePrice, price, config.priceLimitLiquidationMicro);
     }
 
-    // should call before any price limit checks
-    // You only have to call it once at the beginning within the same timestamp.
+    // should call before all price changes
     function update(PerpdexStructs.PriceLimitInfo storage priceLimitInfo, uint256 price) public {
         if (priceLimitInfo.referenceTimestamp < block.timestamp) {
             priceLimitInfo.referencePrice = price;

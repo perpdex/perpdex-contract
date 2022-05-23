@@ -94,4 +94,8 @@ library PerpMath {
 
         return result;
     }
+
+    function sign(int256 value) internal pure returns (int256) {
+        return value > 0 ? 1 : (value < 0 ? -1 : int256(0));
+    }
 }

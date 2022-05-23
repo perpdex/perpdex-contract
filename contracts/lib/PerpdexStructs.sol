@@ -7,7 +7,7 @@ library PerpdexStructs {
         int256 quoteBalance;
     }
 
-    struct OrderInfo {
+    struct MakerInfo {
         uint256 baseDebtShare;
         uint256 quoteDebt;
         uint256 liquidity;
@@ -21,8 +21,9 @@ library PerpdexStructs {
         // base token
         mapping(address => TakerInfo) takerInfo;
         // base token
-        mapping(address => OrderInfo) orderInfo;
+        mapping(address => MakerInfo) makerInfo;
         VaultInfo vaultInfo;
+        address[] baseTokens;
     }
 
     struct InsuranceFundInfo {

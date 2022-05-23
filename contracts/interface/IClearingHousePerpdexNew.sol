@@ -2,6 +2,8 @@
 pragma solidity >=0.7.6;
 pragma abicoder v2;
 
+import { PerpdexStructs } from "../lib/PerpdexStructs.sol";
+
 interface IClearingHousePerpdexNew {
     struct AddLiquidityParams {
         address baseToken;
@@ -161,9 +163,37 @@ interface IClearingHousePerpdexNew {
     /// @return quote The amount of quoteToken the taker got or spent
     function liquidate(LiquidateParams calldata params) external returns (int256 base, int256 quote);
 
-    /// @notice Get account value of trader
-    /// @dev accountValue = totalCollateralValue + totalUnrealizedPnl, in 18 decimals
-    /// @param trader The address of trader
-    /// @return accountValue The account value of trader
-    function getAccountValue(address trader) external view returns (int256);
+    function setPriceLimitConfig(PerpdexStructs.PriceLimitConfig calldata value) external;
+
+    function setMaxMarketsPerAccount(uint8 value) external;
+
+    function setImRatio(uint24 value) external;
+
+    function setMmRatio(uint24 value) external;
+
+    function setLiquidationRewardRatio(uint24 value) external;
+
+    function setTwapInterval(uint32 value) external;
+
+    function setMaxFundingRateRatio(uint24 value) external;
+
+    function setIsBaseTokenAllowed(address baseToken, bool value) external;
+
+    function getTotalAccountValue(address trader) external view returns (int256);
+
+    function getPositionSize(address trader, address baseToken) external view returns (int256);
+
+    function getPositionNotional(address trader, address baseToken) external view returns (int256);
+
+    function getTotalPositionNotional(address trader) external view returns (uint256);
+
+    function getOpenPositionSize(address trader, address baseToken) external view returns (uint256);
+
+    function getOpenPositionNotional(address trader, address baseToken) external view returns (uint256);
+
+    function getTotalOpenPositionNotional(address trader) external view returns (uint256);
+
+    function hasEnoughMaintenanceMargin(address trader) external view returns (bool);
+
+    function hasEnoughInitialMargin(address trader) external view returns (bool);
 }
