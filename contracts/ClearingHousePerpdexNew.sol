@@ -30,15 +30,15 @@ contract ClearingHousePerpdexNew is IClearingHousePerpdexNew, ReentrancyGuard, O
     PerpdexStructs.InsuranceFundInfo public insuranceFundInfo;
 
     // config
-    address immutable quoteToken;
-    address immutable uniV2Factory;
+    address public immutable quoteToken;
+    address public immutable uniV2Factory;
     PerpdexStructs.PriceLimitConfig public priceLimitConfig;
     uint8 public maxMarketsPerAccount;
     uint24 public imRatio;
     uint24 public mmRatio;
     uint24 public liquidationRewardRatio;
     uint24 public maxFundingRateRatio;
-    mapping(address => bool) isBaseTokenAllowed;
+    mapping(address => bool) public isBaseTokenAllowed;
 
     //
     // MODIFIER

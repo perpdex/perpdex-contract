@@ -177,6 +177,10 @@ interface IClearingHousePerpdexNew {
 
     function setIsBaseTokenAllowed(address baseToken, bool value) external;
 
+    // TODO: raw default getters
+
+    // convenient getters
+
     function getTotalAccountValue(address trader) external view returns (int256);
 
     function getPositionSize(address trader, address baseToken) external view returns (int256);
