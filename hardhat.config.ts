@@ -92,6 +92,13 @@ if (process.env.TESTNET_PRIVATE_KEY) {
         accounts: [process.env.TESTNET_PRIVATE_KEY],
         gasMultiplier: 2,
     }
+
+    config.networks.shibuya = {
+        url: "https://evm.shibuya.astar.network",
+        chainId: 81,
+        accounts: [process.env.TESTNET_PRIVATE_KEY],
+        gasMultiplier: 2,
+    }
 }
 
 export default config
