@@ -11,6 +11,7 @@ import { PerpSafeCast } from "./PerpSafeCast.sol";
 import "./AccountLibrary.sol";
 import "./PerpdexStructs.sol";
 
+// internal
 library VaultLibrary {
     using PerpSafeCast for uint256;
     using SafeMath for uint256;
@@ -30,12 +31,12 @@ library VaultLibrary {
         uint24 imRatio;
     }
 
-    function deposit(PerpdexStructs.AccountInfo storage accountInfo, DepositParams calldata params) public {
+    function deposit(PerpdexStructs.AccountInfo storage accountInfo, DepositParams memory params) internal {
         _transferTokenIn(params.quoteToken, params.from, params.amount);
         accountInfo.vaultInfo.collateralBalance = accountInfo.vaultInfo.collateralBalance.add(params.amount.toInt256());
     }
 
-    function withdraw(PerpdexStructs.AccountInfo storage accountInfo, WithdrawParams calldata params) public {
+    function withdraw(PerpdexStructs.AccountInfo storage accountInfo, WithdrawParams memory params) internal {
         accountInfo.vaultInfo.collateralBalance = accountInfo.vaultInfo.collateralBalance.sub(params.amount.toInt256());
         require(
             AccountLibrary.hasEnoughInitialMargin(accountInfo, params.poolFactory, params.quoteToken, params.imRatio)

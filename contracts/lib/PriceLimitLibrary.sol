@@ -6,27 +6,28 @@ import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
 import "@uniswap/lib/contracts/libraries/FullMath.sol";
 import "./PerpdexStructs.sol";
 
+// internal
 library PriceLimitLibrary {
     using SafeMath for uint256;
 
     function isNormalOrderAllowed(
-        PerpdexStructs.PriceLimitInfo calldata priceLimitInfo,
+        PerpdexStructs.PriceLimitInfo storage priceLimitInfo,
         PerpdexStructs.PriceLimitConfig calldata config,
         uint256 price
-    ) public pure returns (bool) {
+    ) internal view returns (bool) {
         return _isWithinPriceLimit(priceLimitInfo.referencePrice, price, config.priceLimitNormalOrderMicro);
     }
 
     function isLiquidationAllowed(
-        PerpdexStructs.PriceLimitInfo calldata priceLimitInfo,
+        PerpdexStructs.PriceLimitInfo storage priceLimitInfo,
         PerpdexStructs.PriceLimitConfig calldata config,
         uint256 price
-    ) public pure returns (bool) {
+    ) internal view returns (bool) {
         return _isWithinPriceLimit(priceLimitInfo.referencePrice, price, config.priceLimitLiquidationMicro);
     }
 
     // should call before all price changes
-    function update(PerpdexStructs.PriceLimitInfo storage priceLimitInfo, uint256 price) public {
+    function update(PerpdexStructs.PriceLimitInfo storage priceLimitInfo, uint256 price) internal {
         if (priceLimitInfo.referenceTimestamp < block.timestamp) {
             priceLimitInfo.referencePrice = price;
             priceLimitInfo.referenceTimestamp = block.timestamp;
