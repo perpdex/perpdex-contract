@@ -13,6 +13,7 @@ import "./PerpdexStructs.sol";
 import "./AccountLibrary.sol";
 import "./PriceLimitLibrary.sol";
 
+// internal
 library TakerLibrary {
     using PerpMath for int256;
     using PerpMath for uint256;
@@ -71,8 +72,8 @@ library TakerLibrary {
     function openPosition(
         PerpdexStructs.AccountInfo storage accountInfo,
         PerpdexStructs.PriceLimitInfo storage priceLimitInfo,
-        OpenPositionParams calldata params
-    ) public checkDeadline(params.deadline) returns (OpenPositionResponse memory) {
+        OpenPositionParams memory params
+    ) internal checkDeadline(params.deadline) returns (OpenPositionResponse memory) {
         require(
             !AccountLibrary.hasEnoughMaintenanceMargin(
                 accountInfo,
@@ -120,8 +121,8 @@ library TakerLibrary {
         PerpdexStructs.AccountInfo storage liquidatorAccountInfo,
         PerpdexStructs.PriceLimitInfo storage priceLimitInfo,
         PerpdexStructs.InsuranceFundInfo storage insuranceFundInfo,
-        LiquidateParams calldata params
-    ) public checkDeadline(params.deadline) returns (LiquidateResponse memory) {
+        LiquidateParams memory params
+    ) internal checkDeadline(params.deadline) returns (LiquidateResponse memory) {
         require(
             !AccountLibrary.hasEnoughMaintenanceMargin(
                 accountInfo,
@@ -179,7 +180,7 @@ library TakerLibrary {
         int256 quoteBalance,
         int256 quoteFee,
         uint8 maxMarketsPerAccount
-    ) public returns (int256) {
+    ) internal returns (int256) {
         require(baseBalance.sign() * quoteBalance.sign() == -1);
 
         int256 baseShare = BaseTokenLibrary.balanceToShare(baseToken, baseBalance);

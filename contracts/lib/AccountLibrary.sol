@@ -12,6 +12,7 @@ import { BaseTokenLibrary } from "./BaseTokenLibrary.sol";
 import "./PerpdexStructs.sol";
 
 // https://help.ftx.com/hc/en-us/articles/360024780511-Complete-Futures-Specs
+// internal
 library AccountLibrary {
     using PerpMath for int256;
     using PerpMath for uint256;
@@ -23,7 +24,7 @@ library AccountLibrary {
         PerpdexStructs.AccountInfo storage accountInfo,
         address poolFactory,
         address quoteToken
-    ) public view returns (int256) {
+    ) internal view returns (int256) {
         address[] storage baseTokens = accountInfo.baseTokens;
         int256 accountValue = accountInfo.vaultInfo.collateralBalance;
         uint256 length = baseTokens.length;
@@ -40,7 +41,7 @@ library AccountLibrary {
         address poolFactory,
         address baseToken,
         address quoteToken
-    ) public view returns (int256) {
+    ) internal view returns (int256) {
         PerpdexStructs.MakerInfo storage makerInfo = accountInfo.makerInfo[baseToken];
         int256 baseShare = accountInfo.takerInfo[baseToken].baseBalanceShare.sub(makerInfo.baseDebtShare.toInt256());
         (uint256 basePool, uint256 quotePool) =
@@ -53,7 +54,7 @@ library AccountLibrary {
         address poolFactory,
         address baseToken,
         address quoteToken
-    ) public view returns (int256) {
+    ) internal view returns (int256) {
         int256 positionSize = getPositionSize(accountInfo, poolFactory, baseToken, quoteToken);
         uint256 priceX96 = UniswapV2Broker.getMarkPriceX96(poolFactory, baseToken, quoteToken);
         return positionSize.mulDiv(priceX96.toInt256(), FixedPoint96.Q96);
@@ -63,7 +64,7 @@ library AccountLibrary {
         PerpdexStructs.AccountInfo storage accountInfo,
         address poolFactory,
         address quoteToken
-    ) public view returns (uint256) {
+    ) internal view returns (uint256) {
         address[] storage baseTokens = accountInfo.baseTokens;
         uint256 totalPositionNotional;
         uint256 length = baseTokens.length;
@@ -79,7 +80,7 @@ library AccountLibrary {
         address poolFactory,
         address baseToken,
         address quoteToken
-    ) public view returns (uint256) {
+    ) internal view returns (uint256) {
         PerpdexStructs.MakerInfo storage makerInfo = accountInfo.makerInfo[baseToken];
         (uint256 basePool, uint256 quotePool) =
             UniswapV2Broker.getLiquidityValue(poolFactory, baseToken, quoteToken, makerInfo.liquidity);
@@ -91,7 +92,7 @@ library AccountLibrary {
         address poolFactory,
         address baseToken,
         address quoteToken
-    ) public view returns (uint256) {
+    ) internal view returns (uint256) {
         uint256 positionSize = getOpenPositionSize(accountInfo, poolFactory, baseToken, quoteToken);
         uint256 priceX96 = UniswapV2Broker.getMarkPriceX96(poolFactory, baseToken, quoteToken);
         return FullMath.mulDiv(positionSize, priceX96, FixedPoint96.Q96);
@@ -101,7 +102,7 @@ library AccountLibrary {
         PerpdexStructs.AccountInfo storage accountInfo,
         address poolFactory,
         address quoteToken
-    ) public view returns (uint256) {
+    ) internal view returns (uint256) {
         address[] storage baseTokens = accountInfo.baseTokens;
         uint256 totalOpenPositionNotional;
         uint256 length = baseTokens.length;
@@ -118,7 +119,7 @@ library AccountLibrary {
         address poolFactory,
         address quoteToken,
         uint24 mmRatio
-    ) public view returns (bool) {
+    ) internal view returns (bool) {
         int256 accountValue = getTotalAccountValue(accountInfo, poolFactory, quoteToken);
         uint256 totalPositionNotional = getTotalPositionNotional(accountInfo, poolFactory, quoteToken);
         return accountValue >= totalPositionNotional.mulRatio(mmRatio).toInt256();
@@ -129,7 +130,7 @@ library AccountLibrary {
         address poolFactory,
         address quoteToken,
         uint24 imRatio
-    ) public view returns (bool) {
+    ) internal view returns (bool) {
         int256 accountValue = getTotalAccountValue(accountInfo, poolFactory, quoteToken);
         uint256 totalOpenPositionNotional = getTotalOpenPositionNotional(accountInfo, poolFactory, quoteToken);
         return
@@ -141,7 +142,7 @@ library AccountLibrary {
         PerpdexStructs.AccountInfo storage accountInfo,
         address baseToken,
         uint8 maxMarketsPerAccount
-    ) public {
+    ) internal {
         bool enabled =
             accountInfo.takerInfo[baseToken].baseBalanceShare != 0 || accountInfo.makerInfo[baseToken].liquidity != 0;
         address[] storage baseTokens = accountInfo.baseTokens;
