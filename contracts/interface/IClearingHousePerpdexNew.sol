@@ -113,9 +113,9 @@ interface IClearingHousePerpdexNew {
         uint256 priceAfterX96
     );
 
-    function deposit(address token, uint256 amount) external;
+    function deposit(uint256 amount) external;
 
-    function withdraw(address token, uint256 amount) external;
+    function withdraw(uint256 amount) external;
 
     /// @notice Maker can call `addLiquidity` to provide liquidity on Uniswap V3 pool
     /// @dev Tx will fail if adding `base == 0 && quote == 0` / `liquidity == 0`
