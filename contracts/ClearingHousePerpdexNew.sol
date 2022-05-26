@@ -30,6 +30,7 @@ contract ClearingHousePerpdexNew is IClearingHousePerpdexNew, ReentrancyGuard, O
     PerpdexStructs.InsuranceFundInfo public insuranceFundInfo;
 
     // config
+    address public immutable settlementToken;
     address public immutable quoteToken;
     address public immutable uniV2Factory;
     PerpdexStructs.PriceLimitConfig public priceLimitConfig;
@@ -49,13 +50,17 @@ contract ClearingHousePerpdexNew is IClearingHousePerpdexNew, ReentrancyGuard, O
     //
 
     constructor(
+        address settlementTokenArg,
         string memory quoteTokenName,
         string memory quoteTokenSymbol,
         address uniV2FactoryArg
     ) public {
+        // CH_SANC: Settlement token address is not contract
+        require(settlementTokenArg.isContract(), "CH_SANC");
         // CH_UANC: UniV2Factory address is not contract
         require(uniV2FactoryArg.isContract(), "CH_UANC");
 
+        settlementToken = settlementTokenArg;
         quoteToken = address(new QuoteTokenPerpdex{ salt: 0 }(quoteTokenName, quoteTokenSymbol, address(this)));
         uniV2Factory = uniV2FactoryArg;
 
@@ -68,19 +73,20 @@ contract ClearingHousePerpdexNew is IClearingHousePerpdexNew, ReentrancyGuard, O
         maxFundingRateRatio = 5e4;
     }
 
-    function deposit(address token, uint256 amount) external override nonReentrant {
+    function deposit(uint256 amount) external override nonReentrant {
         address trader = _msgSender();
         VaultLibrary.deposit(
             accountInfos[trader],
-            VaultLibrary.DepositParams({ quoteToken: quoteToken, amount: amount, from: trader })
+            VaultLibrary.DepositParams({ settlementToken: settlementToken, amount: amount, from: trader })
         );
     }
 
-    function withdraw(address token, uint256 amount) external override nonReentrant {
+    function withdraw(uint256 amount) external override nonReentrant {
         address trader = _msgSender();
         VaultLibrary.withdraw(
             accountInfos[trader],
             VaultLibrary.WithdrawParams({
+                settlementToken: settlementToken,
                 quoteToken: quoteToken,
                 amount: amount,
                 to: trader,
