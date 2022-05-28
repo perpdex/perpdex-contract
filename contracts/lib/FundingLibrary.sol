@@ -31,10 +31,11 @@ library FundingLibrary {
 
     function rebase(MarketStructs.FundingInfo storage fundingInfo, RebaseParams memory params) internal {
         uint256 now = block.timestamp;
-        uint256 indexPrice = IPriceFeed(params.priceFeed).getPrice(0);
         uint256 elapsedSec = now.sub(fundingInfo.prevIndexPriceTimestamp);
+        if (elapsedSec == 0) return;
 
-        if (fundingInfo.prevIndexPrice == indexPrice || indexPrice == 0 || elapsedSec == 0) {
+        uint256 indexPrice = IPriceFeed(params.priceFeed).getPrice(0);
+        if (fundingInfo.prevIndexPrice == indexPrice || indexPrice == 0) {
             return;
         }
 

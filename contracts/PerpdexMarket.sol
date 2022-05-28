@@ -51,6 +51,7 @@ contract PerpdexMarket is IPerpdexMarket {
         bool isExactInput,
         uint256 amount
     ) external override onlyExchange returns (uint256) {
+        _rebase();
         return
             PoolLibrary.swap(
                 poolInfo,
@@ -73,6 +74,7 @@ contract PerpdexMarket is IPerpdexMarket {
             uint256
         )
     {
+        _rebase();
         return
             PoolLibrary.addLiquidity(
                 poolInfo,
@@ -81,22 +83,8 @@ contract PerpdexMarket is IPerpdexMarket {
     }
 
     function removeLiquidity(uint256 liquidity) external override onlyExchange returns (uint256, uint256) {
+        _rebase();
         return PoolLibrary.removeLiquidity(poolInfo, PoolLibrary.RemoveLiquidityParams({ liquidity: liquidity }));
-    }
-
-    function rebase() external override onlyExchange {
-        uint256 markPriceX96 = getMarkPriceX96();
-
-        FundingLibrary.rebase(
-            fundingInfo,
-            FundingLibrary.RebaseParams({
-                priceFeed: priceFeed,
-                markPriceX96: markPriceX96,
-                maxPremiumRatio: fundingMaxPremiumRatio,
-                maxElapsedSec: fundingMaxElapsedSec,
-                rolloverSec: fundingRolloverSec
-            })
-        );
     }
 
     function setPoolFeeRatio(uint24 value) external {
@@ -133,5 +121,20 @@ contract PerpdexMarket is IPerpdexMarket {
 
     function balanceToShare(uint256 balance) external view override returns (uint256) {
         return balance.div(fundingInfo.balancePerShare);
+    }
+
+    function _rebase() private {
+        uint256 markPriceX96 = getMarkPriceX96();
+
+        FundingLibrary.rebase(
+            fundingInfo,
+            FundingLibrary.RebaseParams({
+                priceFeed: priceFeed,
+                markPriceX96: markPriceX96,
+                maxPremiumRatio: fundingMaxPremiumRatio,
+                maxElapsedSec: fundingMaxElapsedSec,
+                rolloverSec: fundingRolloverSec
+            })
+        );
     }
 }

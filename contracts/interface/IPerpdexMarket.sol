@@ -21,10 +21,6 @@ interface IPerpdexMarket {
 
     function removeLiquidity(uint256 liquidity) external returns (uint256 baseShare, uint256 quoteBalance);
 
-    function rebase() external;
-
-    // setters
-
     // getters
 
     function symbol() external view returns (string memory);
