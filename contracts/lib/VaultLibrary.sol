@@ -25,10 +25,8 @@ library VaultLibrary {
 
     struct WithdrawParams {
         address settlementToken;
-        address quoteToken;
         uint256 amount;
         address to;
-        address poolFactory;
         uint24 imRatio;
     }
 
@@ -39,9 +37,7 @@ library VaultLibrary {
 
     function withdraw(PerpdexStructs.AccountInfo storage accountInfo, WithdrawParams memory params) internal {
         accountInfo.vaultInfo.collateralBalance = accountInfo.vaultInfo.collateralBalance.sub(params.amount.toInt256());
-        require(
-            AccountLibrary.hasEnoughInitialMargin(accountInfo, params.poolFactory, params.quoteToken, params.imRatio)
-        );
+        require(AccountLibrary.hasEnoughInitialMargin(accountInfo, params.imRatio));
 
         SafeERC20Upgradeable.safeTransfer(IERC20Upgradeable(params.settlementToken), params.to, params.amount);
     }

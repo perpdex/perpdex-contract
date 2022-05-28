@@ -18,12 +18,12 @@ library PerpdexStructs {
     }
 
     struct AccountInfo {
-        // base token
+        // market
         mapping(address => TakerInfo) takerInfo;
-        // base token
+        // market
         mapping(address => MakerInfo) makerInfo;
         VaultInfo vaultInfo;
-        address[] baseTokens;
+        address[] markets;
     }
 
     struct InsuranceFundInfo {

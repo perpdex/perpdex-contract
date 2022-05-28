@@ -2,7 +2,8 @@
 pragma solidity 0.7.6;
 pragma abicoder v2;
 
-import { UniswapV2Broker } from "./UniswapV2Broker.sol";
+import { IMarket } from "../interface/IMarket.sol";
+import { MarketLibrary } from "./MarketLibrary.sol";
 import "./PerpdexStructs.sol";
 import "./TakerLibrary.sol";
 
@@ -14,15 +15,13 @@ library MakerLibrary {
     using SignedSafeMath for int256;
 
     struct AddLiquidityParams {
-        address baseToken;
-        address quoteToken;
+        address market;
         uint256 base;
         uint256 quote;
         uint256 minBase;
         uint256 minQuote;
         uint256 deadline;
-        address poolFactory;
-        bool isBaseTokenAllowed;
+        bool isMarketAllowed;
         uint24 imRatio;
         uint8 maxMarketsPerAccount;
     }
@@ -34,13 +33,11 @@ library MakerLibrary {
     }
 
     struct RemoveLiquidityParams {
-        address baseToken;
-        address quoteToken;
+        address market;
         uint256 liquidity;
         uint256 minBase;
         uint256 minQuote;
         uint256 deadline;
-        address poolFactory;
         bool makerIsSender;
         uint24 mmRatio;
         uint8 maxMarketsPerAccount;
@@ -65,34 +62,21 @@ library MakerLibrary {
         checkDeadline(params.deadline)
         returns (AddLiquidityResponse memory)
     {
-        require(params.isBaseTokenAllowed);
+        require(params.isMarketAllowed);
 
-        UniswapV2Broker.AddLiquidityResponse memory response =
-            UniswapV2Broker.addLiquidity(
-                UniswapV2Broker.AddLiquidityParams(
-                    params.poolFactory,
-                    params.baseToken,
-                    params.quoteToken,
-                    params.base,
-                    params.quote,
-                    address(this)
-                )
-            );
+        (uint256 baseShare, uint256 quoteBalance, uint256 liquidity) =
+            IMarket(params.market).addLiquidity(params.base, params.quote);
 
-        PerpdexStructs.MakerInfo storage makerInfo = accountInfo.makerInfo[params.baseToken];
-        makerInfo.baseDebtShare = makerInfo.baseDebtShare.add(
-            IBaseTokenNew(params.baseToken).balanceToShare(response.base)
-        );
-        makerInfo.quoteDebt = makerInfo.quoteDebt.add(response.quote);
-        makerInfo.liquidity = makerInfo.liquidity.add(response.liquidity);
+        PerpdexStructs.MakerInfo storage makerInfo = accountInfo.makerInfo[params.market];
+        makerInfo.baseDebtShare = makerInfo.baseDebtShare.add(baseShare);
+        makerInfo.quoteDebt = makerInfo.quoteDebt.add(quoteBalance);
+        makerInfo.liquidity = makerInfo.liquidity.add(liquidity);
 
-        AccountLibrary.updateBaseTokens(accountInfo, params.baseToken, params.maxMarketsPerAccount);
+        AccountLibrary.updateMarkets(accountInfo, params.market, params.maxMarketsPerAccount);
 
-        require(
-            AccountLibrary.hasEnoughInitialMargin(accountInfo, params.poolFactory, params.quoteToken, params.imRatio)
-        );
+        require(AccountLibrary.hasEnoughInitialMargin(accountInfo, params.imRatio));
 
-        return AddLiquidityResponse({ base: response.base, quote: response.quote, liquidity: response.liquidity });
+        return AddLiquidityResponse({ base: baseShare, quote: quoteBalance, liquidity: liquidity });
     }
 
     function removeLiquidity(PerpdexStructs.AccountInfo storage accountInfo, RemoveLiquidityParams memory params)
@@ -101,45 +85,25 @@ library MakerLibrary {
         returns (RemoveLiquidityResponse memory funcResponse)
     {
         if (!params.makerIsSender) {
-            require(
-                !AccountLibrary.hasEnoughMaintenanceMargin(
-                    accountInfo,
-                    params.poolFactory,
-                    params.quoteToken,
-                    params.mmRatio
-                )
-            );
+            require(!AccountLibrary.hasEnoughMaintenanceMargin(accountInfo, params.mmRatio));
         }
 
         {
-            UniswapV2Broker.RemoveLiquidityResponse memory response =
-                UniswapV2Broker.removeLiquidity(
-                    UniswapV2Broker.RemoveLiquidityParams(
-                        params.poolFactory,
-                        params.baseToken,
-                        params.quoteToken,
-                        address(this),
-                        params.liquidity
-                    )
-                );
-            funcResponse.base = response.base;
-            funcResponse.quote = response.quote;
+            (uint256 resBaseShare, uint256 resQuoteBalance) = IMarket(params.market).removeLiquidity(params.liquidity);
+            funcResponse.base = resBaseShare;
+            funcResponse.quote = resQuoteBalance;
         }
 
         // TODO: check slippage
 
         {
             (uint256 baseDebtShare, uint256 quoteDebt) =
-                _removeLiquidityFromOrder(accountInfo.makerInfo[params.baseToken], params.liquidity);
-            AccountLibrary.updateBaseTokens(accountInfo, params.baseToken, params.maxMarketsPerAccount);
+                _removeLiquidityFromOrder(accountInfo.makerInfo[params.market], params.liquidity);
+            AccountLibrary.updateMarkets(accountInfo, params.market, params.maxMarketsPerAccount);
 
-            funcResponse.priceAfterX96 = UniswapV2Broker.getMarkPriceX96(
-                params.poolFactory,
-                params.baseToken,
-                params.quoteToken
-            );
+            funcResponse.priceAfterX96 = IMarket(params.market).getMarkPriceX96();
             funcResponse.takerBase = funcResponse.base.toInt256().sub(
-                IBaseTokenNew(params.baseToken).shareToBalance(baseDebtShare).toInt256()
+                IMarket(params.market).shareToBalance(baseDebtShare).toInt256()
             );
             funcResponse.takerQuote = funcResponse.quote.toInt256().sub(quoteDebt.toInt256());
         }
@@ -149,7 +113,7 @@ library MakerLibrary {
                 -funcResponse.takerBase.mulDiv(funcResponse.priceAfterX96.toInt256(), FixedPoint96.Q96);
             funcResponse.realizedPnL = TakerLibrary.addToTakerBalance(
                 accountInfo,
-                params.baseToken,
+                params.market,
                 funcResponse.takerBase,
                 takerQuoteCalculatedAtCurrentPrice,
                 funcResponse.takerQuote.sub(takerQuoteCalculatedAtCurrentPrice),

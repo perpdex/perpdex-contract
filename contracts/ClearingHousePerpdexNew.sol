@@ -2,10 +2,9 @@
 pragma solidity 0.7.6;
 pragma abicoder v2;
 
-import { AddressUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
+import { Address } from "@openzeppelin/contracts/utils/Address.sol";
 import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
-import { IERC20Metadata } from "./interface/IERC20Metadata.sol";
 import { IClearingHousePerpdexNew } from "./interface/IClearingHousePerpdexNew.sol";
 import { PerpdexStructs } from "./lib/PerpdexStructs.sol";
 import { AccountLibrary } from "./lib/AccountLibrary.sol";
@@ -14,32 +13,28 @@ import { TakerLibrary } from "./lib/TakerLibrary.sol";
 import { VaultLibrary } from "./lib/VaultLibrary.sol";
 import { PerpMath } from "./lib/PerpMath.sol";
 import { PerpSafeCast } from "./lib/PerpSafeCast.sol";
-import { QuoteTokenPerpdex } from "./QuoteTokenPerpdex.sol";
 
-// never inherit any new stateful contract. never change the orders of parent stateful contracts
 contract ClearingHousePerpdexNew is IClearingHousePerpdexNew, ReentrancyGuard, Ownable {
-    using AddressUpgradeable for address;
+    using Address for address;
     using PerpMath for uint256;
     using PerpSafeCast for uint256;
 
     // states
     // trader
     mapping(address => PerpdexStructs.AccountInfo) public accountInfos;
-    // baseToken
+    // market
     mapping(address => PerpdexStructs.PriceLimitInfo) public priceLimitInfos;
     PerpdexStructs.InsuranceFundInfo public insuranceFundInfo;
 
     // config
     address public immutable settlementToken;
-    address public immutable quoteToken;
-    address public immutable uniV2Factory;
     PerpdexStructs.PriceLimitConfig public priceLimitConfig;
     uint8 public maxMarketsPerAccount;
     uint24 public imRatio;
     uint24 public mmRatio;
     uint24 public liquidationRewardRatio;
     uint24 public maxFundingRateRatio;
-    mapping(address => bool) public isBaseTokenAllowed;
+    mapping(address => bool) public isMarketAllowed;
 
     //
     // MODIFIER
@@ -49,20 +44,11 @@ contract ClearingHousePerpdexNew is IClearingHousePerpdexNew, ReentrancyGuard, O
     // EXTERNAL NON-VIEW
     //
 
-    constructor(
-        address settlementTokenArg,
-        string memory quoteTokenName,
-        string memory quoteTokenSymbol,
-        address uniV2FactoryArg
-    ) public {
+    constructor(address settlementTokenArg) {
         // CH_SANC: Settlement token address is not contract
         require(settlementTokenArg.isContract(), "CH_SANC");
-        // CH_UANC: UniV2Factory address is not contract
-        require(uniV2FactoryArg.isContract(), "CH_UANC");
 
         settlementToken = settlementTokenArg;
-        quoteToken = address(new QuoteTokenPerpdex{ salt: 0 }(quoteTokenName, quoteTokenSymbol, address(this)));
-        uniV2Factory = uniV2FactoryArg;
 
         priceLimitConfig.priceLimitLiquidationRatio = 10e4;
         priceLimitConfig.priceLimitLiquidationRatio = 5e4;
@@ -87,10 +73,8 @@ contract ClearingHousePerpdexNew is IClearingHousePerpdexNew, ReentrancyGuard, O
             accountInfos[trader],
             VaultLibrary.WithdrawParams({
                 settlementToken: settlementToken,
-                quoteToken: quoteToken,
                 amount: amount,
                 to: trader,
-                poolFactory: uniV2Factory,
                 imRatio: imRatio
             })
         );
@@ -108,18 +92,16 @@ contract ClearingHousePerpdexNew is IClearingHousePerpdexNew, ReentrancyGuard, O
         TakerLibrary.OpenPositionResponse memory response =
             TakerLibrary.openPosition(
                 accountInfos[trader],
-                priceLimitInfos[params.baseToken],
+                priceLimitInfos[params.market],
                 TakerLibrary.OpenPositionParams({
-                    baseToken: params.baseToken,
-                    quoteToken: quoteToken,
+                    market: params.market,
                     isBaseToQuote: params.isBaseToQuote,
                     isExactInput: params.isExactInput,
                     amount: params.amount,
                     oppositeAmountBound: params.oppositeAmountBound,
                     deadline: params.deadline,
-                    poolFactory: uniV2Factory,
                     priceLimitConfig: priceLimitConfig,
-                    isBaseTokenAllowed: isBaseTokenAllowed[params.baseToken],
+                    isMarketAllowed: isMarketAllowed[params.market],
                     mmRatio: mmRatio,
                     imRatio: imRatio,
                     maxMarketsPerAccount: maxMarketsPerAccount
@@ -128,10 +110,10 @@ contract ClearingHousePerpdexNew is IClearingHousePerpdexNew, ReentrancyGuard, O
 
         emit PositionChanged(
             trader,
-            params.baseToken,
+            params.market,
             response.exchangedBase,
             response.exchangedQuote,
-            accountInfos[trader].takerInfo[params.baseToken].quoteBalance,
+            accountInfos[trader].takerInfo[params.market].quoteBalance,
             response.realizedPnL,
             response.priceAfterX96
         );
@@ -153,15 +135,13 @@ contract ClearingHousePerpdexNew is IClearingHousePerpdexNew, ReentrancyGuard, O
             TakerLibrary.liquidate(
                 accountInfos[trader],
                 accountInfos[liquidator],
-                priceLimitInfos[params.baseToken],
+                priceLimitInfos[params.market],
                 insuranceFundInfo,
                 TakerLibrary.LiquidateParams({
-                    baseToken: params.baseToken,
-                    quoteToken: quoteToken,
+                    market: params.market,
                     amount: params.amount,
                     oppositeAmountBound: params.oppositeAmountBound,
                     deadline: params.deadline,
-                    poolFactory: uniV2Factory,
                     priceLimitConfig: priceLimitConfig,
                     mmRatio: mmRatio,
                     liquidationRewardRatio: liquidationRewardRatio,
@@ -171,10 +151,10 @@ contract ClearingHousePerpdexNew is IClearingHousePerpdexNew, ReentrancyGuard, O
 
         emit PositionChanged(
             trader,
-            params.baseToken,
+            params.market,
             response.exchangedBase,
             response.exchangedQuote,
-            accountInfos[trader].takerInfo[params.baseToken].quoteBalance,
+            accountInfos[trader].takerInfo[params.market].quoteBalance,
             response.realizedPnL,
             response.priceAfterX96
         );
@@ -195,15 +175,13 @@ contract ClearingHousePerpdexNew is IClearingHousePerpdexNew, ReentrancyGuard, O
             MakerLibrary.addLiquidity(
                 accountInfos[maker],
                 MakerLibrary.AddLiquidityParams({
-                    baseToken: params.baseToken,
-                    quoteToken: quoteToken,
+                    market: params.market,
                     base: params.base,
                     quote: params.quote,
                     minBase: params.minBase,
                     minQuote: params.minQuote,
                     deadline: params.deadline,
-                    poolFactory: uniV2Factory,
-                    isBaseTokenAllowed: isBaseTokenAllowed[params.baseToken],
+                    isMarketAllowed: isMarketAllowed[params.market],
                     imRatio: imRatio,
                     maxMarketsPerAccount: maxMarketsPerAccount
                 })
@@ -211,8 +189,7 @@ contract ClearingHousePerpdexNew is IClearingHousePerpdexNew, ReentrancyGuard, O
 
         emit LiquidityChanged(
             maker,
-            params.baseToken,
-            quoteToken,
+            params.market,
             response.base.toInt256(),
             response.quote.toInt256(),
             response.liquidity.toInt256()
@@ -241,13 +218,11 @@ contract ClearingHousePerpdexNew is IClearingHousePerpdexNew, ReentrancyGuard, O
             MakerLibrary.removeLiquidity(
                 accountInfos[maker],
                 MakerLibrary.RemoveLiquidityParams({
-                    baseToken: params.baseToken,
-                    quoteToken: quoteToken,
+                    market: params.market,
                     liquidity: params.liquidity,
                     minBase: params.minBase,
                     minQuote: params.minQuote,
                     deadline: params.deadline,
-                    poolFactory: uniV2Factory,
                     makerIsSender: maker == _msgSender(),
                     mmRatio: mmRatio,
                     maxMarketsPerAccount: maxMarketsPerAccount
@@ -256,8 +231,7 @@ contract ClearingHousePerpdexNew is IClearingHousePerpdexNew, ReentrancyGuard, O
 
         emit LiquidityChanged(
             maker,
-            params.baseToken,
-            quoteToken,
+            params.market,
             response.base.neg256(),
             response.quote.neg256(),
             params.liquidity.neg256()
@@ -265,10 +239,10 @@ contract ClearingHousePerpdexNew is IClearingHousePerpdexNew, ReentrancyGuard, O
 
         emit PositionChanged(
             maker,
-            params.baseToken,
+            params.market,
             response.takerBase, // exchangedPositionSize
             response.takerQuote, // exchangedPositionNotional
-            accountInfos[maker].takerInfo[params.baseToken].quoteBalance,
+            accountInfos[maker].takerInfo[params.market].quoteBalance,
             response.realizedPnL, // realizedPnl
             response.priceAfterX96
         );
@@ -311,8 +285,8 @@ contract ClearingHousePerpdexNew is IClearingHousePerpdexNew, ReentrancyGuard, O
         maxFundingRateRatio = value;
     }
 
-    function setIsBaseTokenAllowed(address baseToken, bool value) external override onlyOwner nonReentrant {
-        isBaseTokenAllowed[baseToken] = value;
+    function setIsMarketAllowed(address market, bool value) external override onlyOwner nonReentrant {
+        isMarketAllowed[market] = value;
     }
 
     //
@@ -321,61 +295,53 @@ contract ClearingHousePerpdexNew is IClearingHousePerpdexNew, ReentrancyGuard, O
 
     // all raw information can be retrieved through getters (including default getters)
 
-    function getTakerInfo(address trader, address baseToken) external returns (PerpdexStructs.TakerInfo memory) {
-        return accountInfos[trader].takerInfo[baseToken];
+    function getTakerInfo(address trader, address market) external returns (PerpdexStructs.TakerInfo memory) {
+        return accountInfos[trader].takerInfo[market];
     }
 
-    function getMakerInfo(address trader, address baseToken) external returns (PerpdexStructs.MakerInfo memory) {
-        return accountInfos[trader].makerInfo[baseToken];
+    function getMakerInfo(address trader, address market) external returns (PerpdexStructs.MakerInfo memory) {
+        return accountInfos[trader].makerInfo[market];
     }
 
-    function getAccountBaseTokens(address trader) external returns (address[] memory) {
-        return accountInfos[trader].baseTokens;
+    function getAccountMarkets(address trader) external returns (address[] memory) {
+        return accountInfos[trader].markets;
     }
 
     // convenient getters
 
     function getTotalAccountValue(address trader) external view override returns (int256) {
-        return AccountLibrary.getTotalAccountValue(accountInfos[trader], uniV2Factory, quoteToken);
+        return AccountLibrary.getTotalAccountValue(accountInfos[trader]);
     }
 
-    function getPositionSize(address trader, address baseToken) external view override returns (int256) {
-        return AccountLibrary.getPositionSize(accountInfos[trader], uniV2Factory, baseToken, quoteToken);
+    function getPositionSize(address trader, address market) external view override returns (int256) {
+        return AccountLibrary.getPositionSize(accountInfos[trader], market);
     }
 
-    function getPositionNotional(address trader, address baseToken) external view override returns (int256) {
-        return AccountLibrary.getPositionNotional(accountInfos[trader], uniV2Factory, baseToken, quoteToken);
+    function getPositionNotional(address trader, address market) external view override returns (int256) {
+        return AccountLibrary.getPositionNotional(accountInfos[trader], market);
     }
 
     function getTotalPositionNotional(address trader) external view override returns (uint256) {
-        return AccountLibrary.getTotalPositionNotional(accountInfos[trader], uniV2Factory, quoteToken);
+        return AccountLibrary.getTotalPositionNotional(accountInfos[trader]);
     }
 
-    function getOpenPositionSize(address trader, address baseToken) external view override returns (uint256) {
-        return AccountLibrary.getOpenPositionSize(accountInfos[trader], uniV2Factory, baseToken, quoteToken);
+    function getOpenPositionSize(address trader, address market) external view override returns (uint256) {
+        return AccountLibrary.getOpenPositionSize(accountInfos[trader], market);
     }
 
-    function getOpenPositionNotional(address trader, address baseToken) external view override returns (uint256) {
-        return AccountLibrary.getOpenPositionNotional(accountInfos[trader], uniV2Factory, baseToken, quoteToken);
+    function getOpenPositionNotional(address trader, address market) external view override returns (uint256) {
+        return AccountLibrary.getOpenPositionNotional(accountInfos[trader], market);
     }
 
     function getTotalOpenPositionNotional(address trader) external view override returns (uint256) {
-        return AccountLibrary.getTotalOpenPositionNotional(accountInfos[trader], uniV2Factory, quoteToken);
+        return AccountLibrary.getTotalOpenPositionNotional(accountInfos[trader]);
     }
 
     function hasEnoughMaintenanceMargin(address trader) external view override returns (bool) {
-        return AccountLibrary.hasEnoughMaintenanceMargin(accountInfos[trader], uniV2Factory, quoteToken, mmRatio);
+        return AccountLibrary.hasEnoughMaintenanceMargin(accountInfos[trader], mmRatio);
     }
 
     function hasEnoughInitialMargin(address trader) external view override returns (bool) {
-        return AccountLibrary.hasEnoughInitialMargin(accountInfos[trader], uniV2Factory, quoteToken, imRatio);
+        return AccountLibrary.hasEnoughInitialMargin(accountInfos[trader], imRatio);
     }
-
-    //
-    // INTERNAL NON-VIEW
-    //
-
-    //
-    // INTERNAL VIEW
-    //
 }
