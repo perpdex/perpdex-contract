@@ -6,7 +6,7 @@ import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
 import { SignedSafeMath } from "@openzeppelin/contracts/math/SignedSafeMath.sol";
 import { PerpMath } from "./PerpMath.sol";
 import { PerpSafeCast } from "./PerpSafeCast.sol";
-import { IMarket } from "../interface/IMarket.sol";
+import { IPerpdexMarket } from "../interface/IPerpdexMarket.sol";
 import { MarketLibrary } from "./MarketLibrary.sol";
 import "./PerpdexStructs.sol";
 import "./AccountLibrary.sol";
@@ -113,7 +113,7 @@ library TakerLibrary {
         {
             PerpdexStructs.TakerInfo storage takerInfo = accountInfo.takerInfo[params.market];
             isLong = takerInfo.baseBalanceShare > 0 ? true : false;
-            require(params.amount <= IMarket(params.market).shareToBalance(takerInfo.baseBalanceShare.abs()));
+            require(params.amount <= IPerpdexMarket(params.market).shareToBalance(takerInfo.baseBalanceShare.abs()));
         }
 
         (int256 exchangedBase, int256 exchangedQuote, int256 realizedPnL) =
@@ -189,7 +189,7 @@ library TakerLibrary {
     }
 
     function _getPriceX96(address market) private returns (uint256) {
-        return IMarket(market).getMarkPriceX96();
+        return IPerpdexMarket(market).getMarkPriceX96();
     }
 
     function _doSwap(

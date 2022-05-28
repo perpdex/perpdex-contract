@@ -3,17 +3,17 @@ pragma solidity 0.7.6;
 
 import { Address } from "@openzeppelin/contracts/utils/Address.sol";
 import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
-import { IMarket } from "./interface/IMarket.sol";
+import { IPerpdexMarket } from "./interface/IPerpdexMarket.sol";
 import { MarketStructs } from "./lib/MarketStructs.sol";
 import { FundingLibrary } from "./lib/FundingLibrary.sol";
 import { PoolLibrary } from "./lib/PoolLibrary.sol";
 
-contract MarketPerpdex is IMarket {
+contract PerpdexMarket is IPerpdexMarket {
     using Address for address;
     using SafeMath for uint256;
 
-    string public symbol;
-    address public immutable clearingHouse;
+    string public override symbol;
+    address public immutable override exchange;
     address public immutable priceFeed;
 
     MarketStructs.PoolInfo public poolInfo;
@@ -24,25 +24,25 @@ contract MarketPerpdex is IMarket {
     uint32 public fundingMaxElapsedSec;
     uint32 public fundingRolloverSec;
 
-    modifier onlyClearingHouse() {
-        // BT_CNCH: caller not clearingHouse
-        require(clearingHouse == msg.sender, "BT_CNCH");
+    modifier onlyExchange() {
+        // BT_CNCH: caller not Exchange
+        require(exchange == msg.sender, "BT_CNE");
         _;
     }
 
     constructor(
         string memory symbolArg,
-        address clearingHouseArg,
+        address exchangeArg,
         address priceFeedArg
     ) {
-        // BT_CANC: ClearingHouse address is not contract
-        require(clearingHouseArg.isContract(), "BT_CANC");
+        // BT_EANC: exchangeArg address is not contract
+        require(exchangeArg.isContract(), "BT_EANC");
 
         // BT_SANC: Price feed address is not contract
         require(priceFeedArg.isContract(), "BT_PANC");
 
         symbol = symbolArg;
-        clearingHouse = clearingHouseArg;
+        exchange = exchangeArg;
         priceFeed = priceFeedArg;
     }
 
@@ -50,7 +50,7 @@ contract MarketPerpdex is IMarket {
         bool isBaseToQuote,
         bool isExactInput,
         uint256 amount
-    ) external override onlyClearingHouse returns (uint256) {
+    ) external override onlyExchange returns (uint256) {
         return
             PoolLibrary.swap(
                 poolInfo,
@@ -66,7 +66,7 @@ contract MarketPerpdex is IMarket {
     function addLiquidity(uint256 baseShare, uint256 quoteBalance)
         external
         override
-        onlyClearingHouse
+        onlyExchange
         returns (
             uint256,
             uint256,
@@ -80,11 +80,11 @@ contract MarketPerpdex is IMarket {
             );
     }
 
-    function removeLiquidity(uint256 liquidity) external override onlyClearingHouse returns (uint256, uint256) {
+    function removeLiquidity(uint256 liquidity) external override onlyExchange returns (uint256, uint256) {
         return PoolLibrary.removeLiquidity(poolInfo, PoolLibrary.RemoveLiquidityParams({ liquidity: liquidity }));
     }
 
-    function rebase() external override onlyClearingHouse {
+    function rebase() external override onlyExchange {
         uint256 markPriceX96 = getMarkPriceX96();
 
         FundingLibrary.rebase(

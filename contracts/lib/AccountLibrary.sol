@@ -7,7 +7,7 @@ import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
 import { SignedSafeMath } from "@openzeppelin/contracts/math/SignedSafeMath.sol";
 import { FullMath } from "@uniswap/lib/contracts/libraries/FullMath.sol";
 import { PerpSafeCast } from "./PerpSafeCast.sol";
-import { IMarket } from "../interface/IMarket.sol";
+import { IPerpdexMarket } from "../interface/IPerpdexMarket.sol";
 import { MarketLibrary } from "./MarketLibrary.sol";
 import "./PerpdexStructs.sol";
 
@@ -39,7 +39,7 @@ library AccountLibrary {
     {
         PerpdexStructs.MakerInfo storage makerInfo = accountInfo.makerInfo[market];
         int256 baseShare = accountInfo.takerInfo[market].baseBalanceShare.sub(makerInfo.baseDebtShare.toInt256());
-        (uint256 poolBaseShare, ) = IMarket(market).getLiquidityValue(makerInfo.liquidity);
+        (uint256 poolBaseShare, ) = IPerpdexMarket(market).getLiquidityValue(makerInfo.liquidity);
         return MarketLibrary.shareToBalance(market, baseShare.add(poolBaseShare.toInt256()));
     }
 
@@ -49,7 +49,7 @@ library AccountLibrary {
         returns (int256)
     {
         int256 positionSize = getPositionSize(accountInfo, market);
-        uint256 priceX96 = IMarket(market).getMarkPriceX96();
+        uint256 priceX96 = IPerpdexMarket(market).getMarkPriceX96();
         return positionSize.mulDiv(priceX96.toInt256(), FixedPoint96.Q96);
     }
 
@@ -70,7 +70,7 @@ library AccountLibrary {
         returns (uint256)
     {
         PerpdexStructs.MakerInfo storage makerInfo = accountInfo.makerInfo[market];
-        (uint256 poolBaseShare, ) = IMarket(market).getLiquidityValue(makerInfo.liquidity);
+        (uint256 poolBaseShare, ) = IPerpdexMarket(market).getLiquidityValue(makerInfo.liquidity);
         return getPositionSize(accountInfo, market).abs().add(poolBaseShare);
     }
 
@@ -80,7 +80,7 @@ library AccountLibrary {
         returns (uint256)
     {
         uint256 positionSize = getOpenPositionSize(accountInfo, market);
-        uint256 priceX96 = IMarket(market).getMarkPriceX96();
+        uint256 priceX96 = IPerpdexMarket(market).getMarkPriceX96();
         return FullMath.mulDiv(positionSize, priceX96, FixedPoint96.Q96);
     }
 

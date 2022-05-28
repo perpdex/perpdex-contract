@@ -2,7 +2,7 @@
 pragma solidity 0.7.6;
 pragma abicoder v2;
 
-import { IMarket } from "../interface/IMarket.sol";
+import { IPerpdexMarket } from "../interface/IPerpdexMarket.sol";
 import { MarketLibrary } from "./MarketLibrary.sol";
 import "./PerpdexStructs.sol";
 import "./TakerLibrary.sol";
@@ -65,7 +65,7 @@ library MakerLibrary {
         require(params.isMarketAllowed);
 
         (uint256 baseShare, uint256 quoteBalance, uint256 liquidity) =
-            IMarket(params.market).addLiquidity(params.base, params.quote);
+            IPerpdexMarket(params.market).addLiquidity(params.base, params.quote);
 
         PerpdexStructs.MakerInfo storage makerInfo = accountInfo.makerInfo[params.market];
         makerInfo.baseDebtShare = makerInfo.baseDebtShare.add(baseShare);
@@ -89,7 +89,8 @@ library MakerLibrary {
         }
 
         {
-            (uint256 resBaseShare, uint256 resQuoteBalance) = IMarket(params.market).removeLiquidity(params.liquidity);
+            (uint256 resBaseShare, uint256 resQuoteBalance) =
+                IPerpdexMarket(params.market).removeLiquidity(params.liquidity);
             funcResponse.base = resBaseShare;
             funcResponse.quote = resQuoteBalance;
         }
@@ -101,9 +102,9 @@ library MakerLibrary {
                 _removeLiquidityFromOrder(accountInfo.makerInfo[params.market], params.liquidity);
             AccountLibrary.updateMarkets(accountInfo, params.market, params.maxMarketsPerAccount);
 
-            funcResponse.priceAfterX96 = IMarket(params.market).getMarkPriceX96();
+            funcResponse.priceAfterX96 = IPerpdexMarket(params.market).getMarkPriceX96();
             funcResponse.takerBase = funcResponse.base.toInt256().sub(
-                IMarket(params.market).shareToBalance(baseDebtShare).toInt256()
+                IPerpdexMarket(params.market).shareToBalance(baseDebtShare).toInt256()
             );
             funcResponse.takerQuote = funcResponse.quote.toInt256().sub(quoteDebt.toInt256());
         }

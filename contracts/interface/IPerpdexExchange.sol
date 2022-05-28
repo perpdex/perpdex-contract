@@ -4,7 +4,7 @@ pragma abicoder v2;
 
 import { PerpdexStructs } from "../lib/PerpdexStructs.sol";
 
-interface IClearingHousePerpdexNew {
+interface IPerpdexExchange {
     struct AddLiquidityParams {
         address market;
         uint256 base;
@@ -89,6 +89,8 @@ interface IClearingHousePerpdexNew {
 
     function liquidate(LiquidateParams calldata params) external returns (int256 base, int256 quote);
 
+    // setters
+
     function setPriceLimitConfig(PerpdexStructs.PriceLimitConfig calldata value) external;
 
     function setMaxMarketsPerAccount(uint8 value) external;
@@ -99,11 +101,32 @@ interface IClearingHousePerpdexNew {
 
     function setLiquidationRewardRatio(uint24 value) external;
 
-    function setMaxFundingRateRatio(uint24 value) external;
-
     function setIsMarketAllowed(address market, bool value) external;
 
-    // TODO: raw default getters
+    // default getters
+
+    function accountInfos(address trader) external view returns (PerpdexStructs.VaultInfo memory);
+
+    function priceLimitInfos(address market) external view returns (uint256 referencePrice, uint256 referenceTimestamp);
+
+    function insuranceFundInfo() external view returns (int256 balance);
+
+    function settlementToken() external view returns (address);
+
+    function priceLimitConfig()
+        external
+        view
+        returns (uint24 priceLimitNormalOrderRatio, uint24 priceLimitLiquidationRatio);
+
+    function maxMarketsPerAccount() external view returns (uint8);
+
+    function imRatio() external view returns (uint24);
+
+    function mmRatio() external view returns (uint24);
+
+    function liquidationRewardRatio() external view returns (uint24);
+
+    function isMarketAllowed(address market) external view returns (bool);
 
     // convenient getters
 

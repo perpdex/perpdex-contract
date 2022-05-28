@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity 0.7.6;
 
-import { IMarket } from "../interface/IMarket.sol";
+import { IPerpdexMarket } from "../interface/IPerpdexMarket.sol";
 import { PerpMath } from "./PerpMath.sol";
 import { PerpSafeCast } from "./PerpSafeCast.sol";
 
@@ -17,7 +17,7 @@ library MarketLibrary {
         bool isExactInput,
         uint256 amount
     ) internal returns (int256, int256) {
-        uint256 resAmount = IMarket(market).swap(isBaseToQuote, isExactInput, amount);
+        uint256 resAmount = IPerpdexMarket(market).swap(isBaseToQuote, isExactInput, amount);
 
         if (isExactInput) {
             if (isBaseToQuote) {
@@ -35,12 +35,12 @@ library MarketLibrary {
     }
 
     function balanceToShare(address market, int256 balance) internal view returns (int256) {
-        uint256 shareAbs = IMarket(market).balanceToShare(balance.abs());
+        uint256 shareAbs = IPerpdexMarket(market).balanceToShare(balance.abs());
         return balance < 0 ? shareAbs.neg256() : shareAbs.toInt256();
     }
 
     function shareToBalance(address market, int256 share) internal view returns (int256) {
-        uint256 balanceAbs = IMarket(market).shareToBalance(share.abs());
+        uint256 balanceAbs = IPerpdexMarket(market).shareToBalance(share.abs());
         return share < 0 ? balanceAbs.neg256() : balanceAbs.toInt256();
     }
 }
