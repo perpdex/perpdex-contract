@@ -8,10 +8,9 @@ import { IERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC
 import { SafeERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/SafeERC20Upgradeable.sol";
 import { IERC20Metadata } from "../interface/IERC20Metadata.sol";
 import { PerpSafeCast } from "./PerpSafeCast.sol";
-import "./AccountLibrary.sol";
-import "./PerpdexStructs.sol";
+import { AccountLibrary } from "./AccountLibrary.sol";
+import { PerpdexStructs } from "./PerpdexStructs.sol";
 
-// internal
 library VaultLibrary {
     using PerpSafeCast for uint256;
     using SafeMath for uint256;

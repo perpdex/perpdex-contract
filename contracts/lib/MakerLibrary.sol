@@ -2,12 +2,18 @@
 pragma solidity 0.7.6;
 pragma abicoder v2;
 
+import { FullMath } from "@uniswap/lib/contracts/libraries/FullMath.sol";
+import { FixedPoint96 } from "@uniswap/v3-core/contracts/libraries/FixedPoint96.sol";
+import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
+import { SignedSafeMath } from "@openzeppelin/contracts/math/SignedSafeMath.sol";
+import { PerpMath } from "./PerpMath.sol";
+import { PerpSafeCast } from "./PerpSafeCast.sol";
 import { IPerpdexMarket } from "../interface/IPerpdexMarket.sol";
 import { MarketLibrary } from "./MarketLibrary.sol";
-import "./PerpdexStructs.sol";
-import "./TakerLibrary.sol";
+import { PerpdexStructs } from "./PerpdexStructs.sol";
+import { AccountLibrary } from "./AccountLibrary.sol";
+import { TakerLibrary } from "./TakerLibrary.sol";
 
-// internal
 library MakerLibrary {
     using PerpMath for int256;
     using PerpSafeCast for uint256;
@@ -91,11 +97,13 @@ library MakerLibrary {
         {
             (uint256 resBaseShare, uint256 resQuoteBalance) =
                 IPerpdexMarket(params.market).removeLiquidity(params.liquidity);
+
+            require(resBaseShare >= params.minBase);
+            require(resQuoteBalance >= params.minQuote);
+
             funcResponse.base = resBaseShare;
             funcResponse.quote = resQuoteBalance;
         }
-
-        // TODO: check slippage
 
         {
             (uint256 baseDebtShare, uint256 quoteDebt) =

@@ -5,7 +5,6 @@ import { IPerpdexMarket } from "../interface/IPerpdexMarket.sol";
 import { PerpMath } from "./PerpMath.sol";
 import { PerpSafeCast } from "./PerpSafeCast.sol";
 
-// internal
 library MarketLibrary {
     using PerpMath for int256;
     using PerpMath for uint256;
@@ -15,17 +14,20 @@ library MarketLibrary {
         address market,
         bool isBaseToQuote,
         bool isExactInput,
-        uint256 amount
+        uint256 amount,
+        uint256 oppositeAmountBound
     ) internal returns (int256, int256) {
         uint256 resAmount = IPerpdexMarket(market).swap(isBaseToQuote, isExactInput, amount);
 
         if (isExactInput) {
+            require(resAmount >= oppositeAmountBound);
             if (isBaseToQuote) {
                 return (amount.neg256(), resAmount.toInt256());
             } else {
                 return (resAmount.toInt256(), amount.neg256());
             }
         } else {
+            require(resAmount <= oppositeAmountBound);
             if (isBaseToQuote) {
                 return (resAmount.neg256(), amount.toInt256());
             } else {

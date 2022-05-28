@@ -4,15 +4,15 @@ pragma abicoder v2;
 
 import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
 import { SignedSafeMath } from "@openzeppelin/contracts/math/SignedSafeMath.sol";
+import { FullMath } from "@uniswap/lib/contracts/libraries/FullMath.sol";
 import { PerpMath } from "./PerpMath.sol";
 import { PerpSafeCast } from "./PerpSafeCast.sol";
 import { IPerpdexMarket } from "../interface/IPerpdexMarket.sol";
 import { MarketLibrary } from "./MarketLibrary.sol";
-import "./PerpdexStructs.sol";
-import "./AccountLibrary.sol";
-import "./PriceLimitLibrary.sol";
+import { PerpdexStructs } from "./PerpdexStructs.sol";
+import { AccountLibrary } from "./AccountLibrary.sol";
+import { PriceLimitLibrary } from "./PriceLimitLibrary.sol";
 
-// internal
 library TakerLibrary {
     using PerpMath for int256;
     using PerpMath for uint256;
@@ -79,6 +79,7 @@ library TakerLibrary {
                 params.isBaseToQuote,
                 params.isExactInput,
                 params.amount,
+                params.oppositeAmountBound,
                 params.maxMarketsPerAccount
             );
 
@@ -124,6 +125,7 @@ library TakerLibrary {
                 isLong, // isBaseToQuote,
                 isLong, // isExactInput,
                 params.amount,
+                params.oppositeAmountBound,
                 params.maxMarketsPerAccount
             );
 
@@ -199,6 +201,7 @@ library TakerLibrary {
         bool isBaseToQuote,
         bool isExactInput,
         uint256 amount,
+        uint256 oppositeAmountBound,
         uint8 maxMarketsPerAccount
     )
         private
@@ -214,7 +217,7 @@ library TakerLibrary {
         }
 
         (int256 exchangedPositionSize, int256 exchangedPositionNotional) =
-            MarketLibrary.swap(market, isBaseToQuote, isExactInput, amount);
+            MarketLibrary.swap(market, isBaseToQuote, isExactInput, amount, oppositeAmountBound);
 
         int256 realizedPnL =
             addToTakerBalance(

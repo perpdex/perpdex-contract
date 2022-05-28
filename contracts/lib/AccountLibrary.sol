@@ -9,10 +9,9 @@ import { FullMath } from "@uniswap/lib/contracts/libraries/FullMath.sol";
 import { PerpSafeCast } from "./PerpSafeCast.sol";
 import { IPerpdexMarket } from "../interface/IPerpdexMarket.sol";
 import { MarketLibrary } from "./MarketLibrary.sol";
-import "./PerpdexStructs.sol";
+import { PerpdexStructs } from "./PerpdexStructs.sol";
 
 // https://help.ftx.com/hc/en-us/articles/360024780511-Complete-Futures-Specs
-// internal
 library AccountLibrary {
     using PerpMath for int256;
     using PerpMath for uint256;
@@ -25,9 +24,18 @@ library AccountLibrary {
         int256 accountValue = accountInfo.vaultInfo.collateralBalance;
         uint256 length = markets.length;
         for (uint256 i = 0; i < length; ++i) {
-            accountValue = accountValue.add(getPositionNotional(accountInfo, markets[i]));
-            // TODO: implement
-            //            accountValue = accountValue.add(getPositionNotional(accountInfo, baseTokens[i]));
+            address market = markets[i];
+            PerpdexStructs.MakerInfo storage makerInfo = accountInfo.makerInfo[market];
+            int256 baseShare = accountInfo.takerInfo[market].baseBalanceShare.sub(makerInfo.baseDebtShare.toInt256());
+            int256 quoteBalance = accountInfo.takerInfo[market].quoteBalance.sub(makerInfo.quoteDebt.toInt256());
+            (uint256 poolBaseShare, uint256 poolQuoteBalance) =
+                IPerpdexMarket(market).getLiquidityValue(makerInfo.liquidity);
+
+            int256 positionSize = MarketLibrary.shareToBalance(market, baseShare.add(poolBaseShare.toInt256()));
+            uint256 priceX96 = IPerpdexMarket(market).getMarkPriceX96();
+
+            accountValue = accountValue.add(positionSize.mulDiv(priceX96.toInt256(), FixedPoint96.Q96));
+            accountValue = accountValue.add(quoteBalance.add(poolQuoteBalance.toInt256()));
         }
         return accountValue;
     }

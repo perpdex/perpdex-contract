@@ -12,7 +12,6 @@ import { IPriceFeed } from "@perp/perp-oracle-contract/contracts/interface/IPric
 import { FullMath } from "@uniswap/lib/contracts/libraries/FullMath.sol";
 import { FixedPoint96 } from "@uniswap/v3-core/contracts/libraries/FixedPoint96.sol";
 
-// internal
 library FundingLibrary {
     using PerpMath for int256;
     using PerpMath for uint256;
