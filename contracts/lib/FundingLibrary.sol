@@ -8,7 +8,7 @@ import { SignedSafeMath } from "@openzeppelin/contracts/math/SignedSafeMath.sol"
 import { PerpMath } from "./PerpMath.sol";
 import { PerpSafeCast } from "./PerpSafeCast.sol";
 import { MarketStructs } from "./MarketStructs.sol";
-import { IPriceFeed } from "@perp/perp-oracle-contract/contracts/interface/IPriceFeed.sol";
+import { IPerpdexPriceFeed } from "../interface/IPerpdexPriceFeed.sol";
 import { FullMath } from "@uniswap/lib/contracts/libraries/FullMath.sol";
 import { FixedPoint96 } from "@uniswap/v3-core/contracts/libraries/FixedPoint96.sol";
 
@@ -33,7 +33,9 @@ library FundingLibrary {
         uint256 elapsedSec = now.sub(fundingInfo.prevIndexPriceTimestamp);
         if (elapsedSec == 0) return;
 
-        uint256 indexPrice = IPriceFeed(params.priceFeed).getPrice(0);
+        // TODO: process decimals
+        // TODO: process inverse
+        uint256 indexPrice = IPerpdexPriceFeed(params.priceFeed).getPrice();
         if (fundingInfo.prevIndexPrice == indexPrice || indexPrice == 0) {
             return;
         }

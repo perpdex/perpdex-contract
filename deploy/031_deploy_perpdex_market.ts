@@ -8,37 +8,39 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     const { deploy, execute } = deployments
     const { deployer } = await getNamedAccounts()
 
-    const baseTokens = [
+    const markets = [
         {
-            name: "BaseTokenUsd",
-            symbol: "BASEUSD",
+            symbol: "USD",
+            priceFeedAddress: {
+                "4": "0x8F9aC0A22e5aC2A6dda0C1d4Ce17B5c079D094F0", // WETH rinkeby
+            }[await getChainId()],
         },
     ]
 
-    const clearingHouse = await deployments.get("ClearingHousePerpdexNew")
+    const perpdexExchange = await deployments.get("PerpdexExchange")
 
-    for (let i = 0; i < baseTokens.length; i++) {
-        const baseToken = await deploy(baseTokens[i].name, {
+    for (let i = 0; i < markets.length; i++) {
+        const market = await deploy("PerpdexMarket" + markets[i].symbol, {
             from: deployer,
-            contract: "BaseTokenPerpdex",
-            args: [baseTokens[i].name, baseTokens[i].symbol, clearingHouse.address],
+            contract: "PerpdexMarket",
+            args: [markets[i].symbol, perpdexExchange.address, markets[i].priceFeedAddress],
             log: true,
             autoMine: true,
         })
 
         await execute(
-            "ClearingHousePerpdexNew",
+            "PerpdexExchange",
             {
                 from: deployer,
                 log: true,
                 autoMine: true,
             },
-            "setIsBaseTokenAllowed",
-            baseToken.address,
+            "setIsMarketAllowed",
+            market.address,
             true,
         )
     }
 }
 
 export default func
-func.tags = ["quote_tokens"]
+func.tags = ["Markets"]
