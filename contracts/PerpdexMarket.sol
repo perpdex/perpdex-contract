@@ -44,6 +44,13 @@ contract PerpdexMarket is IPerpdexMarket {
         symbol = symbolArg;
         exchange = exchangeArg;
         priceFeed = priceFeedArg;
+
+        FundingLibrary.initializeFunding(fundingInfo);
+
+        poolFeeRatio = 3e3;
+        fundingMaxPremiumRatio = 1e4;
+        fundingMaxElapsedSec = 1 days;
+        fundingRolloverSec = 1 days;
     }
 
     function swap(

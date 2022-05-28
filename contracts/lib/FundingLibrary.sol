@@ -28,6 +28,11 @@ library FundingLibrary {
         uint32 rolloverSec;
     }
 
+    function initializeFunding(MarketStructs.FundingInfo storage fundingInfo) internal {
+        fundingInfo.balancePerShare = 1 << 64;
+        fundingInfo.prevIndexPriceTimestamp = block.timestamp;
+    }
+
     function rebase(MarketStructs.FundingInfo storage fundingInfo, RebaseParams memory params) internal {
         uint256 now = block.timestamp;
         uint256 elapsedSec = now.sub(fundingInfo.prevIndexPriceTimestamp);
