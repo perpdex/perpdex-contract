@@ -84,7 +84,7 @@ library TakerLibrary {
             );
 
         if (!params.isMarketAllowed) {
-            require(accountInfo.takerInfo[params.market].baseBalanceShare.sign() * exchangedBase.sign() <= 0);
+            require(accountInfo.takerInfos[params.market].baseBalanceShare.sign() * exchangedBase.sign() <= 0);
         }
 
         uint256 priceAfterX96 = _getPriceX96(params.market);
@@ -112,7 +112,7 @@ library TakerLibrary {
 
         bool isLong;
         {
-            PerpdexStructs.TakerInfo storage takerInfo = accountInfo.takerInfo[params.market];
+            PerpdexStructs.TakerInfo storage takerInfo = accountInfo.takerInfos[params.market];
             isLong = takerInfo.baseBalanceShare > 0 ? true : false;
             require(params.amount <= IPerpdexMarket(params.market).shareToBalance(takerInfo.baseBalanceShare.abs()));
         }
@@ -161,7 +161,7 @@ library TakerLibrary {
         require(baseBalance.sign() * quoteBalance.sign() == -1);
 
         int256 baseShare = MarketLibrary.balanceToShare(market, baseBalance);
-        PerpdexStructs.TakerInfo storage takerInfo = accountInfo.takerInfo[market];
+        PerpdexStructs.TakerInfo storage takerInfo = accountInfo.takerInfos[market];
 
         int256 realizedPnL;
 

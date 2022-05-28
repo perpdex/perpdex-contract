@@ -25,9 +25,9 @@ library AccountLibrary {
         uint256 length = markets.length;
         for (uint256 i = 0; i < length; ++i) {
             address market = markets[i];
-            PerpdexStructs.MakerInfo storage makerInfo = accountInfo.makerInfo[market];
-            int256 baseShare = accountInfo.takerInfo[market].baseBalanceShare.sub(makerInfo.baseDebtShare.toInt256());
-            int256 quoteBalance = accountInfo.takerInfo[market].quoteBalance.sub(makerInfo.quoteDebt.toInt256());
+            PerpdexStructs.MakerInfo storage makerInfo = accountInfo.makerInfos[market];
+            int256 baseShare = accountInfo.takerInfos[market].baseBalanceShare.sub(makerInfo.baseDebtShare.toInt256());
+            int256 quoteBalance = accountInfo.takerInfos[market].quoteBalance.sub(makerInfo.quoteDebt.toInt256());
             (uint256 poolBaseShare, uint256 poolQuoteBalance) =
                 IPerpdexMarket(market).getLiquidityValue(makerInfo.liquidity);
 
@@ -45,8 +45,8 @@ library AccountLibrary {
         view
         returns (int256)
     {
-        PerpdexStructs.MakerInfo storage makerInfo = accountInfo.makerInfo[market];
-        int256 baseShare = accountInfo.takerInfo[market].baseBalanceShare.sub(makerInfo.baseDebtShare.toInt256());
+        PerpdexStructs.MakerInfo storage makerInfo = accountInfo.makerInfos[market];
+        int256 baseShare = accountInfo.takerInfos[market].baseBalanceShare.sub(makerInfo.baseDebtShare.toInt256());
         (uint256 poolBaseShare, ) = IPerpdexMarket(market).getLiquidityValue(makerInfo.liquidity);
         return MarketLibrary.shareToBalance(market, baseShare.add(poolBaseShare.toInt256()));
     }
@@ -77,7 +77,7 @@ library AccountLibrary {
         view
         returns (uint256)
     {
-        PerpdexStructs.MakerInfo storage makerInfo = accountInfo.makerInfo[market];
+        PerpdexStructs.MakerInfo storage makerInfo = accountInfo.makerInfos[market];
         (uint256 poolBaseShare, ) = IPerpdexMarket(market).getLiquidityValue(makerInfo.liquidity);
         return getPositionSize(accountInfo, market).abs().add(poolBaseShare);
     }
@@ -138,7 +138,7 @@ library AccountLibrary {
         require(market != address(0));
 
         bool enabled =
-            accountInfo.takerInfo[market].baseBalanceShare != 0 || accountInfo.makerInfo[market].liquidity != 0;
+            accountInfo.takerInfos[market].baseBalanceShare != 0 || accountInfo.makerInfos[market].liquidity != 0;
         address[] storage markets = accountInfo.markets;
         uint256 length = markets.length;
         for (uint256 i = 0; i < length; ++i) {

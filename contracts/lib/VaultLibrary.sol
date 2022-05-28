@@ -30,11 +30,15 @@ library VaultLibrary {
     }
 
     function deposit(PerpdexStructs.AccountInfo storage accountInfo, DepositParams memory params) internal {
+        // V_ZA: Zero amount
+        require(params.amount > 0, "V_ZA");
         _transferTokenIn(params.settlementToken, params.from, params.amount);
         accountInfo.vaultInfo.collateralBalance = accountInfo.vaultInfo.collateralBalance.add(params.amount.toInt256());
     }
 
     function withdraw(PerpdexStructs.AccountInfo storage accountInfo, WithdrawParams memory params) internal {
+        // V_ZA: Zero amount
+        require(params.amount > 0, "V_ZA");
         accountInfo.vaultInfo.collateralBalance = accountInfo.vaultInfo.collateralBalance.sub(params.amount.toInt256());
         require(AccountLibrary.hasEnoughInitialMargin(accountInfo, params.imRatio));
 

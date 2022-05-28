@@ -73,7 +73,7 @@ library MakerLibrary {
         (uint256 baseShare, uint256 quoteBalance, uint256 liquidity) =
             IPerpdexMarket(params.market).addLiquidity(params.base, params.quote);
 
-        PerpdexStructs.MakerInfo storage makerInfo = accountInfo.makerInfo[params.market];
+        PerpdexStructs.MakerInfo storage makerInfo = accountInfo.makerInfos[params.market];
         makerInfo.baseDebtShare = makerInfo.baseDebtShare.add(baseShare);
         makerInfo.quoteDebt = makerInfo.quoteDebt.add(quoteBalance);
         makerInfo.liquidity = makerInfo.liquidity.add(liquidity);
@@ -107,7 +107,7 @@ library MakerLibrary {
 
         {
             (uint256 baseDebtShare, uint256 quoteDebt) =
-                _removeLiquidityFromOrder(accountInfo.makerInfo[params.market], params.liquidity);
+                _removeLiquidityFromOrder(accountInfo.makerInfos[params.market], params.liquidity);
             AccountLibrary.updateMarkets(accountInfo, params.market, params.maxMarketsPerAccount);
 
             funcResponse.priceAfterX96 = IPerpdexMarket(params.market).getMarkPriceX96();

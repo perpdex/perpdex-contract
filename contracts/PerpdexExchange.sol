@@ -36,10 +36,6 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
     mapping(address => bool) public override isMarketAllowed;
 
     //
-    // MODIFIER
-    //
-
-    //
     // EXTERNAL NON-VIEW
     //
 
@@ -63,6 +59,7 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
             accountInfos[trader],
             VaultLibrary.DepositParams({ settlementToken: settlementToken, amount: amount, from: trader })
         );
+        emit Deposited(trader, amount);
     }
 
     function withdraw(uint256 amount) external override nonReentrant {
@@ -76,6 +73,7 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
                 imRatio: imRatio
             })
         );
+        emit Withdrawn(trader, amount);
     }
 
     function openPosition(OpenPositionParams calldata params)
@@ -110,7 +108,7 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
             params.market,
             response.exchangedBase,
             response.exchangedQuote,
-            accountInfos[trader].takerInfo[params.market].quoteBalance,
+            accountInfos[trader].takerInfos[params.market].quoteBalance,
             response.realizedPnL,
             response.priceAfterX96
         );
@@ -150,7 +148,7 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
             params.market,
             response.exchangedBase,
             response.exchangedQuote,
-            accountInfos[trader].takerInfo[params.market].quoteBalance,
+            accountInfos[trader].takerInfos[params.market].quoteBalance,
             response.realizedPnL,
             response.priceAfterX96
         );
@@ -235,7 +233,7 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
             params.market,
             response.takerBase, // exchangedPositionSize
             response.takerQuote, // exchangedPositionNotional
-            accountInfos[maker].takerInfo[params.market].quoteBalance,
+            accountInfos[maker].takerInfos[params.market].quoteBalance,
             response.realizedPnL, // realizedPnl
             response.priceAfterX96
         );
@@ -284,11 +282,11 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
     // all raw information can be retrieved through getters (including default getters)
 
     function getTakerInfo(address trader, address market) external returns (PerpdexStructs.TakerInfo memory) {
-        return accountInfos[trader].takerInfo[market];
+        return accountInfos[trader].takerInfos[market];
     }
 
     function getMakerInfo(address trader, address market) external returns (PerpdexStructs.MakerInfo memory) {
-        return accountInfos[trader].makerInfo[market];
+        return accountInfos[trader].makerInfos[market];
     }
 
     function getAccountMarkets(address trader) external returns (address[] memory) {

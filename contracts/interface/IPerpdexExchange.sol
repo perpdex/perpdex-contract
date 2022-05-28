@@ -50,6 +50,9 @@ interface IPerpdexExchange {
         uint256 deadline;
     }
 
+    event Deposited(address indexed trader, uint256 amount);
+    event Withdrawn(address indexed trader, uint256 amount);
+
     event PositionLiquidated(
         address indexed trader,
         address indexed market,
