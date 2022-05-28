@@ -123,6 +123,10 @@ contract MarketPerpdex is IMarket {
         return PoolLibrary.getMarkPriceX96(poolInfo).div(fundingInfo.balancePerShare);
     }
 
+    function getLiquidityValue(uint256 liquidity) external view override returns (uint256, uint256) {
+        return PoolLibrary.getLiquidityValue(poolInfo, liquidity);
+    }
+
     function shareToBalance(uint256 share) external view override returns (uint256) {
         return share.mul(fundingInfo.balancePerShare);
     }

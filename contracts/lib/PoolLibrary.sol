@@ -119,4 +119,15 @@ library PoolLibrary {
     function getMarkPriceX96(MarketStructs.PoolInfo storage poolInfo) internal view returns (uint256) {
         return poolInfo.quote.div(poolInfo.base);
     }
+
+    function getLiquidityValue(MarketStructs.PoolInfo storage poolInfo, uint256 liquidity)
+        internal
+        view
+        returns (uint256, uint256)
+    {
+        return (
+            FullMath.mulDiv(liquidity, poolInfo.base, poolInfo.totalLiquidity),
+            FullMath.mulDiv(liquidity, poolInfo.quote, poolInfo.totalLiquidity)
+        );
+    }
 }
