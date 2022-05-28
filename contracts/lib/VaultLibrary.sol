@@ -8,10 +8,9 @@ import { IERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC
 import { SafeERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/SafeERC20Upgradeable.sol";
 import { IERC20Metadata } from "../interface/IERC20Metadata.sol";
 import { PerpSafeCast } from "./PerpSafeCast.sol";
-import "./AccountLibrary.sol";
-import "./PerpdexStructs.sol";
+import { AccountLibrary } from "./AccountLibrary.sol";
+import { PerpdexStructs } from "./PerpdexStructs.sol";
 
-// internal
 library VaultLibrary {
     using PerpSafeCast for uint256;
     using SafeMath for uint256;
@@ -31,11 +30,15 @@ library VaultLibrary {
     }
 
     function deposit(PerpdexStructs.AccountInfo storage accountInfo, DepositParams memory params) internal {
+        // V_ZA: Zero amount
+        require(params.amount > 0, "V_ZA");
         _transferTokenIn(params.settlementToken, params.from, params.amount);
         accountInfo.vaultInfo.collateralBalance = accountInfo.vaultInfo.collateralBalance.add(params.amount.toInt256());
     }
 
     function withdraw(PerpdexStructs.AccountInfo storage accountInfo, WithdrawParams memory params) internal {
+        // V_ZA: Zero amount
+        require(params.amount > 0, "V_ZA");
         accountInfo.vaultInfo.collateralBalance = accountInfo.vaultInfo.collateralBalance.sub(params.amount.toInt256());
         require(AccountLibrary.hasEnoughInitialMargin(accountInfo, params.imRatio));
 

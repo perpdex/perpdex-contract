@@ -15,18 +15,13 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
         "81": "0x321F318e7C276c93Cf3094fd3a9d7c4362fd19FB", // WSBY shibuya
     }[await getChainId()]
 
-    const quoteTokenName = "QuoteEth"
-    const quoteTokenSymbol = "QUOTEETH"
-
-    const uniV2Factory = await deployments.get("UniswapV2Factory")
-
-    await deploy("ClearingHousePerpdexNew", {
+    await deploy("PerpdexExchange", {
         from: deployer,
-        args: [settlementTokenAddress, quoteTokenName, quoteTokenSymbol, uniV2Factory.address],
+        args: [settlementTokenAddress],
         log: true,
         autoMine: true,
     })
 }
 
 export default func
-func.tags = ["ClearingHousePerpdexNew"]
+func.tags = ["PerpdexExchange"]

@@ -4,7 +4,7 @@ pragma abicoder v2;
 
 import { PerpdexStructs } from "../lib/PerpdexStructs.sol";
 
-interface IMarket {
+interface IPerpdexMarket {
     function swap(
         bool isBaseToQuote,
         bool isExactInput,
@@ -21,7 +21,11 @@ interface IMarket {
 
     function removeLiquidity(uint256 liquidity) external returns (uint256 baseShare, uint256 quoteBalance);
 
-    function rebase() external;
+    // getters
+
+    function symbol() external view returns (string memory);
+
+    function exchange() external view returns (address);
 
     function getMarkPriceX96() external view returns (uint256);
 

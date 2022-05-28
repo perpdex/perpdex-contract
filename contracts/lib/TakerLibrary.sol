@@ -4,15 +4,15 @@ pragma abicoder v2;
 
 import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
 import { SignedSafeMath } from "@openzeppelin/contracts/math/SignedSafeMath.sol";
+import { FullMath } from "@uniswap/lib/contracts/libraries/FullMath.sol";
 import { PerpMath } from "./PerpMath.sol";
 import { PerpSafeCast } from "./PerpSafeCast.sol";
-import { IMarket } from "../interface/IMarket.sol";
+import { IPerpdexMarket } from "../interface/IPerpdexMarket.sol";
 import { MarketLibrary } from "./MarketLibrary.sol";
-import "./PerpdexStructs.sol";
-import "./AccountLibrary.sol";
-import "./PriceLimitLibrary.sol";
+import { PerpdexStructs } from "./PerpdexStructs.sol";
+import { AccountLibrary } from "./AccountLibrary.sol";
+import { PriceLimitLibrary } from "./PriceLimitLibrary.sol";
 
-// internal
 library TakerLibrary {
     using PerpMath for int256;
     using PerpMath for uint256;
@@ -79,11 +79,12 @@ library TakerLibrary {
                 params.isBaseToQuote,
                 params.isExactInput,
                 params.amount,
+                params.oppositeAmountBound,
                 params.maxMarketsPerAccount
             );
 
         if (!params.isMarketAllowed) {
-            require(accountInfo.takerInfo[params.market].baseBalanceShare.sign() * exchangedBase.sign() <= 0);
+            require(accountInfo.takerInfos[params.market].baseBalanceShare.sign() * exchangedBase.sign() <= 0);
         }
 
         uint256 priceAfterX96 = _getPriceX96(params.market);
@@ -111,9 +112,9 @@ library TakerLibrary {
 
         bool isLong;
         {
-            PerpdexStructs.TakerInfo storage takerInfo = accountInfo.takerInfo[params.market];
+            PerpdexStructs.TakerInfo storage takerInfo = accountInfo.takerInfos[params.market];
             isLong = takerInfo.baseBalanceShare > 0 ? true : false;
-            require(params.amount <= IMarket(params.market).shareToBalance(takerInfo.baseBalanceShare.abs()));
+            require(params.amount <= IPerpdexMarket(params.market).shareToBalance(takerInfo.baseBalanceShare.abs()));
         }
 
         (int256 exchangedBase, int256 exchangedQuote, int256 realizedPnL) =
@@ -124,6 +125,7 @@ library TakerLibrary {
                 isLong, // isBaseToQuote,
                 isLong, // isExactInput,
                 params.amount,
+                params.oppositeAmountBound,
                 params.maxMarketsPerAccount
             );
 
@@ -159,7 +161,7 @@ library TakerLibrary {
         require(baseBalance.sign() * quoteBalance.sign() == -1);
 
         int256 baseShare = MarketLibrary.balanceToShare(market, baseBalance);
-        PerpdexStructs.TakerInfo storage takerInfo = accountInfo.takerInfo[market];
+        PerpdexStructs.TakerInfo storage takerInfo = accountInfo.takerInfos[market];
 
         int256 realizedPnL;
 
@@ -189,7 +191,7 @@ library TakerLibrary {
     }
 
     function _getPriceX96(address market) private returns (uint256) {
-        return IMarket(market).getMarkPriceX96();
+        return IPerpdexMarket(market).getMarkPriceX96();
     }
 
     function _doSwap(
@@ -199,6 +201,7 @@ library TakerLibrary {
         bool isBaseToQuote,
         bool isExactInput,
         uint256 amount,
+        uint256 oppositeAmountBound,
         uint8 maxMarketsPerAccount
     )
         private
@@ -214,7 +217,7 @@ library TakerLibrary {
         }
 
         (int256 exchangedPositionSize, int256 exchangedPositionNotional) =
-            MarketLibrary.swap(market, isBaseToQuote, isExactInput, amount);
+            MarketLibrary.swap(market, isBaseToQuote, isExactInput, amount, oppositeAmountBound);
 
         int256 realizedPnL =
             addToTakerBalance(

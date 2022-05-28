@@ -8,11 +8,10 @@ import { SignedSafeMath } from "@openzeppelin/contracts/math/SignedSafeMath.sol"
 import { PerpMath } from "./PerpMath.sol";
 import { PerpSafeCast } from "./PerpSafeCast.sol";
 import { MarketStructs } from "./MarketStructs.sol";
-import { IPriceFeed } from "@perp/perp-oracle-contract/contracts/interface/IPriceFeed.sol";
+import { IPerpdexPriceFeed } from "../interface/IPerpdexPriceFeed.sol";
 import { FullMath } from "@uniswap/lib/contracts/libraries/FullMath.sol";
 import { FixedPoint96 } from "@uniswap/v3-core/contracts/libraries/FixedPoint96.sol";
 
-// internal
 library FundingLibrary {
     using PerpMath for int256;
     using PerpMath for uint256;
@@ -29,12 +28,20 @@ library FundingLibrary {
         uint32 rolloverSec;
     }
 
+    function initializeFunding(MarketStructs.FundingInfo storage fundingInfo) internal {
+        fundingInfo.balancePerShare = 1 << 64;
+        fundingInfo.prevIndexPriceTimestamp = block.timestamp;
+    }
+
     function rebase(MarketStructs.FundingInfo storage fundingInfo, RebaseParams memory params) internal {
         uint256 now = block.timestamp;
-        uint256 indexPrice = IPriceFeed(params.priceFeed).getPrice(0);
         uint256 elapsedSec = now.sub(fundingInfo.prevIndexPriceTimestamp);
+        if (elapsedSec == 0) return;
 
-        if (fundingInfo.prevIndexPrice == indexPrice || indexPrice == 0 || elapsedSec == 0) {
+        // TODO: process decimals
+        // TODO: process inverse
+        uint256 indexPrice = IPerpdexPriceFeed(params.priceFeed).getPrice();
+        if (fundingInfo.prevIndexPrice == indexPrice || indexPrice == 0) {
             return;
         }
 

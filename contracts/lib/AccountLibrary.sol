@@ -7,12 +7,11 @@ import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
 import { SignedSafeMath } from "@openzeppelin/contracts/math/SignedSafeMath.sol";
 import { FullMath } from "@uniswap/lib/contracts/libraries/FullMath.sol";
 import { PerpSafeCast } from "./PerpSafeCast.sol";
-import { IMarket } from "../interface/IMarket.sol";
+import { IPerpdexMarket } from "../interface/IPerpdexMarket.sol";
 import { MarketLibrary } from "./MarketLibrary.sol";
-import "./PerpdexStructs.sol";
+import { PerpdexStructs } from "./PerpdexStructs.sol";
 
 // https://help.ftx.com/hc/en-us/articles/360024780511-Complete-Futures-Specs
-// internal
 library AccountLibrary {
     using PerpMath for int256;
     using PerpMath for uint256;
@@ -25,9 +24,18 @@ library AccountLibrary {
         int256 accountValue = accountInfo.vaultInfo.collateralBalance;
         uint256 length = markets.length;
         for (uint256 i = 0; i < length; ++i) {
-            accountValue = accountValue.add(getPositionNotional(accountInfo, markets[i]));
-            // TODO: implement
-            //            accountValue = accountValue.add(getPositionNotional(accountInfo, baseTokens[i]));
+            address market = markets[i];
+            PerpdexStructs.MakerInfo storage makerInfo = accountInfo.makerInfos[market];
+            int256 baseShare = accountInfo.takerInfos[market].baseBalanceShare.sub(makerInfo.baseDebtShare.toInt256());
+            int256 quoteBalance = accountInfo.takerInfos[market].quoteBalance.sub(makerInfo.quoteDebt.toInt256());
+            (uint256 poolBaseShare, uint256 poolQuoteBalance) =
+                IPerpdexMarket(market).getLiquidityValue(makerInfo.liquidity);
+
+            int256 positionSize = MarketLibrary.shareToBalance(market, baseShare.add(poolBaseShare.toInt256()));
+            uint256 priceX96 = IPerpdexMarket(market).getMarkPriceX96();
+
+            accountValue = accountValue.add(positionSize.mulDiv(priceX96.toInt256(), FixedPoint96.Q96));
+            accountValue = accountValue.add(quoteBalance.add(poolQuoteBalance.toInt256()));
         }
         return accountValue;
     }
@@ -37,9 +45,9 @@ library AccountLibrary {
         view
         returns (int256)
     {
-        PerpdexStructs.MakerInfo storage makerInfo = accountInfo.makerInfo[market];
-        int256 baseShare = accountInfo.takerInfo[market].baseBalanceShare.sub(makerInfo.baseDebtShare.toInt256());
-        (uint256 poolBaseShare, ) = IMarket(market).getLiquidityValue(makerInfo.liquidity);
+        PerpdexStructs.MakerInfo storage makerInfo = accountInfo.makerInfos[market];
+        int256 baseShare = accountInfo.takerInfos[market].baseBalanceShare.sub(makerInfo.baseDebtShare.toInt256());
+        (uint256 poolBaseShare, ) = IPerpdexMarket(market).getLiquidityValue(makerInfo.liquidity);
         return MarketLibrary.shareToBalance(market, baseShare.add(poolBaseShare.toInt256()));
     }
 
@@ -49,7 +57,7 @@ library AccountLibrary {
         returns (int256)
     {
         int256 positionSize = getPositionSize(accountInfo, market);
-        uint256 priceX96 = IMarket(market).getMarkPriceX96();
+        uint256 priceX96 = IPerpdexMarket(market).getMarkPriceX96();
         return positionSize.mulDiv(priceX96.toInt256(), FixedPoint96.Q96);
     }
 
@@ -69,8 +77,8 @@ library AccountLibrary {
         view
         returns (uint256)
     {
-        PerpdexStructs.MakerInfo storage makerInfo = accountInfo.makerInfo[market];
-        (uint256 poolBaseShare, ) = IMarket(market).getLiquidityValue(makerInfo.liquidity);
+        PerpdexStructs.MakerInfo storage makerInfo = accountInfo.makerInfos[market];
+        (uint256 poolBaseShare, ) = IPerpdexMarket(market).getLiquidityValue(makerInfo.liquidity);
         return getPositionSize(accountInfo, market).abs().add(poolBaseShare);
     }
 
@@ -80,7 +88,7 @@ library AccountLibrary {
         returns (uint256)
     {
         uint256 positionSize = getOpenPositionSize(accountInfo, market);
-        uint256 priceX96 = IMarket(market).getMarkPriceX96();
+        uint256 priceX96 = IPerpdexMarket(market).getMarkPriceX96();
         return FullMath.mulDiv(positionSize, priceX96, FixedPoint96.Q96);
     }
 
@@ -130,7 +138,7 @@ library AccountLibrary {
         require(market != address(0));
 
         bool enabled =
-            accountInfo.takerInfo[market].baseBalanceShare != 0 || accountInfo.makerInfo[market].liquidity != 0;
+            accountInfo.takerInfos[market].baseBalanceShare != 0 || accountInfo.makerInfos[market].liquidity != 0;
         address[] storage markets = accountInfo.markets;
         uint256 length = markets.length;
         for (uint256 i = 0; i < length; ++i) {

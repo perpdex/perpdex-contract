@@ -5,7 +5,7 @@ pragma abicoder v2;
 import { Address } from "@openzeppelin/contracts/utils/Address.sol";
 import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
-import { IClearingHousePerpdexNew } from "./interface/IClearingHousePerpdexNew.sol";
+import { IPerpdexExchange } from "./interface/IPerpdexExchange.sol";
 import { PerpdexStructs } from "./lib/PerpdexStructs.sol";
 import { AccountLibrary } from "./lib/AccountLibrary.sol";
 import { MakerLibrary } from "./lib/MakerLibrary.sol";
@@ -14,31 +14,26 @@ import { VaultLibrary } from "./lib/VaultLibrary.sol";
 import { PerpMath } from "./lib/PerpMath.sol";
 import { PerpSafeCast } from "./lib/PerpSafeCast.sol";
 
-contract ClearingHousePerpdexNew is IClearingHousePerpdexNew, ReentrancyGuard, Ownable {
+contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
     using Address for address;
     using PerpMath for uint256;
     using PerpSafeCast for uint256;
 
     // states
     // trader
-    mapping(address => PerpdexStructs.AccountInfo) public accountInfos;
+    mapping(address => PerpdexStructs.AccountInfo) public override accountInfos;
     // market
-    mapping(address => PerpdexStructs.PriceLimitInfo) public priceLimitInfos;
-    PerpdexStructs.InsuranceFundInfo public insuranceFundInfo;
+    mapping(address => PerpdexStructs.PriceLimitInfo) public override priceLimitInfos;
+    PerpdexStructs.InsuranceFundInfo public override insuranceFundInfo;
 
     // config
-    address public immutable settlementToken;
-    PerpdexStructs.PriceLimitConfig public priceLimitConfig;
-    uint8 public maxMarketsPerAccount;
-    uint24 public imRatio;
-    uint24 public mmRatio;
-    uint24 public liquidationRewardRatio;
-    uint24 public maxFundingRateRatio;
-    mapping(address => bool) public isMarketAllowed;
-
-    //
-    // MODIFIER
-    //
+    address public immutable override settlementToken;
+    PerpdexStructs.PriceLimitConfig public override priceLimitConfig;
+    uint8 public override maxMarketsPerAccount;
+    uint24 public override imRatio;
+    uint24 public override mmRatio;
+    uint24 public override liquidationRewardRatio;
+    mapping(address => bool) public override isMarketAllowed;
 
     //
     // EXTERNAL NON-VIEW
@@ -56,7 +51,6 @@ contract ClearingHousePerpdexNew is IClearingHousePerpdexNew, ReentrancyGuard, O
         imRatio = 10e4;
         mmRatio = 5e4;
         liquidationRewardRatio = 20e4;
-        maxFundingRateRatio = 5e4;
     }
 
     function deposit(uint256 amount) external override nonReentrant {
@@ -65,6 +59,7 @@ contract ClearingHousePerpdexNew is IClearingHousePerpdexNew, ReentrancyGuard, O
             accountInfos[trader],
             VaultLibrary.DepositParams({ settlementToken: settlementToken, amount: amount, from: trader })
         );
+        emit Deposited(trader, amount);
     }
 
     function withdraw(uint256 amount) external override nonReentrant {
@@ -78,9 +73,9 @@ contract ClearingHousePerpdexNew is IClearingHousePerpdexNew, ReentrancyGuard, O
                 imRatio: imRatio
             })
         );
+        emit Withdrawn(trader, amount);
     }
 
-    /// @inheritdoc IClearingHousePerpdexNew
     function openPosition(OpenPositionParams calldata params)
         external
         override
@@ -113,7 +108,7 @@ contract ClearingHousePerpdexNew is IClearingHousePerpdexNew, ReentrancyGuard, O
             params.market,
             response.exchangedBase,
             response.exchangedQuote,
-            accountInfos[trader].takerInfo[params.market].quoteBalance,
+            accountInfos[trader].takerInfos[params.market].quoteBalance,
             response.realizedPnL,
             response.priceAfterX96
         );
@@ -121,7 +116,6 @@ contract ClearingHousePerpdexNew is IClearingHousePerpdexNew, ReentrancyGuard, O
         return (response.exchangedBase, response.exchangedQuote);
     }
 
-    /// @inheritdoc IClearingHousePerpdexNew
     function liquidate(LiquidateParams calldata params)
         external
         override
@@ -154,7 +148,7 @@ contract ClearingHousePerpdexNew is IClearingHousePerpdexNew, ReentrancyGuard, O
             params.market,
             response.exchangedBase,
             response.exchangedQuote,
-            accountInfos[trader].takerInfo[params.market].quoteBalance,
+            accountInfos[trader].takerInfos[params.market].quoteBalance,
             response.realizedPnL,
             response.priceAfterX96
         );
@@ -162,7 +156,6 @@ contract ClearingHousePerpdexNew is IClearingHousePerpdexNew, ReentrancyGuard, O
         return (response.exchangedBase, response.exchangedQuote);
     }
 
-    /// @inheritdoc IClearingHousePerpdexNew
     function addLiquidity(AddLiquidityParams calldata params)
         external
         override
@@ -198,7 +191,6 @@ contract ClearingHousePerpdexNew is IClearingHousePerpdexNew, ReentrancyGuard, O
         return AddLiquidityResponse({ base: response.base, quote: response.quote, liquidity: response.liquidity });
     }
 
-    /// @inheritdoc IClearingHousePerpdexNew
     function removeLiquidity(RemoveLiquidityParams calldata params)
         external
         override
@@ -207,7 +199,6 @@ contract ClearingHousePerpdexNew is IClearingHousePerpdexNew, ReentrancyGuard, O
         return removeLiquidity(params, _msgSender());
     }
 
-    /// @inheritdoc IClearingHousePerpdexNew
     function removeLiquidity(RemoveLiquidityParams calldata params, address maker)
         public
         override
@@ -242,7 +233,7 @@ contract ClearingHousePerpdexNew is IClearingHousePerpdexNew, ReentrancyGuard, O
             params.market,
             response.takerBase, // exchangedPositionSize
             response.takerQuote, // exchangedPositionNotional
-            accountInfos[maker].takerInfo[params.market].quoteBalance,
+            accountInfos[maker].takerInfos[params.market].quoteBalance,
             response.realizedPnL, // realizedPnl
             response.priceAfterX96
         );
@@ -280,11 +271,6 @@ contract ClearingHousePerpdexNew is IClearingHousePerpdexNew, ReentrancyGuard, O
         liquidationRewardRatio = value;
     }
 
-    function setMaxFundingRateRatio(uint24 value) external override onlyOwner nonReentrant {
-        require(value < 1e6);
-        maxFundingRateRatio = value;
-    }
-
     function setIsMarketAllowed(address market, bool value) external override onlyOwner nonReentrant {
         isMarketAllowed[market] = value;
     }
@@ -296,11 +282,11 @@ contract ClearingHousePerpdexNew is IClearingHousePerpdexNew, ReentrancyGuard, O
     // all raw information can be retrieved through getters (including default getters)
 
     function getTakerInfo(address trader, address market) external returns (PerpdexStructs.TakerInfo memory) {
-        return accountInfos[trader].takerInfo[market];
+        return accountInfos[trader].takerInfos[market];
     }
 
     function getMakerInfo(address trader, address market) external returns (PerpdexStructs.MakerInfo memory) {
-        return accountInfos[trader].makerInfo[market];
+        return accountInfos[trader].makerInfos[market];
     }
 
     function getAccountMarkets(address trader) external returns (address[] memory) {

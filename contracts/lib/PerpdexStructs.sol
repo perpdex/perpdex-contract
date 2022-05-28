@@ -19,9 +19,9 @@ library PerpdexStructs {
 
     struct AccountInfo {
         // market
-        mapping(address => TakerInfo) takerInfo;
+        mapping(address => TakerInfo) takerInfos;
         // market
-        mapping(address => MakerInfo) makerInfo;
+        mapping(address => MakerInfo) makerInfos;
         VaultInfo vaultInfo;
         address[] markets;
     }

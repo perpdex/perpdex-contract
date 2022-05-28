@@ -4,9 +4,8 @@ pragma abicoder v2;
 
 import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
 import { PerpMath } from "./PerpMath.sol";
-import "./PerpdexStructs.sol";
+import { PerpdexStructs } from "./PerpdexStructs.sol";
 
-// internal
 library PriceLimitLibrary {
     using PerpMath for uint256;
     using SafeMath for uint256;

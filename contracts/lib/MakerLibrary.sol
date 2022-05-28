@@ -2,12 +2,18 @@
 pragma solidity 0.7.6;
 pragma abicoder v2;
 
-import { IMarket } from "../interface/IMarket.sol";
+import { FullMath } from "@uniswap/lib/contracts/libraries/FullMath.sol";
+import { FixedPoint96 } from "@uniswap/v3-core/contracts/libraries/FixedPoint96.sol";
+import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
+import { SignedSafeMath } from "@openzeppelin/contracts/math/SignedSafeMath.sol";
+import { PerpMath } from "./PerpMath.sol";
+import { PerpSafeCast } from "./PerpSafeCast.sol";
+import { IPerpdexMarket } from "../interface/IPerpdexMarket.sol";
 import { MarketLibrary } from "./MarketLibrary.sol";
-import "./PerpdexStructs.sol";
-import "./TakerLibrary.sol";
+import { PerpdexStructs } from "./PerpdexStructs.sol";
+import { AccountLibrary } from "./AccountLibrary.sol";
+import { TakerLibrary } from "./TakerLibrary.sol";
 
-// internal
 library MakerLibrary {
     using PerpMath for int256;
     using PerpSafeCast for uint256;
@@ -65,9 +71,9 @@ library MakerLibrary {
         require(params.isMarketAllowed);
 
         (uint256 baseShare, uint256 quoteBalance, uint256 liquidity) =
-            IMarket(params.market).addLiquidity(params.base, params.quote);
+            IPerpdexMarket(params.market).addLiquidity(params.base, params.quote);
 
-        PerpdexStructs.MakerInfo storage makerInfo = accountInfo.makerInfo[params.market];
+        PerpdexStructs.MakerInfo storage makerInfo = accountInfo.makerInfos[params.market];
         makerInfo.baseDebtShare = makerInfo.baseDebtShare.add(baseShare);
         makerInfo.quoteDebt = makerInfo.quoteDebt.add(quoteBalance);
         makerInfo.liquidity = makerInfo.liquidity.add(liquidity);
@@ -89,21 +95,24 @@ library MakerLibrary {
         }
 
         {
-            (uint256 resBaseShare, uint256 resQuoteBalance) = IMarket(params.market).removeLiquidity(params.liquidity);
+            (uint256 resBaseShare, uint256 resQuoteBalance) =
+                IPerpdexMarket(params.market).removeLiquidity(params.liquidity);
+
+            require(resBaseShare >= params.minBase);
+            require(resQuoteBalance >= params.minQuote);
+
             funcResponse.base = resBaseShare;
             funcResponse.quote = resQuoteBalance;
         }
 
-        // TODO: check slippage
-
         {
             (uint256 baseDebtShare, uint256 quoteDebt) =
-                _removeLiquidityFromOrder(accountInfo.makerInfo[params.market], params.liquidity);
+                _removeLiquidityFromOrder(accountInfo.makerInfos[params.market], params.liquidity);
             AccountLibrary.updateMarkets(accountInfo, params.market, params.maxMarketsPerAccount);
 
-            funcResponse.priceAfterX96 = IMarket(params.market).getMarkPriceX96();
+            funcResponse.priceAfterX96 = IPerpdexMarket(params.market).getMarkPriceX96();
             funcResponse.takerBase = funcResponse.base.toInt256().sub(
-                IMarket(params.market).shareToBalance(baseDebtShare).toInt256()
+                IPerpdexMarket(params.market).shareToBalance(baseDebtShare).toInt256()
             );
             funcResponse.takerQuote = funcResponse.quote.toInt256().sub(quoteDebt.toInt256());
         }

@@ -10,7 +10,6 @@ import { PerpSafeCast } from "./PerpSafeCast.sol";
 import { MarketStructs } from "./MarketStructs.sol";
 import { FullMath } from "@uniswap/lib/contracts/libraries/FullMath.sol";
 
-// internal
 library PoolLibrary {
     using PerpMath for int256;
     using PerpMath for uint256;
