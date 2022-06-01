@@ -76,6 +76,12 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
         emit Withdrawn(trader, amount);
     }
 
+    function transferInsuranceFund(uint256 amount) external override onlyOwner nonReentrant {
+        address trader = _msgSender();
+        VaultLibrary.transferInsuranceFund(accountInfos[trader], insuranceFundInfo, amount);
+        emit InsuranceFundTransferred(trader, amount);
+    }
+
     function openPosition(OpenPositionParams calldata params)
         external
         override

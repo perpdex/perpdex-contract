@@ -45,6 +45,16 @@ library VaultLibrary {
         SafeERC20Upgradeable.safeTransfer(IERC20Upgradeable(params.settlementToken), params.to, params.amount);
     }
 
+    function transferInsuranceFund(
+        PerpdexStructs.AccountInfo storage accountInfo,
+        PerpdexStructs.InsuranceFundInfo storage insuranceFundInfo,
+        uint256 amount
+    ) internal {
+        accountInfo.vaultInfo.collateralBalance = accountInfo.vaultInfo.collateralBalance.add(amount.toInt256());
+        insuranceFundInfo.balance = insuranceFundInfo.balance.sub(amount.toInt256());
+        require(insuranceFundInfo.balance >= 0);
+    }
+
     function _transferTokenIn(
         address token,
         address from,

@@ -52,6 +52,7 @@ interface IPerpdexExchange {
 
     event Deposited(address indexed trader, uint256 amount);
     event Withdrawn(address indexed trader, uint256 amount);
+    event InsuranceFundTransferred(address indexed trader, uint256 amount);
 
     event PositionLiquidated(
         address indexed trader,
@@ -77,6 +78,8 @@ interface IPerpdexExchange {
     function deposit(uint256 amount) external;
 
     function withdraw(uint256 amount) external;
+
+    function transferInsuranceFund(uint256 amount) external;
 
     function addLiquidity(AddLiquidityParams calldata params) external returns (AddLiquidityResponse memory);
 
