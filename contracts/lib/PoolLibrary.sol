@@ -36,6 +36,32 @@ library PoolLibrary {
     }
 
     function swap(MarketStructs.PoolInfo storage poolInfo, SwapParams memory params) internal returns (uint256) {
+        uint256 output = swapDry(poolInfo, params);
+        if (params.isExactInput) {
+            if (params.isBaseToQuote) {
+                poolInfo.base = poolInfo.base.sub(params.amount);
+                poolInfo.quote = poolInfo.quote.add(output);
+            } else {
+                poolInfo.base = poolInfo.base.add(output);
+                poolInfo.quote = poolInfo.quote.sub(params.amount);
+            }
+        } else {
+            if (params.isBaseToQuote) {
+                poolInfo.base = poolInfo.base.sub(output);
+                poolInfo.quote = poolInfo.quote.add(params.amount);
+            } else {
+                poolInfo.base = poolInfo.base.add(params.amount);
+                poolInfo.quote = poolInfo.quote.sub(output);
+            }
+        }
+        return output;
+    }
+
+    function swapDry(MarketStructs.PoolInfo storage poolInfo, SwapParams memory params)
+        internal
+        view
+        returns (uint256)
+    {
         uint256 output;
         uint256 base = poolInfo.base;
         uint256 quote = poolInfo.quote;

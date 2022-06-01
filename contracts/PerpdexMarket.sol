@@ -117,8 +117,25 @@ contract PerpdexMarket is IPerpdexMarket, ReentrancyGuard, Ownable {
         fundingRolloverSec = value;
     }
 
+    function swapDry(
+        bool isBaseToQuote,
+        bool isExactInput,
+        uint256 amount
+    ) external view override onlyExchange returns (uint256) {
+        return
+            PoolLibrary.swap(
+                poolInfo,
+                PoolLibrary.SwapParams({
+                    isBaseToQuote: isBaseToQuote,
+                    isExactInput: isExactInput,
+                    amount: amount,
+                    feeRatio: poolFeeRatio
+                })
+            );
+    }
+
     function getMarkPriceX96() public view override returns (uint256) {
-        return PoolLibrary.getMarkPriceX96(poolInfo).div(fundingInfo.balancePerShare);
+        return PoolLibrary.getMarkPriceX96(poolInfo).div(_balancePerShare());
     }
 
     function getLiquidityValue(uint256 liquidity) external view override returns (uint256, uint256) {
@@ -126,15 +143,19 @@ contract PerpdexMarket is IPerpdexMarket, ReentrancyGuard, Ownable {
     }
 
     function shareToBalance(uint256 share) external view override returns (uint256) {
-        return share.mul(fundingInfo.balancePerShare);
+        return share.mul(_balancePerShare());
     }
 
     function balanceToShare(uint256 balance) external view override returns (uint256) {
-        return balance.div(fundingInfo.balancePerShare);
+        return balance.div(_balancePerShare());
+    }
+
+    function _getLastMarkPriceX96() private view override returns (uint256) {
+        return PoolLibrary.getMarkPriceX96(poolInfo).div(fundingInfo.balancePerShare);
     }
 
     function _rebase() private {
-        uint256 markPriceX96 = getMarkPriceX96();
+        uint256 markPriceX96 = _getLastMarkPriceX96();
 
         FundingLibrary.rebase(
             fundingInfo,
@@ -146,5 +167,21 @@ contract PerpdexMarket is IPerpdexMarket, ReentrancyGuard, Ownable {
                 rolloverSec: fundingRolloverSec
             })
         );
+    }
+
+    function _balancePerShare() private view returns (uint256) {
+        uint256 markPriceX96 = _getLastMarkPriceX96();
+
+        return
+            FundingLibrary.getBalancePerShare(
+                fundingInfo,
+                FundingLibrary.RebaseParams({
+                    priceFeed: priceFeed,
+                    markPriceX96: markPriceX96,
+                    maxPremiumRatio: fundingMaxPremiumRatio,
+                    maxElapsedSec: fundingMaxElapsedSec,
+                    rolloverSec: fundingRolloverSec
+                })
+            );
     }
 }
