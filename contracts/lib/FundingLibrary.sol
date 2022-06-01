@@ -29,19 +29,19 @@ library FundingLibrary {
     }
 
     function initializeFunding(MarketStructs.FundingInfo storage fundingInfo) internal {
-        fundingInfo.balancePerShare = 1 << 64;
         fundingInfo.prevIndexPriceTimestamp = block.timestamp;
     }
 
-    function rebase(MarketStructs.FundingInfo storage fundingInfo, RebaseParams memory params) internal {
-        (bool updating, uint256 balancePerShare, uint256 prevIndexPrice, uint256 prevIndexPriceTimestamp) =
+    function rebase(MarketStructs.FundingInfo storage fundingInfo, RebaseParams memory params) internal returns (int256) {
+        (bool updating, int256 fundingRateX96, uint256 prevIndexPrice, uint256 prevIndexPriceTimestamp) =
             _rebaseDry(fundingInfo, params);
 
         if (updating) {
-            fundingInfo.balancePerShare = balancePerShare;
             fundingInfo.prevIndexPrice = prevIndexPrice;
             fundingInfo.prevIndexPriceTimestamp = prevIndexPriceTimestamp;
         }
+
+        return fundingRateX96;
     }
 
     function getBalancePerShare(MarketStructs.FundingInfo storage fundingInfo, RebaseParams memory params)
@@ -58,15 +58,9 @@ library FundingLibrary {
         }
     }
 
-    function _rebaseDry(MarketStructs.FundingInfo storage fundingInfo, RebaseParams memory params)
-        private
-        view
-        returns (
-            bool updating,
-            uint256 balancePerShare,
-            uint256 prevIndexPrice,
-            uint256 prevIndexPriceTimestamp
-        )
+    function rebaseDry(MarketStructs.FundingInfo storage fundingInfo, RebaseParams memory params)
+        private view
+        returns (bool updating, int256 fundingRateX96, uint256 prevIndexPrice, uint256 prevIndexPriceTimestamp)
     {
         uint256 now = block.timestamp;
         uint256 elapsedSec = now.sub(fundingInfo.prevIndexPriceTimestamp);
@@ -85,14 +79,9 @@ library FundingLibrary {
             FullMath.mulDiv(params.markPriceX96, FixedPoint96.Q96, indexPrice).toInt256() - FixedPoint96.Q96.toInt256();
         int256 maxPremiumX96 = FixedPoint96.Q96.mulRatio(params.maxPremiumRatio).toInt256();
         premiumX96 = (-maxPremiumX96).max(maxPremiumX96.min(premiumX96));
-        int256 fundingRateX96 = premiumX96.mulDiv(elapsedSec.toInt256(), params.rolloverSec);
+        fundingRateX96 = premiumX96.mulDiv(elapsedSec.toInt256(), params.rolloverSec);
 
         updating = true;
-        balancePerShare = FullMath.mulDiv(
-            fundingInfo.balancePerShare,
-            FixedPoint96.Q96,
-            FixedPoint96.Q96.toInt256().sub(fundingRateX96).toUint256()
-        );
         prevIndexPrice = indexPrice;
         prevIndexPriceTimestamp = now;
     }

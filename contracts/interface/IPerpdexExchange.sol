@@ -152,13 +152,13 @@ interface IPerpdexExchange {
 
     function getTotalAccountValue(address trader) external view returns (int256);
 
-    function getPositionSize(address trader, address market) external view returns (int256);
+    function getPositionShare(address trader, address market) external view returns (int256);
 
     function getPositionNotional(address trader, address market) external view returns (int256);
 
     function getTotalPositionNotional(address trader) external view returns (uint256);
 
-    function getOpenPositionSize(address trader, address market) external view returns (uint256);
+    function getOpenPositionShare(address trader, address market) external view returns (uint256);
 
     function getOpenPositionNotional(address trader, address market) external view returns (uint256);
 

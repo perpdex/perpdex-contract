@@ -11,6 +11,8 @@ library PerpdexStructs {
         uint256 baseDebtShare;
         uint256 quoteDebt;
         uint256 liquidity;
+        uint256 cumDeleveragedBaseSharePerLiquidity;
+        uint256 cumDeleveragedQuotePerLiquidity;
     }
 
     struct VaultInfo {

@@ -9,10 +9,12 @@ import { PerpMath } from "./PerpMath.sol";
 import { PerpSafeCast } from "./PerpSafeCast.sol";
 import { MarketStructs } from "./MarketStructs.sol";
 import { FullMath } from "@uniswap/lib/contracts/libraries/FullMath.sol";
+import { FixedPoint96 } from "@uniswap/v3-core/contracts/libraries/FixedPoint96.sol";
 
 library PoolLibrary {
     using PerpMath for int256;
     using PerpMath for uint256;
+    using PerpSafeCast for int256;
     using PerpSafeCast for uint256;
     using SafeMath for uint256;
     using SignedSafeMath for int256;
@@ -33,6 +35,37 @@ library PoolLibrary {
 
     struct RemoveLiquidityParams {
         uint256 liquidity;
+    }
+
+    function initializePool(MarketStructs.PoolInfo storage poolInfo) internal {
+        poolInfo.baseBalancePerShare = 1 << 64;
+    }
+
+    function applyFunding(MarketStructs.PoolInfo storage poolInfo, int256 fundingRateX96) internal {
+        if (fundingRateX96 == 0) return;
+
+        if (fundingRateX96 > 0) {
+            uint256 poolQuote = poolInfo.quote;
+            uint256 deleveratedQuote = FullMath.mulDiv(poolQuote, fundingRateX96.abs(), FixedPoint96.Q96);
+            poolInfo.quote = poolQuote - deleveratedQuote;
+            poolInfo.cumDeleveragedQuotePerLiquidity = poolInfo.cumDeleveragedQuotePerLiquidity.add(
+                deleveratedQuote.div(poolInfo.totalLiquidity)
+            );
+        } else {
+            uint256 poolBase = poolInfo.base;
+            uint256 deleveratedBase =
+                poolBase.sub(FullMath.mulDiv(poolBase, FixedPoint96.Q96, FixedPoint96.Q96.add(fundingRateX96.abs())));
+            poolInfo.base = poolBase - deleveratedBase;
+            poolInfo.cumDeleveragedBasePerLiquidity = poolInfo.cumDeleveragedBasePerLiquidity.add(
+                deleveratedBase.div(poolInfo.totalLiquidity)
+            );
+        }
+
+        poolInfo.baseBalancePerShare = FullMath.mulDiv(
+            poolInfo.baseBalancePerShare,
+            FixedPoint96.Q96,
+            FixedPoint96.Q96.toInt256().sub(fundingRateX96).toUint256()
+        );
     }
 
     function swap(MarketStructs.PoolInfo storage poolInfo, SwapParams memory params) internal returns (uint256) {
@@ -142,6 +175,10 @@ library PoolLibrary {
     }
 
     function getMarkPriceX96(MarketStructs.PoolInfo storage poolInfo) internal view returns (uint256) {
+        return poolInfo.quote.div(poolInfo.base.mul(poolInfo.baseBalancePerShare));
+    }
+
+    function getShareMarkPriceX96(MarketStructs.PoolInfo storage poolInfo) internal view returns (uint256) {
         return poolInfo.quote.div(poolInfo.base);
     }
 
@@ -154,5 +191,18 @@ library PoolLibrary {
             FullMath.mulDiv(liquidity, poolInfo.base, poolInfo.totalLiquidity),
             FullMath.mulDiv(liquidity, poolInfo.quote, poolInfo.totalLiquidity)
         );
+    }
+
+    function getLiquidityDeleveraged(
+        MarketStructs.PoolInfo storage poolInfo,
+        uint256 liquidity,
+        uint256 cumDeleveragedBasePerLiquidity,
+        uint256 cumDeleveragedQuotePerLiquidity
+    ) internal view returns (uint256, uint256) {
+        uint256 deleveragedBasePerLiquidity = cumDeleveragedBasePerLiquidity - poolInfo.cumDeleveragedBasePerLiquidity;
+        uint256 deleveragedQuotePerLiquidity =
+            cumDeleveragedQuotePerLiquidity - poolInfo.cumDeleveragedQuotePerLiquidity;
+
+        return (liquidity.mul(deleveragedBasePerLiquidity), liquidity.mul(deleveragedQuotePerLiquidity));
     }
 }
