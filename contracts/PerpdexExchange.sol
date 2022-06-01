@@ -25,6 +25,7 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
     // market
     mapping(address => PerpdexStructs.PriceLimitInfo) public override priceLimitInfos;
     PerpdexStructs.InsuranceFundInfo public override insuranceFundInfo;
+    PerpdexStructs.ProtocolInfo public override protocolInfo;
 
     // config
     address public immutable override settlementToken;
@@ -33,6 +34,7 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
     uint24 public override imRatio;
     uint24 public override mmRatio;
     uint24 public override liquidationRewardRatio;
+    uint24 public override protocolFeeRatio;
     mapping(address => bool) public override isMarketAllowed;
 
     //
@@ -82,6 +84,12 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
         emit InsuranceFundTransferred(trader, amount);
     }
 
+    function transferProtocolFee(uint256 amount) external override onlyOwner nonReentrant {
+        address trader = _msgSender();
+        VaultLibrary.transferProtocolFee(accountInfos[trader], protocolInfo, amount);
+        emit ProtocolFeeTransferred(trader, amount);
+    }
+
     function openPosition(OpenPositionParams calldata params)
         external
         override
@@ -94,6 +102,7 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
             TakerLibrary.openPosition(
                 accountInfos[trader],
                 priceLimitInfos[params.market],
+                protocolInfo,
                 TakerLibrary.OpenPositionParams({
                     market: params.market,
                     isBaseToQuote: params.isBaseToQuote,
@@ -105,7 +114,8 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
                     isMarketAllowed: isMarketAllowed[params.market],
                     mmRatio: mmRatio,
                     imRatio: imRatio,
-                    maxMarketsPerAccount: maxMarketsPerAccount
+                    maxMarketsPerAccount: maxMarketsPerAccount,
+                    protocolFeeRatio: protocolFeeRatio
                 })
             );
 
@@ -136,6 +146,7 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
                 accountInfos[trader],
                 accountInfos[liquidator],
                 priceLimitInfos[params.market],
+                protocolInfo,
                 insuranceFundInfo,
                 TakerLibrary.LiquidateParams({
                     market: params.market,
@@ -145,7 +156,8 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
                     priceLimitConfig: priceLimitConfig,
                     mmRatio: mmRatio,
                     liquidationRewardRatio: liquidationRewardRatio,
-                    maxMarketsPerAccount: maxMarketsPerAccount
+                    maxMarketsPerAccount: maxMarketsPerAccount,
+                    protocolFeeRatio: protocolFeeRatio
                 })
             );
 
@@ -275,6 +287,11 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
     function setLiquidationRewardRatio(uint24 value) external override onlyOwner nonReentrant {
         require(value < 1e6);
         liquidationRewardRatio = value;
+    }
+
+    function setProtocolFeeRatio(uint24 value) external override onlyOwner nonReentrant {
+        require(value < 1e4);
+        protocolFeeRatio = value;
     }
 
     function setIsMarketAllowed(address market, bool value) external override onlyOwner nonReentrant {

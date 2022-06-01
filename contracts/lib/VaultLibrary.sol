@@ -55,6 +55,15 @@ library VaultLibrary {
         require(insuranceFundInfo.balance >= 0);
     }
 
+    function transferProtocolFee(
+        PerpdexStructs.AccountInfo storage accountInfo,
+        PerpdexStructs.ProtocolInfo storage protocolInfo,
+        uint256 amount
+    ) internal {
+        accountInfo.vaultInfo.collateralBalance = accountInfo.vaultInfo.collateralBalance.add(amount.toInt256());
+        protocolInfo.protocolFee = protocolInfo.protocolFee.sub(amount);
+    }
+
     function _transferTokenIn(
         address token,
         address from,

@@ -32,6 +32,7 @@ library TakerLibrary {
         uint24 mmRatio;
         uint24 imRatio;
         uint8 maxMarketsPerAccount;
+        uint24 protocolFeeRatio;
     }
 
     struct OpenPositionResponse {
@@ -50,6 +51,7 @@ library TakerLibrary {
         uint24 mmRatio;
         uint24 liquidationRewardRatio;
         uint8 maxMarketsPerAccount;
+        uint24 protocolFeeRatio;
     }
 
     struct LiquidateResponse {
@@ -67,6 +69,7 @@ library TakerLibrary {
     function openPosition(
         PerpdexStructs.AccountInfo storage accountInfo,
         PerpdexStructs.PriceLimitInfo storage priceLimitInfo,
+        PerpdexStructs.ProtocolInfo storage protocolInfo,
         OpenPositionParams memory params
     ) internal checkDeadline(params.deadline) returns (OpenPositionResponse memory) {
         require(!AccountLibrary.hasEnoughMaintenanceMargin(accountInfo, params.mmRatio));
@@ -75,12 +78,14 @@ library TakerLibrary {
             _doSwap(
                 accountInfo,
                 priceLimitInfo,
+                protocolInfo,
                 params.market,
                 params.isBaseToQuote,
                 params.isExactInput,
                 params.amount,
                 params.oppositeAmountBound,
-                params.maxMarketsPerAccount
+                params.maxMarketsPerAccount,
+                params.protocolFeeRatio
             );
 
         if (!params.isMarketAllowed) {
@@ -105,9 +110,10 @@ library TakerLibrary {
         PerpdexStructs.AccountInfo storage accountInfo,
         PerpdexStructs.AccountInfo storage liquidatorAccountInfo,
         PerpdexStructs.PriceLimitInfo storage priceLimitInfo,
+        PerpdexStructs.ProtocolInfo storage protocolInfo,
         PerpdexStructs.InsuranceFundInfo storage insuranceFundInfo,
         LiquidateParams memory params
-    ) internal checkDeadline(params.deadline) returns (LiquidateResponse memory) {
+    ) internal checkDeadline(params.deadline) returns (LiquidateResponse memory result) {
         require(!AccountLibrary.hasEnoughMaintenanceMargin(accountInfo, params.mmRatio));
 
         bool isLong;
@@ -117,20 +123,21 @@ library TakerLibrary {
             require(params.amount <= IPerpdexMarket(params.market).shareToBalance(takerInfo.baseBalanceShare.abs()));
         }
 
-        (int256 exchangedBase, int256 exchangedQuote, int256 realizedPnL) =
-            _doSwap(
-                accountInfo,
-                priceLimitInfo,
-                params.market,
-                isLong, // isBaseToQuote,
-                isLong, // isExactInput,
-                params.amount,
-                params.oppositeAmountBound,
-                params.maxMarketsPerAccount
-            );
+        (result.exchangedBase, result.exchangedQuote, result.realizedPnL) = _doSwap(
+            accountInfo,
+            priceLimitInfo,
+            protocolInfo,
+            params.market,
+            isLong, // isBaseToQuote,
+            isLong, // isExactInput,
+            params.amount,
+            params.oppositeAmountBound,
+            params.maxMarketsPerAccount,
+            params.protocolFeeRatio
+        );
 
-        uint256 priceAfterX96 = _getPriceX96(params.market);
-        require(PriceLimitLibrary.isLiquidationAllowed(priceLimitInfo, params.priceLimitConfig, priceAfterX96));
+        result.priceAfterX96 = _getPriceX96(params.market);
+        require(PriceLimitLibrary.isLiquidationAllowed(priceLimitInfo, params.priceLimitConfig, result.priceAfterX96));
 
         _processLiquidationFee(
             accountInfo.vaultInfo,
@@ -138,16 +145,8 @@ library TakerLibrary {
             insuranceFundInfo,
             params.mmRatio,
             params.liquidationRewardRatio,
-            exchangedQuote.abs()
+            result.exchangedQuote.abs()
         );
-
-        return
-            LiquidateResponse({
-                exchangedBase: exchangedBase,
-                exchangedQuote: exchangedQuote,
-                realizedPnL: realizedPnL,
-                priceAfterX96: priceAfterX96
-            });
     }
 
     function addToTakerBalance(
@@ -197,18 +196,20 @@ library TakerLibrary {
     function _doSwap(
         PerpdexStructs.AccountInfo storage accountInfo,
         PerpdexStructs.PriceLimitInfo storage priceLimitInfo,
+        PerpdexStructs.ProtocolInfo storage protocolInfo,
         address market,
         bool isBaseToQuote,
         bool isExactInput,
         uint256 amount,
         uint256 oppositeAmountBound,
-        uint8 maxMarketsPerAccount
+        uint8 maxMarketsPerAccount,
+        uint24 protocolFeeRatio
     )
         private
         returns (
-            int256,
-            int256,
-            int256
+            int256 exchangedPositionSize,
+            int256 exchangedPositionNotional,
+            int256 realizedPnL
         )
     {
         {
@@ -216,20 +217,68 @@ library TakerLibrary {
             PriceLimitLibrary.update(priceLimitInfo, priceBeforeX96);
         }
 
-        (int256 exchangedPositionSize, int256 exchangedPositionNotional) =
-            MarketLibrary.swap(market, isBaseToQuote, isExactInput, amount, oppositeAmountBound);
-
-        int256 realizedPnL =
-            addToTakerBalance(
-                accountInfo,
+        if (protocolFeeRatio > 0) {
+            (exchangedPositionSize, exchangedPositionNotional) = _swapWithProtocolFee(
+                protocolInfo,
                 market,
-                exchangedPositionSize,
-                exchangedPositionNotional,
-                0,
-                maxMarketsPerAccount
+                isBaseToQuote,
+                isExactInput,
+                amount,
+                oppositeAmountBound,
+                protocolFeeRatio
             );
+        } else {
+            (exchangedPositionSize, exchangedPositionNotional) = MarketLibrary.swap(
+                market,
+                isBaseToQuote,
+                isExactInput,
+                amount,
+                oppositeAmountBound
+            );
+        }
 
-        return (exchangedPositionSize, exchangedPositionNotional, realizedPnL);
+        realizedPnL = addToTakerBalance(
+            accountInfo,
+            market,
+            exchangedPositionSize,
+            exchangedPositionNotional,
+            0,
+            maxMarketsPerAccount
+        );
+    }
+
+    function _swapWithProtocolFee(
+        PerpdexStructs.ProtocolInfo storage protocolInfo,
+        address market,
+        bool isBaseToQuote,
+        bool isExactInput,
+        uint256 amount,
+        uint256 oppositeAmountBound,
+        uint24 protocolFeeRatio
+    ) private returns (int256 base, int256 quote) {
+        uint256 protocolFee;
+
+        if (isBaseToQuote == isExactInput) {
+            // exact base
+            (base, quote) = MarketLibrary.swap(market, isBaseToQuote, isExactInput, amount, oppositeAmountBound);
+
+            protocolFee = quote.abs().mulRatio(protocolFeeRatio);
+            quote = quote.sub(protocolFee.toInt256());
+        } else {
+            // exact quote
+            protocolFee = amount - amount.divRatio(1e6 + protocolFeeRatio);
+
+            (base, ) = MarketLibrary.swap(
+                market,
+                isBaseToQuote,
+                isExactInput,
+                amount.sub(protocolInfo.protocolFee),
+                oppositeAmountBound
+            );
+            quote = isBaseToQuote ? amount.toInt256() : amount.neg256();
+        }
+
+        protocolInfo.protocolFee = protocolInfo.protocolFee.add(protocolFee);
     }
 
     function _processLiquidationFee(
