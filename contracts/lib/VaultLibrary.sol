@@ -40,7 +40,9 @@ library VaultLibrary {
         // V_ZA: Zero amount
         require(params.amount > 0, "V_ZA");
         accountInfo.vaultInfo.collateralBalance = accountInfo.vaultInfo.collateralBalance.sub(params.amount.toInt256());
-        require(AccountLibrary.hasEnoughInitialMargin(accountInfo, params.imRatio));
+
+        // V_NEIM: does not have enough initial margin
+        require(AccountLibrary.hasEnoughInitialMargin(accountInfo, params.imRatio), "V_NEIM");
 
         SafeERC20Upgradeable.safeTransfer(IERC20Upgradeable(params.settlementToken), params.to, params.amount);
     }
