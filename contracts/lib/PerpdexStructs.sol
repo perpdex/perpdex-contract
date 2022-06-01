@@ -30,6 +30,10 @@ library PerpdexStructs {
         int256 balance;
     }
 
+    struct ProtocolInfo {
+        uint256 protocolFee;
+    }
+
     struct PriceLimitInfo {
         uint256 referencePrice;
         uint256 referenceTimestamp;

@@ -52,6 +52,8 @@ interface IPerpdexExchange {
 
     event Deposited(address indexed trader, uint256 amount);
     event Withdrawn(address indexed trader, uint256 amount);
+    event InsuranceFundTransferred(address indexed trader, uint256 amount);
+    event ProtocolFeeTransferred(address indexed trader, uint256 amount);
 
     event PositionLiquidated(
         address indexed trader,
@@ -77,6 +79,10 @@ interface IPerpdexExchange {
     function deposit(uint256 amount) external;
 
     function withdraw(uint256 amount) external;
+
+    function transferInsuranceFund(uint256 amount) external;
+
+    function transferProtocolFee(uint256 amount) external;
 
     function addLiquidity(AddLiquidityParams calldata params) external returns (AddLiquidityResponse memory);
 
@@ -104,6 +110,8 @@ interface IPerpdexExchange {
 
     function setLiquidationRewardRatio(uint24 value) external;
 
+    function setProtocolFeeRatio(uint24 value) external;
+
     function setIsMarketAllowed(address market, bool value) external;
 
     // default getters
@@ -113,6 +121,8 @@ interface IPerpdexExchange {
     function priceLimitInfos(address market) external view returns (uint256 referencePrice, uint256 referenceTimestamp);
 
     function insuranceFundInfo() external view returns (int256 balance);
+
+    function protocolInfo() external view returns (uint256 protocolFee);
 
     function settlementToken() external view returns (address);
 
@@ -128,6 +138,8 @@ interface IPerpdexExchange {
     function mmRatio() external view returns (uint24);
 
     function liquidationRewardRatio() external view returns (uint24);
+
+    function protocolFeeRatio() external view returns (uint24);
 
     function isMarketAllowed(address market) external view returns (bool);
 

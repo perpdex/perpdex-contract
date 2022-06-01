@@ -2,13 +2,15 @@
 pragma solidity 0.7.6;
 
 import { Address } from "@openzeppelin/contracts/utils/Address.sol";
+import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
 import { IPerpdexMarket } from "./interface/IPerpdexMarket.sol";
 import { MarketStructs } from "./lib/MarketStructs.sol";
 import { FundingLibrary } from "./lib/FundingLibrary.sol";
 import { PoolLibrary } from "./lib/PoolLibrary.sol";
 
-contract PerpdexMarket is IPerpdexMarket {
+contract PerpdexMarket is IPerpdexMarket, ReentrancyGuard, Ownable {
     using Address for address;
     using SafeMath for uint256;
 
@@ -57,7 +59,7 @@ contract PerpdexMarket is IPerpdexMarket {
         bool isBaseToQuote,
         bool isExactInput,
         uint256 amount
-    ) external override onlyExchange returns (uint256) {
+    ) external override onlyExchange nonReentrant returns (uint256) {
         _rebase();
         return
             PoolLibrary.swap(
@@ -75,6 +77,7 @@ contract PerpdexMarket is IPerpdexMarket {
         external
         override
         onlyExchange
+        nonReentrant
         returns (
             uint256,
             uint256,
@@ -89,27 +92,27 @@ contract PerpdexMarket is IPerpdexMarket {
             );
     }
 
-    function removeLiquidity(uint256 liquidity) external override onlyExchange returns (uint256, uint256) {
+    function removeLiquidity(uint256 liquidity) external override onlyExchange nonReentrant returns (uint256, uint256) {
         _rebase();
         return PoolLibrary.removeLiquidity(poolInfo, PoolLibrary.RemoveLiquidityParams({ liquidity: liquidity }));
     }
 
-    function setPoolFeeRatio(uint24 value) external {
+    function setPoolFeeRatio(uint24 value) external onlyOwner nonReentrant {
         require(value < 1e6);
         poolFeeRatio = value;
     }
 
-    function setFundingMaxPremiumRatio(uint24 value) external {
+    function setFundingMaxPremiumRatio(uint24 value) external onlyOwner nonReentrant {
         require(value < 1e6);
         fundingMaxPremiumRatio = value;
     }
 
-    function setFundingMaxElapsedSec(uint32 value) external {
+    function setFundingMaxElapsedSec(uint32 value) external onlyOwner nonReentrant {
         require(value <= 7 days);
         fundingMaxElapsedSec = value;
     }
 
-    function setFundingRolloverSec(uint32 value) external {
+    function setFundingRolloverSec(uint32 value) external onlyOwner nonReentrant {
         require(value <= 7 days);
         fundingRolloverSec = value;
     }
