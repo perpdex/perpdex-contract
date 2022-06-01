@@ -138,7 +138,26 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
         override
         returns (int256 base, int256 quote)
     {
-        require(false, "not implemented");
+        TakerLibrary.OpenPositionResponse memory response =
+            TakerLibrary.openPositionDry(
+                accountInfos[trader],
+                priceLimitInfos[params.market],
+                TakerLibrary.OpenPositionParams({
+                    market: params.market,
+                    isBaseToQuote: params.isBaseToQuote,
+                    isExactInput: params.isExactInput,
+                    amount: params.amount,
+                    oppositeAmountBound: params.oppositeAmountBound,
+                    deadline: params.deadline,
+                    priceLimitConfig: priceLimitConfig,
+                    isMarketAllowed: isMarketAllowed[params.market],
+                    mmRatio: mmRatio,
+                    imRatio: imRatio,
+                    maxMarketsPerAccount: maxMarketsPerAccount
+                })
+            );
+
+        return (response.exchangedBase, response.exchangedQuote);
     }
 
     function liquidate(LiquidateParams calldata params)

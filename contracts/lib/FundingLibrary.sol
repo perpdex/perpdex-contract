@@ -49,7 +49,7 @@ library FundingLibrary {
         view
         returns (uint256)
     {
-        (bool updating, uint256 balancePerShare, ) = _rebaseDry(fundingInfo, params);
+        (bool updating, uint256 balancePerShare, , ) = _rebaseDry(fundingInfo, params);
 
         if (updating) {
             return balancePerShare;
@@ -60,6 +60,7 @@ library FundingLibrary {
 
     function _rebaseDry(MarketStructs.FundingInfo storage fundingInfo, RebaseParams memory params)
         private
+        view
         returns (
             bool updating,
             uint256 balancePerShare,
@@ -92,7 +93,7 @@ library FundingLibrary {
             FixedPoint96.Q96,
             FixedPoint96.Q96.toInt256().sub(fundingRateX96).toUint256()
         );
-        revIndexPrice = indexPrice;
+        prevIndexPrice = indexPrice;
         prevIndexPriceTimestamp = now;
     }
 }

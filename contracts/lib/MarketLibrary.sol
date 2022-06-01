@@ -18,7 +18,37 @@ library MarketLibrary {
         uint256 oppositeAmountBound
     ) internal returns (int256, int256) {
         uint256 resAmount = IPerpdexMarket(market).swap(isBaseToQuote, isExactInput, amount);
+        return _processSwapResponse(isBaseToQuote, isExactInput, amount, oppositeAmountBound, resAmount);
+    }
 
+    function swapDry(
+        address market,
+        bool isBaseToQuote,
+        bool isExactInput,
+        uint256 amount,
+        uint256 oppositeAmountBound
+    ) internal view returns (int256, int256) {
+        uint256 resAmount = IPerpdexMarket(market).swapDry(isBaseToQuote, isExactInput, amount);
+        return _processSwapResponse(isBaseToQuote, isExactInput, amount, oppositeAmountBound, resAmount);
+    }
+
+    function balanceToShare(address market, int256 balance) internal view returns (int256) {
+        uint256 shareAbs = IPerpdexMarket(market).balanceToShare(balance.abs());
+        return balance < 0 ? shareAbs.neg256() : shareAbs.toInt256();
+    }
+
+    function shareToBalance(address market, int256 share) internal view returns (int256) {
+        uint256 balanceAbs = IPerpdexMarket(market).shareToBalance(share.abs());
+        return share < 0 ? balanceAbs.neg256() : balanceAbs.toInt256();
+    }
+
+    function _processSwapResponse(
+        bool isBaseToQuote,
+        bool isExactInput,
+        uint256 amount,
+        uint256 oppositeAmountBound,
+        uint256 resAmount
+    ) internal view returns (int256, int256) {
         if (isExactInput) {
             require(resAmount >= oppositeAmountBound);
             if (isBaseToQuote) {
@@ -34,15 +64,5 @@ library MarketLibrary {
                 return (amount.toInt256(), resAmount.neg256());
             }
         }
-    }
-
-    function balanceToShare(address market, int256 balance) internal view returns (int256) {
-        uint256 shareAbs = IPerpdexMarket(market).balanceToShare(balance.abs());
-        return balance < 0 ? shareAbs.neg256() : shareAbs.toInt256();
-    }
-
-    function shareToBalance(address market, int256 share) internal view returns (int256) {
-        uint256 balanceAbs = IPerpdexMarket(market).shareToBalance(share.abs());
-        return share < 0 ? balanceAbs.neg256() : balanceAbs.toInt256();
     }
 }

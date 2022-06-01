@@ -106,6 +106,43 @@ library TakerLibrary {
             });
     }
 
+    function openPositionDry(
+        PerpdexStructs.AccountInfo storage accountInfo,
+        PerpdexStructs.PriceLimitInfo storage priceLimitInfo,
+        OpenPositionParams memory params
+    ) internal view checkDeadline(params.deadline) returns (OpenPositionResponse memory) {
+        require(!AccountLibrary.hasEnoughMaintenanceMargin(accountInfo, params.mmRatio));
+
+        (int256 exchangedBase, int256 exchangedQuote, int256 realizedPnL) =
+            _doSwapDry(
+                accountInfo,
+                priceLimitInfo,
+                params.market,
+                params.isBaseToQuote,
+                params.isExactInput,
+                params.amount,
+                params.oppositeAmountBound,
+                params.maxMarketsPerAccount
+            );
+
+        if (!params.isMarketAllowed) {
+            require(accountInfo.takerInfos[params.market].baseBalanceShare.sign() * exchangedBase.sign() <= 0);
+        }
+
+        uint256 priceAfterX96 = _getPriceX96(params.market);
+        require(PriceLimitLibrary.isNormalOrderAllowed(priceLimitInfo, params.priceLimitConfig, priceAfterX96));
+
+        require(AccountLibrary.hasEnoughInitialMargin(accountInfo, params.imRatio));
+
+        return
+            OpenPositionResponse({
+                exchangedBase: exchangedBase,
+                exchangedQuote: exchangedQuote,
+                realizedPnL: realizedPnL,
+                priceAfterX96: priceAfterX96
+            });
+    }
+
     function liquidate(
         PerpdexStructs.AccountInfo storage accountInfo,
         PerpdexStructs.AccountInfo storage liquidatorAccountInfo,
@@ -189,7 +226,7 @@ library TakerLibrary {
         return realizedPnL;
     }
 
-    function _getPriceX96(address market) private returns (uint256) {
+    function _getPriceX96(address market) private view returns (uint256) {
         return IPerpdexMarket(market).getMarkPriceX96();
     }
 
@@ -279,6 +316,45 @@ library TakerLibrary {
         }
 
         protocolInfo.protocolFee = protocolInfo.protocolFee.add(protocolFee);
+    }
+
+    function _doSwapDry(
+        PerpdexStructs.AccountInfo storage accountInfo,
+        PerpdexStructs.PriceLimitInfo storage priceLimitInfo,
+        address market,
+        bool isBaseToQuote,
+        bool isExactInput,
+        uint256 amount,
+        uint256 oppositeAmountBound,
+        uint8 maxMarketsPerAccount
+    )
+        private
+        view
+        returns (
+            int256,
+            int256,
+            int256
+        )
+    {
+        {
+            uint256 priceBeforeX96 = _getPriceX96(market);
+            PriceLimitLibrary.update(priceLimitInfo, priceBeforeX96);
+        }
+
+        (int256 exchangedPositionSize, int256 exchangedPositionNotional) =
+            MarketLibrary.swapDry(market, isBaseToQuote, isExactInput, amount, oppositeAmountBound);
+
+        int256 realizedPnL =
+            addToTakerBalance(
+                accountInfo,
+                market,
+                exchangedPositionSize,
+                exchangedPositionNotional,
+                0,
+                maxMarketsPerAccount
+            );
+
+        return (exchangedPositionSize, exchangedPositionNotional, realizedPnL);
     }
 
     function _processLiquidationFee(

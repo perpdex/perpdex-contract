@@ -123,7 +123,7 @@ contract PerpdexMarket is IPerpdexMarket, ReentrancyGuard, Ownable {
         uint256 amount
     ) external view override onlyExchange returns (uint256) {
         return
-            PoolLibrary.swap(
+            PoolLibrary.swapDry(
                 poolInfo,
                 PoolLibrary.SwapParams({
                     isBaseToQuote: isBaseToQuote,
@@ -150,7 +150,7 @@ contract PerpdexMarket is IPerpdexMarket, ReentrancyGuard, Ownable {
         return balance.div(_balancePerShare());
     }
 
-    function _getLastMarkPriceX96() private view override returns (uint256) {
+    function _getLastMarkPriceX96() private view returns (uint256) {
         return PoolLibrary.getMarkPriceX96(poolInfo).div(fundingInfo.balancePerShare);
     }
 
