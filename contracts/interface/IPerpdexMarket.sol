@@ -2,8 +2,6 @@
 pragma solidity >=0.7.6;
 pragma abicoder v2;
 
-import { PerpdexStructs } from "../lib/PerpdexStructs.sol";
-
 interface IPerpdexMarket {
     function swap(
         bool isBaseToQuote,
@@ -26,6 +24,8 @@ interface IPerpdexMarket {
     function symbol() external view returns (string memory);
 
     function exchange() external view returns (address);
+
+    function getTotalLiquidity() external view returns (uint256);
 
     function getMarkPriceX96() external view returns (uint256);
 

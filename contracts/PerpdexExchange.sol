@@ -132,6 +132,15 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
         return (response.exchangedBase, response.exchangedQuote);
     }
 
+    function openPositionDry(OpenPositionParams calldata params, address trader)
+        external
+        view
+        override
+        returns (int256 base, int256 quote)
+    {
+        require(false, "not implemented");
+    }
+
     function liquidate(LiquidateParams calldata params)
         external
         override
