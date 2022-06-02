@@ -333,15 +333,25 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
 
     // all raw information can be retrieved through getters (including default getters)
 
-    function getTakerInfo(address trader, address market) external returns (PerpdexStructs.TakerInfo memory) {
+    function getTakerInfo(address trader, address market)
+        external
+        view
+        override
+        returns (PerpdexStructs.TakerInfo memory)
+    {
         return accountInfos[trader].takerInfos[market];
     }
 
-    function getMakerInfo(address trader, address market) external returns (PerpdexStructs.MakerInfo memory) {
+    function getMakerInfo(address trader, address market)
+        external
+        view
+        override
+        returns (PerpdexStructs.MakerInfo memory)
+    {
         return accountInfos[trader].makerInfos[market];
     }
 
-    function getAccountMarkets(address trader) external returns (address[] memory) {
+    function getAccountMarkets(address trader) external view override returns (address[] memory) {
         return accountInfos[trader].markets;
     }
 
