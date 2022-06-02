@@ -2,8 +2,6 @@
 pragma solidity >=0.7.6;
 pragma abicoder v2;
 
-import { PerpdexStructs } from "../lib/PerpdexStructs.sol";
-
 interface IPerpdexMarket {
     function swap(
         bool isBaseToQuote,
