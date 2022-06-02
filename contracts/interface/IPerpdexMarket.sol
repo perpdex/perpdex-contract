@@ -25,8 +25,6 @@ interface IPerpdexMarket {
 
     function exchange() external view returns (address);
 
-    function getTotalLiquidity() external view returns (uint256);
-
     function getMarkPriceX96() external view returns (uint256);
 
     function getLiquidityValue(uint256 liquidity) external view returns (uint256 baseShare, uint256 quoteBalance);

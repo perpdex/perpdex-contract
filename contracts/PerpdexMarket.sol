@@ -117,10 +117,6 @@ contract PerpdexMarket is IPerpdexMarket, ReentrancyGuard, Ownable {
         fundingRolloverSec = value;
     }
 
-    function getTotalLiquidity() external view override returns (uint256) {
-        return poolInfo.totalLiquidity;
-    }
-
     function getMarkPriceX96() public view override returns (uint256) {
         return PoolLibrary.getMarkPriceX96(poolInfo).div(fundingInfo.balancePerShare);
     }
