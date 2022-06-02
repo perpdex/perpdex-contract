@@ -25,6 +25,6 @@ contract PerpdexRouter is IPerpdexRouter {
 
     function withdrawEth(uint256 amount) external override {
         IPerpdexExchange(exchange).withdraw(amount);
-        assert(IWETH9(settlementToken).transfer(msg.sender, amount));
+        require(IWETH9(settlementToken).transfer(msg.sender, amount));
     }
 }
