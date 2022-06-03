@@ -112,7 +112,7 @@ library PoolLibrary {
             }
             output = output.mulRatio(onePlusFeeRatio);
         }
-        require(output > 0);
+        require(output > 0, "PL_SD: output is zero");
     }
 
     function addLiquidity(MarketStructs.PoolInfo storage poolInfo, AddLiquidityParams memory params)

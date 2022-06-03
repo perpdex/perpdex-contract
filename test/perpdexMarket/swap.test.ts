@@ -42,7 +42,6 @@ describe("PerpdexMarket swap", () => {
             await market.connect(owner).setFundingMaxPremiumRatio(0)
             await market.connect(exchange).addLiquidity(10000, 10000)
         })
-
         ;[
             {
                 title: "long exact input",
@@ -116,14 +115,86 @@ describe("PerpdexMarket swap", () => {
                 base: 20005,
                 quote: 4999,
             },
+            {
+                title: "revert when output is too small",
+                isBaseToQuote: false,
+                isExactInput: true,
+                amount: 1,
+                revertedWith: "PL_SD: output is zero",
+            },
+            {
+                title: "long revert when insufficient base liquidity",
+                isBaseToQuote: false,
+                isExactInput: false,
+                amount: 10000,
+                revertedWith: "",
+            },
+            {
+                title: "short revert when insufficient quote liquidity",
+                isBaseToQuote: true,
+                isExactInput: false,
+                amount: 10000,
+                revertedWith: "",
+            },
+            {
+                title: "long revert when insufficient base liquidity over",
+                isBaseToQuote: false,
+                isExactInput: false,
+                amount: 10001,
+                revertedWith: "SafeMath: subtraction overflow",
+            },
+            {
+                title: "short revert when insufficient quote liquidity over",
+                isBaseToQuote: true,
+                isExactInput: false,
+                amount: 10001,
+                revertedWith: "SafeMath: subtraction overflow",
+            },
+            {
+                title: "long revert when too large amount",
+                isBaseToQuote: false,
+                isExactInput: true,
+                amount: BigNumber.from(2).pow(256).sub(1),
+                revertedWith: "SafeMath: addition overflow",
+            },
+            {
+                title: "short revert when too large amount",
+                isBaseToQuote: true,
+                isExactInput: true,
+                amount: BigNumber.from(2).pow(256).sub(1),
+                revertedWith: "SafeMath: addition overflow",
+            },
+            {
+                title: "liquidity remain when too large long not overflow",
+                isBaseToQuote: false,
+                isExactInput: true,
+                amount: BigNumber.from(2).pow(128),
+                oppositeAmount: 9999,
+                base: 1,
+                quote: BigNumber.from(2).pow(128).add(10000),
+            },
+            {
+                title: "liquidity remain when too large short not overflow",
+                isBaseToQuote: true,
+                isExactInput: true,
+                amount: BigNumber.from(2).pow(128),
+                oppositeAmount: 9999,
+                base: BigNumber.from(2).pow(128).add(10000),
+                quote: 1,
+            },
         ].forEach(test => {
             it(test.title, async () => {
-                await expect(market.connect(exchange).swap(test.isBaseToQuote, test.isExactInput, test.amount))
-                    .to.emit(market, "Swapped")
-                    .withArgs(test.isBaseToQuote, test.isExactInput, test.amount, test.oppositeAmount)
-                const poolInfo = await market.poolInfo()
-                expect(poolInfo.base).to.eq(test.base)
-                expect(poolInfo.quote).to.eq(test.quote)
+                const res = expect(market.connect(exchange).swap(test.isBaseToQuote, test.isExactInput, test.amount))
+                if (test.revertedWith !== void 0) {
+                    await res.to.revertedWith(test.revertedWith)
+                } else {
+                    await res.to
+                        .emit(market, "Swapped")
+                        .withArgs(test.isBaseToQuote, test.isExactInput, test.amount, test.oppositeAmount)
+                    const poolInfo = await market.poolInfo()
+                    expect(poolInfo.base).to.eq(test.base)
+                    expect(poolInfo.quote).to.eq(test.quote)
+                }
             })
         })
     })
@@ -134,7 +205,6 @@ describe("PerpdexMarket swap", () => {
             await market.connect(owner).setFundingMaxPremiumRatio(0)
             await market.connect(exchange).addLiquidity(10000, 10000)
         })
-
         ;[
             {
                 title: "long exact input",
@@ -193,7 +263,6 @@ describe("PerpdexMarket swap", () => {
             await market.connect(owner).setFundingMaxPremiumRatio(5e4)
             await priceFeed.mock.getPrice.returns(2)
         })
-
         ;[
             {
                 title: "long exact input. funding not affect swap",
