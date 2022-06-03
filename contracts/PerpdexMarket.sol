@@ -66,7 +66,7 @@ contract PerpdexMarket is IPerpdexMarket, ReentrancyGuard, Ownable {
         );
         emit Swapped(isBaseToQuote, isExactInput, amount, oppositeAmount);
 
-        _rebase();
+        _processFunding();
     }
 
     function addLiquidity(uint256 baseShare, uint256 quoteBalance)
@@ -90,7 +90,7 @@ contract PerpdexMarket is IPerpdexMarket, ReentrancyGuard, Ownable {
         );
         emit LiquidityAdded(base, quote, liquidity);
 
-        _rebase();
+        _processFunding();
     }
 
     function removeLiquidity(uint256 liquidity)
@@ -106,7 +106,7 @@ contract PerpdexMarket is IPerpdexMarket, ReentrancyGuard, Ownable {
         );
         emit LiquidityRemoved(base, quote, liquidity);
 
-        _rebase();
+        _processFunding();
     }
 
     function setPoolFeeRatio(uint24 value) external onlyOwner nonReentrant {
@@ -181,11 +181,11 @@ contract PerpdexMarket is IPerpdexMarket, ReentrancyGuard, Ownable {
         return poolInfo.baseBalancePerShare;
     }
 
-    function _rebase() private {
+    function _processFunding() internal {
         int256 fundingRateX96 =
-            FundingLibrary.rebase(
+            FundingLibrary.processFunding(
                 fundingInfo,
-                FundingLibrary.RebaseParams({
+                FundingLibrary.ProcessFundingParams({
                     priceFeedBase: priceFeedBase,
                     priceFeedQuote: priceFeedQuote,
                     markPriceX96: getMarkPriceX96(),

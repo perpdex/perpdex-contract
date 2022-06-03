@@ -20,7 +20,7 @@ library FundingLibrary {
     using SafeMath for uint256;
     using SignedSafeMath for int256;
 
-    struct RebaseParams {
+    struct ProcessFundingParams {
         address priceFeedBase;
         address priceFeedQuote;
         uint256 markPriceX96;
@@ -33,7 +33,7 @@ library FundingLibrary {
         fundingInfo.prevIndexPriceTimestamp = block.timestamp;
     }
 
-    function rebase(MarketStructs.FundingInfo storage fundingInfo, RebaseParams memory params)
+    function processFunding(MarketStructs.FundingInfo storage fundingInfo, ProcessFundingParams memory params)
         internal
         returns (int256 fundingRateX96)
     {
@@ -113,7 +113,6 @@ library FundingLibrary {
                 10**IPerpdexPriceFeed(priceFeedQuote).decimals()
             );
         }
-        // TODO: handle overflow
         premiumX96 = priceRatioX96.toInt256().sub(FixedPoint96.Q96.toInt256());
     }
 }
