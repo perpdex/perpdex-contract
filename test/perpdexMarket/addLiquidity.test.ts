@@ -41,28 +41,28 @@ describe("PerpdexMarket addLiquidity", () => {
                 title: "minimum",
                 base: 1001,
                 quote: 1001,
-                liquidity: 1,
+                outputLiquidity: 1,
                 totalLiquidity: 1001,
             },
             {
                 title: "normal",
                 base: 10000,
                 quote: 10000,
-                liquidity: 9000,
+                outputLiquidity: 9000,
                 totalLiquidity: 10000,
             },
             {
                 title: "normal low price",
                 base: 10000,
                 quote: 9001,
-                liquidity: 8487,
+                outputLiquidity: 8487,
                 totalLiquidity: 9487,
             },
             {
                 title: "normal high price",
                 base: 10000,
                 quote: 11000,
-                liquidity: 9488,
+                outputLiquidity: 9488,
                 totalLiquidity: 10488,
             },
             {
@@ -81,7 +81,7 @@ describe("PerpdexMarket addLiquidity", () => {
                 title: "same as minimum",
                 base: 1000,
                 quote: 1000,
-                revertedWith: "PL_AL: liquidity zero",
+                revertedWith: "PL_AL: initial liquidity zero",
             },
             {
                 title: "too small",
@@ -101,11 +101,76 @@ describe("PerpdexMarket addLiquidity", () => {
                 if (test.revertedWith !== void 0) {
                     await res.to.revertedWith(test.revertedWith)
                 } else {
-                    await res.to.emit(market, "LiquidityAdded").withArgs(test.base, test.quote, test.liquidity)
+                    await res.to.emit(market, "LiquidityAdded").withArgs(test.base, test.quote, test.outputLiquidity)
                     const poolInfo = await market.poolInfo()
                     expect(poolInfo.base).to.eq(test.base)
                     expect(poolInfo.quote).to.eq(test.quote)
                     expect(poolInfo.totalLiquidity).to.eq(test.totalLiquidity)
+                }
+            })
+        })
+    })
+
+    describe("non empty pool", async () => {
+        beforeEach(async () => {
+            await market.connect(exchange).addLiquidity(10000, 10000)
+        })
+        ;[
+            {
+                title: "normal",
+                base: 10000,
+                quote: 10000,
+                outputBase: 10000,
+                outputQuote: 10000,
+                outputLiquidity: 10000,
+            },
+            {
+                title: "base small",
+                base: 1,
+                quote: 10000,
+                outputBase: 1,
+                outputQuote: 1,
+                outputLiquidity: 1,
+            },
+            {
+                title: "quote small",
+                base: 10000,
+                quote: 1,
+                outputBase: 1,
+                outputQuote: 1,
+                outputLiquidity: 1,
+            },
+            {
+                title: "base zero",
+                base: 0,
+                quote: 10000,
+                revertedWith: "PL_AL: liquidity zero",
+            },
+            {
+                title: "quote zero",
+                base: 10000,
+                quote: 0,
+                revertedWith: "PL_AL: liquidity zero",
+            },
+            {
+                title: "overflow",
+                base: BigNumber.from(2).pow(256).sub(10000),
+                quote: BigNumber.from(2).pow(256).sub(10000),
+                revertedWith: "SafeMath: addition overflow",
+            },
+        ].forEach(test => {
+            it(test.title, async () => {
+                const res = expect(market.connect(exchange).addLiquidity(test.base, test.quote))
+                if (test.revertedWith !== void 0) {
+                    await res.to.revertedWith(test.revertedWith)
+                } else {
+                    await res.to
+                        .emit(market, "LiquidityAdded")
+                        .withArgs(test.outputBase, test.outputQuote, test.outputLiquidity)
+                    const poolInfo = await market.poolInfo()
+                    expect(poolInfo.base).to.eq(test.outputBase + 10000)
+                    expect(poolInfo.quote).to.eq(test.outputQuote + 10000)
+                    expect(poolInfo.totalLiquidity).to.eq(test.outputLiquidity + 10000)
                 }
             })
         })

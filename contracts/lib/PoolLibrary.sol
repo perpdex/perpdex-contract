@@ -128,7 +128,7 @@ library PoolLibrary {
         if (poolTotalLiquidity == 0) {
             uint256 totalLiquidity = Math.sqrt(params.base.mul(params.quote));
             uint256 liquidity = totalLiquidity.sub(MINIMUM_LIQUIDITY);
-            require(params.base > 0 && params.quote > 0 && liquidity > 0, "PL_AL: liquidity zero");
+            require(params.base > 0 && params.quote > 0 && liquidity > 0, "PL_AL: initial liquidity zero");
 
             poolInfo.base = params.base;
             poolInfo.quote = params.quote;
@@ -146,7 +146,7 @@ library PoolLibrary {
                 FullMath.mulDiv(base, poolTotalLiquidity, poolBase),
                 FullMath.mulDiv(quote, poolTotalLiquidity, poolQuote)
             );
-        require(base > 0 && quote > 0 && liquidity > 0);
+        require(base > 0 && quote > 0 && liquidity > 0, "PL_AL: liquidity zero");
 
         poolInfo.base = poolBase.add(base);
         poolInfo.quote = poolQuote.add(quote);
