@@ -164,10 +164,12 @@ library PoolLibrary {
         uint256 poolTotalLiquidity = poolInfo.totalLiquidity;
         uint256 base = FullMath.mulDiv(params.liquidity, poolBase, poolTotalLiquidity);
         uint256 quote = FullMath.mulDiv(params.liquidity, poolQuote, poolTotalLiquidity);
-        require(base > 0 && quote > 0);
+        require(base > 0 && quote > 0, "PL_RL: output is zero");
         poolInfo.base = poolBase.sub(base);
         poolInfo.quote = poolQuote.sub(quote);
-        poolInfo.totalLiquidity = poolTotalLiquidity.sub(params.liquidity);
+        uint256 totalLiquidity = poolTotalLiquidity.sub(params.liquidity);
+        require(totalLiquidity >= MINIMUM_LIQUIDITY, "PL_RL: min liquidity");
+        poolInfo.totalLiquidity = totalLiquidity;
         return (base, quote);
     }
 

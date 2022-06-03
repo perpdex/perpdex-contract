@@ -158,6 +158,7 @@ describe("PerpdexMarket addLiquidity", () => {
                 quote: BigNumber.from(2).pow(256).sub(10000),
                 revertedWith: "SafeMath: addition overflow",
             },
+            // TODO: add round test (benefit to existing LP)
         ].forEach(test => {
             it(test.title, async () => {
                 const res = expect(market.connect(exchange).addLiquidity(test.base, test.quote))

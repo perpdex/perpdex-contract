@@ -104,6 +104,8 @@ contract PerpdexMarket is IPerpdexMarket, ReentrancyGuard, Ownable {
             poolInfo,
             PoolLibrary.RemoveLiquidityParams({ liquidity: liquidity })
         );
+        emit LiquidityRemoved(base, quote, liquidity);
+
         _rebase();
     }
 
