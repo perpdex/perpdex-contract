@@ -3,6 +3,8 @@ pragma solidity >=0.7.6;
 pragma abicoder v2;
 
 interface IPerpdexMarket {
+    event Swapped(bool isBaseToQuote, bool isExactInput, uint256 amount, uint256 oppositeAmount);
+
     function swap(
         bool isBaseToQuote,
         bool isExactInput,

@@ -8,7 +8,7 @@ import { SignedSafeMath } from "@openzeppelin/contracts/math/SignedSafeMath.sol"
 import { PerpMath } from "./PerpMath.sol";
 import { PerpSafeCast } from "./PerpSafeCast.sol";
 import { MarketStructs } from "./MarketStructs.sol";
-import { FullMath } from "@uniswap/lib/contracts/libraries/FullMath.sol";
+import { FullMath } from "@uniswap/v3-core/contracts/libraries/FullMath.sol";
 import { FixedPoint96 } from "@uniswap/v3-core/contracts/libraries/FixedPoint96.sol";
 
 library PoolLibrary {
@@ -72,19 +72,19 @@ library PoolLibrary {
         uint256 output = swapDry(poolInfo.base, poolInfo.quote, params);
         if (params.isExactInput) {
             if (params.isBaseToQuote) {
-                poolInfo.base = poolInfo.base.sub(params.amount);
-                poolInfo.quote = poolInfo.quote.add(output);
+                poolInfo.base = poolInfo.base.add(params.amount);
+                poolInfo.quote = poolInfo.quote.sub(output);
             } else {
-                poolInfo.base = poolInfo.base.add(output);
-                poolInfo.quote = poolInfo.quote.sub(params.amount);
+                poolInfo.base = poolInfo.base.sub(output);
+                poolInfo.quote = poolInfo.quote.add(params.amount);
             }
         } else {
             if (params.isBaseToQuote) {
-                poolInfo.base = poolInfo.base.sub(output);
-                poolInfo.quote = poolInfo.quote.add(params.amount);
+                poolInfo.base = poolInfo.base.add(output);
+                poolInfo.quote = poolInfo.quote.sub(params.amount);
             } else {
-                poolInfo.base = poolInfo.base.add(params.amount);
-                poolInfo.quote = poolInfo.quote.sub(output);
+                poolInfo.base = poolInfo.base.sub(params.amount);
+                poolInfo.quote = poolInfo.quote.add(output);
             }
         }
         return output;
@@ -94,28 +94,25 @@ library PoolLibrary {
         uint256 base,
         uint256 quote,
         SwapParams memory params
-    ) internal view returns (uint256) {
-        uint256 output;
-        uint256 invariant = base.mul(quote);
+    ) internal view returns (uint256 output) {
         uint24 onePlusFeeRatio = 1e6 + params.feeRatio;
 
         if (params.isExactInput) {
+            uint256 amountDivFee = params.amount.divRatio(onePlusFeeRatio);
             if (params.isBaseToQuote) {
-                output = quote.sub(invariant.div(base + params.amount.divRatio(onePlusFeeRatio)));
+                output = quote.sub(FullMath.mulDivRoundingUp(base, quote, base.add(amountDivFee)));
             } else {
-                output = base.sub(invariant.div(quote + params.amount.divRatio(onePlusFeeRatio)));
+                output = base.sub(FullMath.mulDivRoundingUp(base, quote, quote.add(amountDivFee)));
             }
         } else {
             if (params.isBaseToQuote) {
-                output = invariant.div(quote - params.amount).sub(base);
+                output = FullMath.mulDivRoundingUp(base, quote, quote.sub(params.amount)).sub(base);
             } else {
-                output = invariant.div(base - params.amount).sub(quote);
+                output = FullMath.mulDivRoundingUp(base, quote, base.sub(params.amount)).sub(quote);
             }
             output = output.mulRatio(onePlusFeeRatio);
         }
         require(output > 0);
-
-        return output;
     }
 
     function addLiquidity(MarketStructs.PoolInfo storage poolInfo, AddLiquidityParams memory params)

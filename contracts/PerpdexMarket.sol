@@ -27,8 +27,7 @@ contract PerpdexMarket is IPerpdexMarket, ReentrancyGuard, Ownable {
     uint32 public fundingRolloverSec = 1 days;
 
     modifier onlyExchange() {
-        // BT_CNCH: caller not Exchange
-        require(exchange == msg.sender, "BT_CNE");
+        require(exchange == msg.sender, "PM_OE: caller is not exchange");
         _;
     }
 
@@ -62,6 +61,8 @@ contract PerpdexMarket is IPerpdexMarket, ReentrancyGuard, Ownable {
                 feeRatio: poolFeeRatio
             })
         );
+        emit Swapped(isBaseToQuote, isExactInput, amount, oppositeAmount);
+
         _rebase();
     }
 

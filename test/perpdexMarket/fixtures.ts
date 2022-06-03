@@ -16,6 +16,7 @@ export interface PerpdexMarketFixture {
 export function createPerpdexMarketFixture(): (wallets, provider) => Promise<PerpdexMarketFixture> {
     return async ([owner, alice, bob, exchange], provider): Promise<PerpdexMarketFixture> => {
         const priceFeed = await waffle.deployMockContract(owner, IPerpdexPriceFeedJson.abi)
+        await priceFeed.mock.getPrice.returns(1)
 
         const perpdexMarketFactory = await ethers.getContractFactory("PerpdexMarket")
         const perpdexMarket = (await perpdexMarketFactory.deploy(

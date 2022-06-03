@@ -1,11 +1,10 @@
 import { expect } from "chai"
-import { parseUnits } from "ethers/lib/utils"
-import { ethers, waffle } from "hardhat"
+import { waffle } from "hardhat"
 import { PerpdexMarket } from "../../typechain"
 import { createPerpdexMarketFixture } from "./fixtures"
 import { Wallet } from "ethers"
 
-describe("PerpdexMarket config test", () => {
+describe("PerpdexMarket config", () => {
     let loadFixture = waffle.createFixtureLoader(waffle.provider.getWallets())
     let fixture
 
