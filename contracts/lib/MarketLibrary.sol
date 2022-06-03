@@ -14,26 +14,20 @@ library MarketLibrary {
         address market,
         bool isBaseToQuote,
         bool isExactInput,
-        uint256 amount,
-        uint256 oppositeAmountBound
+        uint256 amount
     ) internal returns (int256, int256) {
         uint256 resAmount = IPerpdexMarket(market).swap(isBaseToQuote, isExactInput, amount);
+        return _processSwapResponse(isBaseToQuote, isExactInput, amount, resAmount);
+    }
 
-        if (isExactInput) {
-            require(resAmount >= oppositeAmountBound);
-            if (isBaseToQuote) {
-                return (amount.neg256(), resAmount.toInt256());
-            } else {
-                return (resAmount.toInt256(), amount.neg256());
-            }
-        } else {
-            require(resAmount <= oppositeAmountBound);
-            if (isBaseToQuote) {
-                return (resAmount.neg256(), amount.toInt256());
-            } else {
-                return (amount.toInt256(), resAmount.neg256());
-            }
-        }
+    function swapDry(
+        address market,
+        bool isBaseToQuote,
+        bool isExactInput,
+        uint256 amount
+    ) internal view returns (int256, int256) {
+        uint256 resAmount = IPerpdexMarket(market).swapDry(isBaseToQuote, isExactInput, amount);
+        return _processSwapResponse(isBaseToQuote, isExactInput, amount, resAmount);
     }
 
     function balanceToShare(address market, int256 balance) internal view returns (int256) {
@@ -44,5 +38,26 @@ library MarketLibrary {
     function shareToBalance(address market, int256 share) internal view returns (int256) {
         uint256 balanceAbs = IPerpdexMarket(market).shareToBalance(share.abs());
         return share < 0 ? balanceAbs.neg256() : balanceAbs.toInt256();
+    }
+
+    function _processSwapResponse(
+        bool isBaseToQuote,
+        bool isExactInput,
+        uint256 amount,
+        uint256 resAmount
+    ) internal view returns (int256, int256) {
+        if (isExactInput) {
+            if (isBaseToQuote) {
+                return (amount.neg256(), resAmount.toInt256());
+            } else {
+                return (resAmount.toInt256(), amount.neg256());
+            }
+        } else {
+            if (isBaseToQuote) {
+                return (resAmount.neg256(), amount.toInt256());
+            } else {
+                return (amount.toInt256(), resAmount.neg256());
+            }
+        }
     }
 }

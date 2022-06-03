@@ -106,6 +106,42 @@ library TakerLibrary {
             });
     }
 
+    function openPositionDry(
+        PerpdexStructs.AccountInfo storage accountInfo,
+        PerpdexStructs.PriceLimitInfo storage priceLimitInfo,
+        OpenPositionParams memory params
+    ) internal view checkDeadline(params.deadline) returns (OpenPositionResponse memory) {
+        require(!AccountLibrary.hasEnoughMaintenanceMargin(accountInfo, params.mmRatio));
+
+        (int256 exchangedBase, int256 exchangedQuote) =
+            _doSwapDry(
+                accountInfo,
+                priceLimitInfo,
+                params.market,
+                params.isBaseToQuote,
+                params.isExactInput,
+                params.amount,
+                params.oppositeAmountBound,
+                params.maxMarketsPerAccount
+            );
+
+        if (!params.isMarketAllowed) {
+            require(accountInfo.takerInfos[params.market].baseBalanceShare.sign() * exchangedBase.sign() <= 0);
+        }
+
+        // disable price limit
+
+        require(AccountLibrary.hasEnoughInitialMargin(accountInfo, params.imRatio));
+
+        return
+            OpenPositionResponse({
+                exchangedBase: exchangedBase,
+                exchangedQuote: exchangedQuote,
+                realizedPnL: 0,
+                priceAfterX96: 0
+            });
+    }
+
     function liquidate(
         PerpdexStructs.AccountInfo storage accountInfo,
         PerpdexStructs.AccountInfo storage liquidatorAccountInfo,
@@ -189,7 +225,7 @@ library TakerLibrary {
         return realizedPnL;
     }
 
-    function _getPriceX96(address market) private returns (uint256) {
+    function _getPriceX96(address market) private view returns (uint256) {
         return IPerpdexMarket(market).getMarkPriceX96();
     }
 
@@ -207,8 +243,8 @@ library TakerLibrary {
     )
         private
         returns (
-            int256 exchangedPositionSize,
-            int256 exchangedPositionNotional,
+            int256 base,
+            int256 quote,
             int256 realizedPnL
         )
     {
@@ -218,33 +254,21 @@ library TakerLibrary {
         }
 
         if (protocolFeeRatio > 0) {
-            (exchangedPositionSize, exchangedPositionNotional) = _swapWithProtocolFee(
+            (base, quote) = _swapWithProtocolFee(
                 protocolInfo,
                 market,
                 isBaseToQuote,
                 isExactInput,
                 amount,
-                oppositeAmountBound,
                 protocolFeeRatio
             );
         } else {
-            (exchangedPositionSize, exchangedPositionNotional) = MarketLibrary.swap(
-                market,
-                isBaseToQuote,
-                isExactInput,
-                amount,
-                oppositeAmountBound
-            );
+            (base, quote) = MarketLibrary.swap(market, isBaseToQuote, isExactInput, amount);
         }
 
-        realizedPnL = addToTakerBalance(
-            accountInfo,
-            market,
-            exchangedPositionSize,
-            exchangedPositionNotional,
-            0,
-            maxMarketsPerAccount
-        );
+        _validateSlippage(isBaseToQuote, isExactInput, base, quote, oppositeAmountBound);
+
+        realizedPnL = addToTakerBalance(accountInfo, market, base, quote, 0, maxMarketsPerAccount);
     }
 
     function _swapWithProtocolFee(
@@ -253,14 +277,13 @@ library TakerLibrary {
         bool isBaseToQuote,
         bool isExactInput,
         uint256 amount,
-        uint256 oppositeAmountBound,
         uint24 protocolFeeRatio
     ) private returns (int256 base, int256 quote) {
         uint256 protocolFee;
 
         if (isBaseToQuote == isExactInput) {
             // exact base
-            (base, quote) = MarketLibrary.swap(market, isBaseToQuote, isExactInput, amount, oppositeAmountBound);
+            (base, quote) = MarketLibrary.swap(market, isBaseToQuote, isExactInput, amount);
 
             protocolFee = quote.abs().mulRatio(protocolFeeRatio);
             quote = quote.sub(protocolFee.toInt256());
@@ -268,17 +291,28 @@ library TakerLibrary {
             // exact quote
             protocolFee = amount - amount.divRatio(1e6 + protocolFeeRatio);
 
-            (base, ) = MarketLibrary.swap(
-                market,
-                isBaseToQuote,
-                isExactInput,
-                amount.sub(protocolInfo.protocolFee),
-                oppositeAmountBound
-            );
+            (base, ) = MarketLibrary.swap(market, isBaseToQuote, isExactInput, amount.sub(protocolInfo.protocolFee));
             quote = isBaseToQuote ? amount.toInt256() : amount.neg256();
         }
 
         protocolInfo.protocolFee = protocolInfo.protocolFee.add(protocolFee);
+    }
+
+    function _doSwapDry(
+        PerpdexStructs.AccountInfo storage accountInfo,
+        PerpdexStructs.PriceLimitInfo storage priceLimitInfo,
+        address market,
+        bool isBaseToQuote,
+        bool isExactInput,
+        uint256 amount,
+        uint256 oppositeAmountBound,
+        uint8 maxMarketsPerAccount
+    ) private view returns (int256 base, int256 quote) {
+        // disable price limit
+
+        (base, quote) = MarketLibrary.swapDry(market, isBaseToQuote, isExactInput, amount);
+
+        _validateSlippage(isBaseToQuote, isExactInput, base, quote, oppositeAmountBound);
     }
 
     function _processLiquidationFee(
@@ -298,5 +332,20 @@ library TakerLibrary {
         insuranceFundInfo.balance = insuranceFundInfo.balance.add(insuranceFundReward.toInt256());
 
         return penalty;
+    }
+
+    function _validateSlippage(
+        bool isBaseToQuote,
+        bool isExactInput,
+        int256 base,
+        int256 quote,
+        uint256 oppositeAmountBound
+    ) private pure {
+        uint256 oppositeAmount = isBaseToQuote == isExactInput ? quote.abs() : base.abs();
+        if (isExactInput) {
+            require(oppositeAmount >= oppositeAmountBound);
+        } else {
+            require(oppositeAmount <= oppositeAmountBound);
+        }
     }
 }

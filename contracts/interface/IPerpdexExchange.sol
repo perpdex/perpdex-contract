@@ -114,12 +114,10 @@ interface IPerpdexExchange {
 
     function setIsMarketAllowed(address market, bool value) external;
 
-    // dry run
+    // dry run getters
 
     function openPositionDry(OpenPositionParams calldata params, address trader)
-        external
-        view
-        returns (int256 base, int256 quote);
+        external view returns (int256 base, int256 quote);
 
     // default getters
 

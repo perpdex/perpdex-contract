@@ -82,6 +82,9 @@ library MakerLibrary {
 
         require(AccountLibrary.hasEnoughInitialMargin(accountInfo, params.imRatio));
 
+        require(baseShare >= params.minBase);
+        require(quoteBalance >= params.minQuote);
+
         return AddLiquidityResponse({ base: baseShare, quote: quoteBalance, liquidity: liquidity });
     }
 
