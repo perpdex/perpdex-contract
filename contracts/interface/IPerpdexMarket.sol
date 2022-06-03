@@ -33,9 +33,17 @@ interface IPerpdexMarket {
 
     function getMarkPriceX96() external view returns (uint256);
 
+    function getShareMarkPriceX96() external view returns (uint256);
+
     function getLiquidityValue(uint256 liquidity) external view returns (uint256 baseShare, uint256 quoteBalance);
 
-    function shareToBalance(uint256 baseShare) external view returns (uint256);
+    function getLiquidityDeleveraged(
+        uint256 liquidity,
+        uint256 cumDeleveragedBasePerLiquidity,
+        uint256 cumDeleveragedQuotePerLiquidity
+    ) external view returns (uint256, uint256);
 
-    function balanceToShare(uint256 baseBalance) external view returns (uint256);
+    function getCumDeleveragedPerLiquidity() external view returns (uint256, uint256);
+
+    function baseBalancePerShare() external view returns (uint256);
 }

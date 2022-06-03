@@ -48,6 +48,7 @@ contract PerpdexMarket is IPerpdexMarket, ReentrancyGuard, Ownable {
         priceFeed = priceFeedArg;
 
         FundingLibrary.initializeFunding(fundingInfo);
+        PoolLibrary.initializePool(poolInfo);
 
         poolFeeRatio = 3e3;
         fundingMaxPremiumRatio = 1e4;
@@ -59,18 +60,17 @@ contract PerpdexMarket is IPerpdexMarket, ReentrancyGuard, Ownable {
         bool isBaseToQuote,
         bool isExactInput,
         uint256 amount
-    ) external override onlyExchange nonReentrant returns (uint256) {
+    ) external override onlyExchange nonReentrant returns (uint256 oppositeAmount) {
+        oppositeAmount = PoolLibrary.swap(
+            poolInfo,
+            PoolLibrary.SwapParams({
+                isBaseToQuote: isBaseToQuote,
+                isExactInput: isExactInput,
+                amount: amount,
+                feeRatio: poolFeeRatio
+            })
+        );
         _rebase();
-        return
-            PoolLibrary.swap(
-                poolInfo,
-                PoolLibrary.SwapParams({
-                    isBaseToQuote: isBaseToQuote,
-                    isExactInput: isExactInput,
-                    amount: amount,
-                    feeRatio: poolFeeRatio
-                })
-            );
     }
 
     function addLiquidity(uint256 baseShare, uint256 quoteBalance)
@@ -79,22 +79,35 @@ contract PerpdexMarket is IPerpdexMarket, ReentrancyGuard, Ownable {
         onlyExchange
         nonReentrant
         returns (
-            uint256,
-            uint256,
-            uint256
+            uint256 base,
+            uint256 quote,
+            uint256 liquidity
         )
     {
+        if (poolInfo.totalLiquidity == 0) {
+            // TODO: check if reasonable price
+        }
+
+        (base, quote, liquidity) = PoolLibrary.addLiquidity(
+            poolInfo,
+            PoolLibrary.AddLiquidityParams({ base: baseShare, quote: quoteBalance })
+        );
+
         _rebase();
-        return
-            PoolLibrary.addLiquidity(
-                poolInfo,
-                PoolLibrary.AddLiquidityParams({ base: baseShare, quote: quoteBalance })
-            );
     }
 
-    function removeLiquidity(uint256 liquidity) external override onlyExchange nonReentrant returns (uint256, uint256) {
+    function removeLiquidity(uint256 liquidity)
+        external
+        override
+        onlyExchange
+        nonReentrant
+        returns (uint256 base, uint256 quote)
+    {
+        (base, quote) = PoolLibrary.removeLiquidity(
+            poolInfo,
+            PoolLibrary.RemoveLiquidityParams({ liquidity: liquidity })
+        );
         _rebase();
-        return PoolLibrary.removeLiquidity(poolInfo, PoolLibrary.RemoveLiquidityParams({ liquidity: liquidity }));
     }
 
     function setPoolFeeRatio(uint24 value) external onlyOwner nonReentrant {
@@ -121,67 +134,66 @@ contract PerpdexMarket is IPerpdexMarket, ReentrancyGuard, Ownable {
         bool isBaseToQuote,
         bool isExactInput,
         uint256 amount
-    ) external view override onlyExchange returns (uint256) {
-        return
-            PoolLibrary.swapDry(
-                poolInfo,
-                PoolLibrary.SwapParams({
-                    isBaseToQuote: isBaseToQuote,
-                    isExactInput: isExactInput,
-                    amount: amount,
-                    feeRatio: poolFeeRatio
-                })
-            );
+    ) external view override onlyExchange returns (uint256 oppositeAmount) {
+        oppositeAmount = PoolLibrary.swapDry(
+            poolInfo.base,
+            poolInfo.quote,
+            PoolLibrary.SwapParams({
+                isBaseToQuote: isBaseToQuote,
+                isExactInput: isExactInput,
+                amount: amount,
+                feeRatio: poolFeeRatio
+            })
+        );
     }
 
     function getMarkPriceX96() public view override returns (uint256) {
-        return PoolLibrary.getMarkPriceX96(poolInfo).div(_balancePerShare());
+        return PoolLibrary.getMarkPriceX96(poolInfo.base, poolInfo.quote, poolInfo.baseBalancePerShare);
+    }
+
+    function getShareMarkPriceX96() external view override returns (uint256) {
+        return PoolLibrary.getShareMarkPriceX96(poolInfo.base, poolInfo.quote);
     }
 
     function getLiquidityValue(uint256 liquidity) external view override returns (uint256, uint256) {
         return PoolLibrary.getLiquidityValue(poolInfo, liquidity);
     }
 
-    function shareToBalance(uint256 share) external view override returns (uint256) {
-        return share.mul(_balancePerShare());
+    function getLiquidityDeleveraged(
+        uint256 liquidity,
+        uint256 cumDeleveragedBasePerLiquidity,
+        uint256 cumDeleveragedQuotePerLiquidity
+    ) external view override returns (uint256, uint256) {
+        return
+            PoolLibrary.getLiquidityDeleveraged(
+                poolInfo.cumDeleveragedBasePerLiquidity,
+                poolInfo.cumDeleveragedQuotePerLiquidity,
+                liquidity,
+                cumDeleveragedBasePerLiquidity,
+                cumDeleveragedQuotePerLiquidity
+            );
     }
 
-    function balanceToShare(uint256 balance) external view override returns (uint256) {
-        return balance.div(_balancePerShare());
+    function getCumDeleveragedPerLiquidity() external view override returns (uint256, uint256) {
+        return (poolInfo.cumDeleveragedBasePerLiquidity, poolInfo.cumDeleveragedQuotePerLiquidity);
     }
 
-    function _getLastMarkPriceX96() private view returns (uint256) {
-        return PoolLibrary.getMarkPriceX96(poolInfo).div(fundingInfo.balancePerShare);
+    function baseBalancePerShare() external view override returns (uint256) {
+        return poolInfo.baseBalancePerShare;
     }
 
     function _rebase() private {
-        uint256 markPriceX96 = _getLastMarkPriceX96();
-
-        FundingLibrary.rebase(
-            fundingInfo,
-            FundingLibrary.RebaseParams({
-                priceFeed: priceFeed,
-                markPriceX96: markPriceX96,
-                maxPremiumRatio: fundingMaxPremiumRatio,
-                maxElapsedSec: fundingMaxElapsedSec,
-                rolloverSec: fundingRolloverSec
-            })
-        );
-    }
-
-    function _balancePerShare() private view returns (uint256) {
-        uint256 markPriceX96 = _getLastMarkPriceX96();
-
-        return
-            FundingLibrary.getBalancePerShare(
+        int256 fundingRateX96 =
+            FundingLibrary.rebase(
                 fundingInfo,
                 FundingLibrary.RebaseParams({
                     priceFeed: priceFeed,
-                    markPriceX96: markPriceX96,
+                    markPriceX96: getMarkPriceX96(),
                     maxPremiumRatio: fundingMaxPremiumRatio,
                     maxElapsedSec: fundingMaxElapsedSec,
                     rolloverSec: fundingRolloverSec
                 })
             );
+        return PoolLibrary.applyFunding(poolInfo, fundingRateX96);
     }
 }

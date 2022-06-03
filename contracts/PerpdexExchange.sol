@@ -333,15 +333,25 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
 
     // all raw information can be retrieved through getters (including default getters)
 
-    function getTakerInfo(address trader, address market) external returns (PerpdexStructs.TakerInfo memory) {
+    function getTakerInfo(address trader, address market)
+        external
+        view
+        override
+        returns (PerpdexStructs.TakerInfo memory)
+    {
         return accountInfos[trader].takerInfos[market];
     }
 
-    function getMakerInfo(address trader, address market) external returns (PerpdexStructs.MakerInfo memory) {
+    function getMakerInfo(address trader, address market)
+        external
+        view
+        override
+        returns (PerpdexStructs.MakerInfo memory)
+    {
         return accountInfos[trader].makerInfos[market];
     }
 
-    function getAccountMarkets(address trader) external returns (address[] memory) {
+    function getAccountMarkets(address trader) external view override returns (address[] memory) {
         return accountInfos[trader].markets;
     }
 
@@ -351,8 +361,8 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
         return AccountLibrary.getTotalAccountValue(accountInfos[trader]);
     }
 
-    function getPositionSize(address trader, address market) external view override returns (int256) {
-        return AccountLibrary.getPositionSize(accountInfos[trader], market);
+    function getPositionShare(address trader, address market) external view override returns (int256) {
+        return AccountLibrary.getPositionShare(accountInfos[trader], market);
     }
 
     function getPositionNotional(address trader, address market) external view override returns (int256) {
@@ -363,8 +373,8 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
         return AccountLibrary.getTotalPositionNotional(accountInfos[trader]);
     }
 
-    function getOpenPositionSize(address trader, address market) external view override returns (uint256) {
-        return AccountLibrary.getOpenPositionSize(accountInfos[trader], market);
+    function getOpenPositionShare(address trader, address market) external view override returns (uint256) {
+        return AccountLibrary.getOpenPositionShare(accountInfos[trader], market);
     }
 
     function getOpenPositionNotional(address trader, address market) external view override returns (uint256) {

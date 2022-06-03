@@ -156,7 +156,7 @@ library TakerLibrary {
         {
             PerpdexStructs.TakerInfo storage takerInfo = accountInfo.takerInfos[params.market];
             isLong = takerInfo.baseBalanceShare > 0 ? true : false;
-            require(params.amount <= IPerpdexMarket(params.market).shareToBalance(takerInfo.baseBalanceShare.abs()));
+            require(params.amount <= takerInfo.baseBalanceShare.abs());
         }
 
         (result.exchangedBase, result.exchangedQuote, result.realizedPnL) = _doSwap(
@@ -188,14 +188,13 @@ library TakerLibrary {
     function addToTakerBalance(
         PerpdexStructs.AccountInfo storage accountInfo,
         address market,
-        int256 baseBalance,
+        int256 baseShare,
         int256 quoteBalance,
         int256 quoteFee,
         uint8 maxMarketsPerAccount
     ) internal returns (int256) {
-        require(baseBalance.sign() * quoteBalance.sign() == -1);
+        require(baseShare.sign() * quoteBalance.sign() == -1);
 
-        int256 baseShare = MarketLibrary.balanceToShare(market, baseBalance);
         PerpdexStructs.TakerInfo storage takerInfo = accountInfo.takerInfos[market];
 
         int256 realizedPnL;
