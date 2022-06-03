@@ -187,6 +187,9 @@ contract PerpdexMarket is IPerpdexMarket, ReentrancyGuard, Ownable {
                     rolloverSec: fundingRolloverSec
                 })
             );
-        return PoolLibrary.applyFunding(poolInfo, fundingRateX96);
+        if (fundingRateX96 == 0) return;
+
+        PoolLibrary.applyFunding(poolInfo, fundingRateX96);
+        emit FundingPaid(fundingRateX96);
     }
 }

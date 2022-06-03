@@ -3,6 +3,7 @@ import { waffle } from "hardhat"
 import { PerpdexMarket } from "../../typechain"
 import { createPerpdexMarketFixture } from "./fixtures"
 import { BigNumber, BigNumberish, Wallet } from "ethers"
+import { MockContract } from "ethereum-waffle"
 
 describe("PerpdexMarket swap", () => {
     let loadFixture = waffle.createFixtureLoader(waffle.provider.getWallets())
@@ -12,6 +13,7 @@ describe("PerpdexMarket swap", () => {
     let owner: Wallet
     let alice: Wallet
     let exchange: Wallet
+    let priceFeed: MockContract
 
     beforeEach(async () => {
         fixture = await loadFixture(createPerpdexMarketFixture())
@@ -19,6 +21,7 @@ describe("PerpdexMarket swap", () => {
         owner = fixture.owner
         alice = fixture.alice
         exchange = fixture.exchange
+        priceFeed = fixture.priceFeed
     })
 
     describe("caller is not exchange", async () => {
@@ -176,6 +179,65 @@ describe("PerpdexMarket swap", () => {
                     .withArgs(test.isBaseToQuote, test.isExactInput, test.amount, test.oppositeAmount)
                 const poolInfo = await market.poolInfo()
                 expect(poolInfo.base).to.eq(test.base)
+                expect(poolInfo.quote).to.eq(test.quote)
+            })
+        })
+    })
+
+    describe("without fee, with funding", async () => {
+        beforeEach(async () => {
+            await market.connect(owner).setPoolFeeRatio(0)
+            await market.connect(owner).setFundingMaxPremiumRatio(0)
+            await priceFeed.mock.getPrice.returns(1)
+            await market.connect(exchange).addLiquidity(10000, 10000)
+            await market.connect(owner).setFundingMaxPremiumRatio(5e4)
+            await priceFeed.mock.getPrice.returns(2)
+        })
+
+        ;[
+            {
+                title: "long exact input. funding not affect swap",
+                isBaseToQuote: false,
+                isExactInput: true,
+                amount: 10000,
+                oppositeAmount: 5000,
+                base: 5000,
+                quote: 20000,
+            },
+            {
+                title: "short exact input. funding not affect swap",
+                isBaseToQuote: true,
+                isExactInput: true,
+                amount: 10000,
+                oppositeAmount: 5000,
+                base: 20000,
+                quote: 5000,
+            },
+            {
+                title: "long exact output. funding not affect swap",
+                isBaseToQuote: false,
+                isExactInput: false,
+                amount: 5000,
+                oppositeAmount: 10000,
+                base: 5000,
+                quote: 20000,
+            },
+            {
+                title: "short exact input. funding not affect swap",
+                isBaseToQuote: true,
+                isExactInput: false,
+                amount: 5000,
+                oppositeAmount: 10000,
+                base: 20000,
+                quote: 5000,
+            },
+        ].forEach(test => {
+            it(test.title, async () => {
+                await expect(market.connect(exchange).swap(test.isBaseToQuote, test.isExactInput, test.amount))
+                    .to.emit(market, "Swapped")
+                    .withArgs(test.isBaseToQuote, test.isExactInput, test.amount, test.oppositeAmount)
+                    .to.emit(market, "FundingPaid")
+                const poolInfo = await market.poolInfo()
                 expect(poolInfo.quote).to.eq(test.quote)
             })
         })
