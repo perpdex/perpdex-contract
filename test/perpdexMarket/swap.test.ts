@@ -22,6 +22,9 @@ describe("PerpdexMarket swap", () => {
         alice = fixture.alice
         exchange = fixture.exchange
         priceFeed = fixture.priceFeed
+
+        await market.connect(owner).setPoolFeeRatio(0)
+        await market.connect(owner).setFundingMaxPremiumRatio(0)
     })
 
     describe("caller is not exchange", async () => {
@@ -38,8 +41,6 @@ describe("PerpdexMarket swap", () => {
 
     describe("without fee, without funding", async () => {
         beforeEach(async () => {
-            await market.connect(owner).setPoolFeeRatio(0)
-            await market.connect(owner).setFundingMaxPremiumRatio(0)
             await market.connect(exchange).addLiquidity(10000, 10000)
         })
         ;[
@@ -78,6 +79,34 @@ describe("PerpdexMarket swap", () => {
                 oppositeAmount: 10000,
                 base: 20000,
                 quote: 5000,
+            },
+            {
+                title: "long exact input zero",
+                isBaseToQuote: false,
+                isExactInput: true,
+                amount: 0,
+                revertedWith: "PL_SD: output is zero",
+            },
+            {
+                title: "short exact input zero",
+                isBaseToQuote: true,
+                isExactInput: true,
+                amount: 0,
+                revertedWith: "PL_SD: output is zero",
+            },
+            {
+                title: "long exact output zero",
+                isBaseToQuote: false,
+                isExactInput: false,
+                amount: 0,
+                revertedWith: "PL_SD: output is zero",
+            },
+            {
+                title: "short exact input zero",
+                isBaseToQuote: true,
+                isExactInput: false,
+                amount: 0,
+                revertedWith: "PL_SD: output is zero",
             },
             {
                 title: "long exact input rounded to benefit pool",
@@ -213,7 +242,6 @@ describe("PerpdexMarket swap", () => {
     describe("with fee, without funding", async () => {
         beforeEach(async () => {
             await market.connect(owner).setPoolFeeRatio(1e4)
-            await market.connect(owner).setFundingMaxPremiumRatio(0)
             await market.connect(exchange).addLiquidity(10000, 10000)
         })
         ;[
@@ -272,8 +300,6 @@ describe("PerpdexMarket swap", () => {
 
     describe("without fee, with funding", async () => {
         beforeEach(async () => {
-            await market.connect(owner).setPoolFeeRatio(0)
-            await market.connect(owner).setFundingMaxPremiumRatio(0)
             await priceFeed.mock.getPrice.returns(1)
             await market.connect(exchange).addLiquidity(10000, 10000)
             await market.connect(owner).setFundingMaxPremiumRatio(5e4)
