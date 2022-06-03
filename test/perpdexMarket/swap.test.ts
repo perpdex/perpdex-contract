@@ -196,6 +196,17 @@ describe("PerpdexMarket swap", () => {
                     expect(poolInfo.quote).to.eq(test.quote)
                 }
             })
+
+            it(test.title + " dry", async () => {
+                if (test.revertedWith !== void 0) {
+                    await expect(market.swapDry(test.isBaseToQuote, test.isExactInput, test.amount)).to.revertedWith(
+                        test.revertedWith,
+                    )
+                } else {
+                    const res = await market.swapDry(test.isBaseToQuote, test.isExactInput, test.amount)
+                    expect(res).to.eq(test.oppositeAmount)
+                }
+            })
         })
     })
 
@@ -250,6 +261,11 @@ describe("PerpdexMarket swap", () => {
                 const poolInfo = await market.poolInfo()
                 expect(poolInfo.base).to.eq(test.base)
                 expect(poolInfo.quote).to.eq(test.quote)
+            })
+
+            it(test.title + " dry", async () => {
+                const res = await market.swapDry(test.isBaseToQuote, test.isExactInput, test.amount)
+                expect(res).to.eq(test.oppositeAmount)
             })
         })
     })
@@ -308,6 +324,11 @@ describe("PerpdexMarket swap", () => {
                     .to.emit(market, "FundingPaid")
                 const poolInfo = await market.poolInfo()
                 expect(poolInfo.quote).to.eq(test.quote)
+            })
+
+            it(test.title + " dry", async () => {
+                const res = await market.swapDry(test.isBaseToQuote, test.isExactInput, test.amount)
+                expect(res).to.eq(test.oppositeAmount)
             })
         })
     })

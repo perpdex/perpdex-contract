@@ -127,7 +127,7 @@ contract PerpdexMarket is IPerpdexMarket, ReentrancyGuard, Ownable {
         bool isBaseToQuote,
         bool isExactInput,
         uint256 amount
-    ) external view override onlyExchange returns (uint256 oppositeAmount) {
+    ) external view override returns (uint256 oppositeAmount) {
         oppositeAmount = PoolLibrary.swapDry(
             poolInfo.base,
             poolInfo.quote,
