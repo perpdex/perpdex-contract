@@ -21,10 +21,10 @@ contract PerpdexMarket is IPerpdexMarket, ReentrancyGuard, Ownable {
     MarketStructs.PoolInfo public poolInfo;
     MarketStructs.FundingInfo public fundingInfo;
 
-    uint24 public poolFeeRatio;
-    uint24 public fundingMaxPremiumRatio;
-    uint32 public fundingMaxElapsedSec;
-    uint32 public fundingRolloverSec;
+    uint24 public poolFeeRatio = 3e3;
+    uint24 public fundingMaxPremiumRatio = 1e4;
+    uint32 public fundingMaxElapsedSec = 1 days;
+    uint32 public fundingRolloverSec = 1 days;
 
     modifier onlyExchange() {
         // BT_CNCH: caller not Exchange
@@ -49,11 +49,6 @@ contract PerpdexMarket is IPerpdexMarket, ReentrancyGuard, Ownable {
 
         FundingLibrary.initializeFunding(fundingInfo);
         PoolLibrary.initializePool(poolInfo);
-
-        poolFeeRatio = 3e3;
-        fundingMaxPremiumRatio = 1e4;
-        fundingMaxElapsedSec = 1 days;
-        fundingRolloverSec = 1 days;
     }
 
     function swap(

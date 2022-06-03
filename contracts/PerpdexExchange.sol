@@ -29,12 +29,13 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
 
     // config
     address public immutable override settlementToken;
-    PerpdexStructs.PriceLimitConfig public override priceLimitConfig;
-    uint8 public override maxMarketsPerAccount;
-    uint24 public override imRatio;
-    uint24 public override mmRatio;
-    uint24 public override liquidationRewardRatio;
-    uint24 public override protocolFeeRatio;
+    PerpdexStructs.PriceLimitConfig public override priceLimitConfig =
+        PerpdexStructs.PriceLimitConfig({ priceLimitNormalOrderRatio: 5e4, priceLimitLiquidationRatio: 10e4 });
+    uint8 public override maxMarketsPerAccount = 16;
+    uint24 public override imRatio = 10e4;
+    uint24 public override mmRatio = 5e4;
+    uint24 public override liquidationRewardRatio = 20e4;
+    uint24 public override protocolFeeRatio = 3e3;
     mapping(address => bool) public override isMarketAllowed;
 
     //
@@ -46,13 +47,6 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
         require(settlementTokenArg.isContract(), "CH_SANC");
 
         settlementToken = settlementTokenArg;
-
-        priceLimitConfig.priceLimitLiquidationRatio = 10e4;
-        priceLimitConfig.priceLimitLiquidationRatio = 5e4;
-        maxMarketsPerAccount = 16;
-        imRatio = 10e4;
-        mmRatio = 5e4;
-        liquidationRewardRatio = 20e4;
     }
 
     function deposit(uint256 amount) external override nonReentrant {
