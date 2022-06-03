@@ -145,8 +145,15 @@ describe("PerpdexMarket swap", () => {
                 quote: 4999,
             },
             {
-                title: "revert when output is too small",
+                title: "long revert when output is too small",
                 isBaseToQuote: false,
+                isExactInput: true,
+                amount: 1,
+                revertedWith: "PL_SD: output is zero",
+            },
+            {
+                title: "short revert when output is too small",
+                isBaseToQuote: true,
                 isExactInput: true,
                 amount: 1,
                 revertedWith: "PL_SD: output is zero",
@@ -300,7 +307,7 @@ describe("PerpdexMarket swap", () => {
 
     describe("without fee, with funding", async () => {
         beforeEach(async () => {
-            await priceFeed.mock.getPrice.returns(1)
+            await priceFeed.mock.getPrice.returns(BigNumber.from(10).pow(18))
             await market.connect(exchange).addLiquidity(10000, 10000)
             await market.connect(owner).setFundingMaxPremiumRatio(5e4)
             await priceFeed.mock.getPrice.returns(2)

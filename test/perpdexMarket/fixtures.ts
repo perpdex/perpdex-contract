@@ -2,7 +2,7 @@ import { ethers, waffle } from "hardhat"
 import { TestPerpdexMarket } from "../../typechain"
 import IPerpdexPriceFeedJson from "../../artifacts/contracts/interface/IPerpdexPriceFeed.sol/IPerpdexPriceFeed.json"
 import { MockContract } from "ethereum-waffle"
-import { Wallet } from "ethers"
+import { BigNumber, Wallet } from "ethers"
 
 interface PerpdexMarketFixture {
     perpdexMarket: TestPerpdexMarket
@@ -16,7 +16,8 @@ interface PerpdexMarketFixture {
 export function createPerpdexMarketFixture(): (wallets, provider) => Promise<PerpdexMarketFixture> {
     return async ([owner, alice, bob, exchange], provider): Promise<PerpdexMarketFixture> => {
         const priceFeed = await waffle.deployMockContract(owner, IPerpdexPriceFeedJson.abi)
-        await priceFeed.mock.getPrice.returns(1)
+        await priceFeed.mock.getPrice.returns(BigNumber.from(10).pow(18))
+        await priceFeed.mock.decimals.returns(18)
 
         const perpdexMarketFactory = await ethers.getContractFactory("TestPerpdexMarket")
         const perpdexMarket = (await perpdexMarketFactory.deploy(
