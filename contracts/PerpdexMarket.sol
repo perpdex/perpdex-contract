@@ -103,22 +103,22 @@ contract PerpdexMarket is IPerpdexMarket, ReentrancyGuard, Ownable {
     }
 
     function setPoolFeeRatio(uint24 value) external onlyOwner nonReentrant {
-        require(value < 1e6, "PerpdexMarket: too large");
+        require(value <= 5e4, "PM_SPFR: too large");
         poolFeeRatio = value;
     }
 
     function setFundingMaxPremiumRatio(uint24 value) external onlyOwner nonReentrant {
-        require(value < 1e6, "PerpdexMarket: too large");
+        require(value <= 1e5, "PM_SFMPR: too large");
         fundingMaxPremiumRatio = value;
     }
 
     function setFundingMaxElapsedSec(uint32 value) external onlyOwner nonReentrant {
-        require(value <= 7 days);
+        require(value <= 7 days, "PM_SFMES: too large");
         fundingMaxElapsedSec = value;
     }
 
     function setFundingRolloverSec(uint32 value) external onlyOwner nonReentrant {
-        require(value <= 7 days);
+        require(value <= 7 days, "PM_SFRS: too large");
         fundingRolloverSec = value;
     }
 
