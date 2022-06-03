@@ -153,7 +153,8 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
                     isMarketAllowed: isMarketAllowed[params.market],
                     mmRatio: mmRatio,
                     imRatio: imRatio,
-                    maxMarketsPerAccount: maxMarketsPerAccount
+                    maxMarketsPerAccount: maxMarketsPerAccount,
+                    protocolFeeRatio: protocolFeeRatio
                 })
             );
 

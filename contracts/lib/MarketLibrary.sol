@@ -14,22 +14,20 @@ library MarketLibrary {
         address market,
         bool isBaseToQuote,
         bool isExactInput,
-        uint256 amount,
-        uint256 oppositeAmountBound
+        uint256 amount
     ) internal returns (int256, int256) {
         uint256 resAmount = IPerpdexMarket(market).swap(isBaseToQuote, isExactInput, amount);
-        return _processSwapResponse(isBaseToQuote, isExactInput, amount, oppositeAmountBound, resAmount);
+        return _processSwapResponse(isBaseToQuote, isExactInput, amount, resAmount);
     }
 
     function swapDry(
         address market,
         bool isBaseToQuote,
         bool isExactInput,
-        uint256 amount,
-        uint256 oppositeAmountBound
+        uint256 amount
     ) internal view returns (int256, int256) {
         uint256 resAmount = IPerpdexMarket(market).swapDry(isBaseToQuote, isExactInput, amount);
-        return _processSwapResponse(isBaseToQuote, isExactInput, amount, oppositeAmountBound, resAmount);
+        return _processSwapResponse(isBaseToQuote, isExactInput, amount, resAmount);
     }
 
     function balanceToShare(address market, int256 balance) internal view returns (int256) {
@@ -46,18 +44,15 @@ library MarketLibrary {
         bool isBaseToQuote,
         bool isExactInput,
         uint256 amount,
-        uint256 oppositeAmountBound,
         uint256 resAmount
     ) internal view returns (int256, int256) {
         if (isExactInput) {
-            require(resAmount >= oppositeAmountBound);
             if (isBaseToQuote) {
                 return (amount.neg256(), resAmount.toInt256());
             } else {
                 return (resAmount.toInt256(), amount.neg256());
             }
         } else {
-            require(resAmount <= oppositeAmountBound);
             if (isBaseToQuote) {
                 return (resAmount.neg256(), amount.toInt256());
             } else {
