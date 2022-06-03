@@ -5,7 +5,7 @@ import { createFundingLibraryFixture } from "./fixtures"
 import { BigNumber, BigNumberish, Wallet } from "ethers"
 import { MockContract } from "ethereum-waffle"
 
-describe("FundingLibrary", () => {
+describe("FundingLibrary processFunding", () => {
     let loadFixture = waffle.createFixtureLoader(waffle.provider.getWallets())
     let fixture
 

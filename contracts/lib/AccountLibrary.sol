@@ -33,8 +33,8 @@ library AccountLibrary {
             (uint256 deleveragedBaseShare, uint256 deleveragedQuoteBalance) =
                 IPerpdexMarket(market).getLiquidityDeleveraged(
                     makerInfo.liquidity,
-                    makerInfo.cumDeleveragedBaseSharePerLiquidity,
-                    makerInfo.cumDeleveragedQuotePerLiquidity
+                    makerInfo.cumDeleveragedBaseSharePerLiquidityX96,
+                    makerInfo.cumDeleveragedQuotePerLiquidityX96
                 );
 
             int256 positionShare = baseShare.add(poolBaseShare.add(deleveragedBaseShare).toInt256());
@@ -57,8 +57,8 @@ library AccountLibrary {
         (uint256 deleveragedBaseShare, ) =
             IPerpdexMarket(market).getLiquidityDeleveraged(
                 makerInfo.liquidity,
-                makerInfo.cumDeleveragedBaseSharePerLiquidity,
-                makerInfo.cumDeleveragedQuotePerLiquidity
+                makerInfo.cumDeleveragedBaseSharePerLiquidityX96,
+                makerInfo.cumDeleveragedQuotePerLiquidityX96
             );
         return baseShare.add(poolBaseShare.add(deleveragedBaseShare).toInt256());
     }

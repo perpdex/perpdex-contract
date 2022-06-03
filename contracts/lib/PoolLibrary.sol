@@ -48,23 +48,23 @@ library PoolLibrary {
             uint256 poolQuote = poolInfo.quote;
             uint256 deleveratedQuote = FullMath.mulDiv(poolQuote, fundingRateX96.abs(), FixedPoint96.Q96);
             poolInfo.quote = poolQuote - deleveratedQuote;
-            poolInfo.cumDeleveragedQuotePerLiquidity = poolInfo.cumDeleveragedQuotePerLiquidity.add(
-                deleveratedQuote.div(poolInfo.totalLiquidity)
+            poolInfo.cumDeleveragedQuotePerLiquidityX96 = poolInfo.cumDeleveragedQuotePerLiquidityX96.add(
+                FullMath.mulDiv(deleveratedQuote, FixedPoint96.Q96, poolInfo.totalLiquidity)
             );
         } else {
             uint256 poolBase = poolInfo.base;
             uint256 deleveratedBase =
                 poolBase.sub(FullMath.mulDiv(poolBase, FixedPoint96.Q96, FixedPoint96.Q96.add(fundingRateX96.abs())));
             poolInfo.base = poolBase - deleveratedBase;
-            poolInfo.cumDeleveragedBasePerLiquidity = poolInfo.cumDeleveragedBasePerLiquidity.add(
-                deleveratedBase.div(poolInfo.totalLiquidity)
+            poolInfo.cumDeleveragedBasePerLiquidityX96 = poolInfo.cumDeleveragedBasePerLiquidityX96.add(
+                FullMath.mulDiv(deleveratedBase, FixedPoint96.Q96, poolInfo.totalLiquidity)
             );
         }
 
         poolInfo.baseBalancePerShare = FullMath.mulDiv(
             poolInfo.baseBalancePerShare,
-            FixedPoint96.Q96,
-            FixedPoint96.Q96.toInt256().sub(fundingRateX96).toUint256()
+            FixedPoint96.Q96.toInt256().sub(fundingRateX96).toUint256(),
+            FixedPoint96.Q96
         );
     }
 
@@ -197,15 +197,20 @@ library PoolLibrary {
     }
 
     function getLiquidityDeleveraged(
-        uint256 poolCumDeleveragedBasePerLiquidity,
-        uint256 poolCumDeleveragedQuotePerLiquidity,
+        uint256 poolCumDeleveragedBasePerLiquidityX96,
+        uint256 poolCumDeleveragedQuotePerLiquidityX96,
         uint256 liquidity,
-        uint256 cumDeleveragedBasePerLiquidity,
-        uint256 cumDeleveragedQuotePerLiquidity
+        uint256 cumDeleveragedBasePerLiquidityX96,
+        uint256 cumDeleveragedQuotePerLiquidityX96
     ) internal pure returns (uint256, uint256) {
-        uint256 deleveragedBasePerLiquidity = cumDeleveragedBasePerLiquidity - poolCumDeleveragedBasePerLiquidity;
-        uint256 deleveragedQuotePerLiquidity = cumDeleveragedQuotePerLiquidity - poolCumDeleveragedQuotePerLiquidity;
+        uint256 deleveragedBasePerLiquidityX96 =
+            cumDeleveragedBasePerLiquidityX96 - poolCumDeleveragedBasePerLiquidityX96;
+        uint256 deleveragedQuotePerLiquidityX96 =
+            cumDeleveragedQuotePerLiquidityX96 - poolCumDeleveragedQuotePerLiquidityX96;
 
-        return (liquidity.mul(deleveragedBasePerLiquidity), liquidity.mul(deleveragedQuotePerLiquidity));
+        return (
+            FullMath.mulDiv(liquidity, deleveragedBasePerLiquidityX96, FixedPoint96.Q96),
+            FullMath.mulDiv(liquidity, deleveragedQuotePerLiquidityX96, FixedPoint96.Q96)
+        );
     }
 }
