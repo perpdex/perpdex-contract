@@ -41,37 +41,27 @@ library PoolLibrary {
         poolInfo.baseBalancePerShare = 1 << 64;
     }
 
-    function applyFundingDry(MarketStructs.PoolInfo memory poolInfo, int256 fundingRateX96)
-        internal
-        pure
-        returns (bool updating, MarketStructs.PoolInfo memory poolInfoOutput)
-    {
-        if (fundingRateX96 == 0) return (false, poolInfoOutput);
-
-        updating = true;
+    function applyFunding(MarketStructs.PoolInfo storage poolInfo, int256 fundingRateX96) internal {
+        if (fundingRateX96 == 0) return;
 
         if (fundingRateX96 > 0) {
             uint256 poolQuote = poolInfo.quote;
             uint256 deleveratedQuote = FullMath.mulDiv(poolQuote, fundingRateX96.abs(), FixedPoint96.Q96);
-            poolInfoOutput.quote = poolQuote - deleveratedQuote;
-            poolInfoOutput.cumDeleveragedQuotePerLiquidity = poolInfo.cumDeleveragedQuotePerLiquidity.add(
+            poolInfo.quote = poolQuote - deleveratedQuote;
+            poolInfo.cumDeleveragedQuotePerLiquidity = poolInfo.cumDeleveragedQuotePerLiquidity.add(
                 deleveratedQuote.div(poolInfo.totalLiquidity)
             );
-            poolInfoOutput.base = poolInfo.base;
-            poolInfoOutput.cumDeleveragedBasePerLiquidity = poolInfo.cumDeleveragedBasePerLiquidity;
         } else {
             uint256 poolBase = poolInfo.base;
             uint256 deleveratedBase =
                 poolBase.sub(FullMath.mulDiv(poolBase, FixedPoint96.Q96, FixedPoint96.Q96.add(fundingRateX96.abs())));
-            poolInfoOutput.base = poolBase - deleveratedBase;
-            poolInfoOutput.cumDeleveragedBasePerLiquidity = poolInfo.cumDeleveragedBasePerLiquidity.add(
+            poolInfo.base = poolBase - deleveratedBase;
+            poolInfo.cumDeleveragedBasePerLiquidity = poolInfo.cumDeleveragedBasePerLiquidity.add(
                 deleveratedBase.div(poolInfo.totalLiquidity)
             );
-            poolInfoOutput.quote = poolInfo.quote;
-            poolInfoOutput.cumDeleveragedQuotePerLiquidity = poolInfo.cumDeleveragedQuotePerLiquidity;
         }
 
-        poolInfoOutput.baseBalancePerShare = FullMath.mulDiv(
+        poolInfo.baseBalancePerShare = FullMath.mulDiv(
             poolInfo.baseBalancePerShare,
             FixedPoint96.Q96,
             FixedPoint96.Q96.toInt256().sub(fundingRateX96).toUint256()
@@ -211,7 +201,7 @@ library PoolLibrary {
         uint256 liquidity,
         uint256 cumDeleveragedBasePerLiquidity,
         uint256 cumDeleveragedQuotePerLiquidity
-    ) internal view returns (uint256, uint256) {
+    ) internal pure returns (uint256, uint256) {
         uint256 deleveragedBasePerLiquidity = cumDeleveragedBasePerLiquidity - poolCumDeleveragedBasePerLiquidity;
         uint256 deleveragedQuotePerLiquidity = cumDeleveragedQuotePerLiquidity - poolCumDeleveragedQuotePerLiquidity;
 

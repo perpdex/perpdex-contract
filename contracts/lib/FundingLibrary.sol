@@ -34,38 +34,17 @@ library FundingLibrary {
 
     function rebase(MarketStructs.FundingInfo storage fundingInfo, RebaseParams memory params)
         internal
-        returns (int256)
-    {
-        (bool updating, int256 fundingRateX96, uint256 prevIndexPrice, uint256 prevIndexPriceTimestamp) =
-            rebaseDry(fundingInfo, params);
-
-        if (updating) {
-            fundingInfo.prevIndexPrice = prevIndexPrice;
-            fundingInfo.prevIndexPriceTimestamp = prevIndexPriceTimestamp;
-        }
-
-        return fundingRateX96;
-    }
-
-    function rebaseDry(MarketStructs.FundingInfo storage fundingInfo, RebaseParams memory params)
-        internal
-        view
-        returns (
-            bool updating,
-            int256 fundingRateX96,
-            uint256 prevIndexPrice,
-            uint256 prevIndexPriceTimestamp
-        )
+        returns (int256 fundingRateX96)
     {
         uint256 now = block.timestamp;
         uint256 elapsedSec = now.sub(fundingInfo.prevIndexPriceTimestamp);
-        if (elapsedSec == 0) return (false, 0, 0, 0);
+        if (elapsedSec == 0) return 0;
 
         // TODO: process decimals
         // TODO: process inverse
         uint256 indexPrice = IPerpdexPriceFeed(params.priceFeed).getPrice();
         if (fundingInfo.prevIndexPrice == indexPrice || indexPrice == 0) {
-            return (false, 0, 0, 0);
+            return 0;
         }
 
         elapsedSec = Math.min(elapsedSec, params.maxElapsedSec);
@@ -76,8 +55,7 @@ library FundingLibrary {
         premiumX96 = (-maxPremiumX96).max(maxPremiumX96.min(premiumX96));
         fundingRateX96 = premiumX96.mulDiv(elapsedSec.toInt256(), params.rolloverSec);
 
-        updating = true;
-        prevIndexPrice = indexPrice;
-        prevIndexPriceTimestamp = now;
+        fundingInfo.prevIndexPrice = indexPrice;
+        fundingInfo.prevIndexPriceTimestamp = now;
     }
 }
