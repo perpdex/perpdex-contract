@@ -32,9 +32,12 @@ library FundingLibrary {
         fundingInfo.prevIndexPriceTimestamp = block.timestamp;
     }
 
-    function rebase(MarketStructs.FundingInfo storage fundingInfo, RebaseParams memory params) internal returns (int256) {
+    function rebase(MarketStructs.FundingInfo storage fundingInfo, RebaseParams memory params)
+        internal
+        returns (int256)
+    {
         (bool updating, int256 fundingRateX96, uint256 prevIndexPrice, uint256 prevIndexPriceTimestamp) =
-            _rebaseDry(fundingInfo, params);
+            rebaseDry(fundingInfo, params);
 
         if (updating) {
             fundingInfo.prevIndexPrice = prevIndexPrice;
@@ -44,23 +47,15 @@ library FundingLibrary {
         return fundingRateX96;
     }
 
-    function getBalancePerShare(MarketStructs.FundingInfo storage fundingInfo, RebaseParams memory params)
+    function rebaseDry(MarketStructs.FundingInfo storage fundingInfo, RebaseParams memory params)
         internal
         view
-        returns (uint256)
-    {
-        (bool updating, uint256 balancePerShare, , ) = _rebaseDry(fundingInfo, params);
-
-        if (updating) {
-            return balancePerShare;
-        } else {
-            return fundingInfo.balancePerShare;
-        }
-    }
-
-    function rebaseDry(MarketStructs.FundingInfo storage fundingInfo, RebaseParams memory params)
-        private view
-        returns (bool updating, int256 fundingRateX96, uint256 prevIndexPrice, uint256 prevIndexPriceTimestamp)
+        returns (
+            bool updating,
+            int256 fundingRateX96,
+            uint256 prevIndexPrice,
+            uint256 prevIndexPriceTimestamp
+        )
     {
         uint256 now = block.timestamp;
         uint256 elapsedSec = now.sub(fundingInfo.prevIndexPriceTimestamp);
