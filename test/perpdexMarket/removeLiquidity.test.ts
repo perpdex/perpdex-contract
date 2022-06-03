@@ -102,7 +102,6 @@ describe("PerpdexMarket removeLiquidity", () => {
                 liquidity: BigNumber.from(2).pow(256).sub(1),
                 revertedWith: "SafeMath: subtraction overflow",
             },
-            // TODO: add round test (benefit to existing LP)
         ].forEach(test => {
             it(test.title, async () => {
                 const res = expect(market.connect(exchange).removeLiquidity(test.liquidity))
@@ -117,6 +116,45 @@ describe("PerpdexMarket removeLiquidity", () => {
                     expect(poolInfo.quote).to.eq(10000 - test.outputQuote)
                     expect(poolInfo.totalLiquidity).to.eq(BigNumber.from(10000).sub(test.liquidity))
                 }
+            })
+        })
+    })
+
+    describe("rounding (benefit to others)", async () => {
+        ;[
+            {
+                title: "quote rounded",
+                initialBase: 10000,
+                initialQuote: 10001,
+                initialLiquidity: 10000,
+                liquidity: 1,
+                outputBase: 1,
+                outputQuote: 1,
+            },
+            {
+                title: "base rounded",
+                initialBase: 10001,
+                initialQuote: 10000,
+                initialLiquidity: 10000,
+                liquidity: 1,
+                outputBase: 1,
+                outputQuote: 1,
+            },
+        ].forEach(test => {
+            it(test.title, async () => {
+                const resInitial = expect(market.connect(exchange).addLiquidity(test.initialBase, test.initialQuote))
+                await resInitial.to
+                    .emit(market, "LiquidityAdded")
+                    .withArgs(test.initialBase, test.initialQuote, test.initialLiquidity - 1000)
+
+                const res = expect(market.connect(exchange).removeLiquidity(test.liquidity))
+                await res.to
+                    .emit(market, "LiquidityRemoved")
+                    .withArgs(test.outputBase, test.outputQuote, test.liquidity)
+                const poolInfo = await market.poolInfo()
+                expect(poolInfo.base).to.eq(test.initialBase - test.outputBase)
+                expect(poolInfo.quote).to.eq(test.initialQuote - test.outputQuote)
+                expect(poolInfo.totalLiquidity).to.eq(BigNumber.from(test.initialLiquidity).sub(test.liquidity))
             })
         })
     })

@@ -158,7 +158,6 @@ describe("PerpdexMarket addLiquidity", () => {
                 quote: BigNumber.from(2).pow(256).sub(10000),
                 revertedWith: "SafeMath: addition overflow",
             },
-            // TODO: add round test (benefit to existing LP)
         ].forEach(test => {
             it(test.title, async () => {
                 const res = expect(market.connect(exchange).addLiquidity(test.base, test.quote))
@@ -173,6 +172,49 @@ describe("PerpdexMarket addLiquidity", () => {
                     expect(poolInfo.quote).to.eq(test.outputQuote + 10000)
                     expect(poolInfo.totalLiquidity).to.eq(test.outputLiquidity + 10000)
                 }
+            })
+        })
+    })
+
+    describe("rounding (benefit to others)", async () => {
+        ;[
+            {
+                title: "base and liquidity rounded",
+                initialBase: 10000,
+                initialQuote: 10001,
+                initialLiquidity: 10000,
+                base: 10,
+                quote: 10,
+                outputBase: 9,
+                outputQuote: 10,
+                outputLiquidity: 9,
+            },
+            {
+                title: "quote and liquidity rounded",
+                initialBase: 10001,
+                initialQuote: 10000,
+                initialLiquidity: 10000,
+                base: 10,
+                quote: 10,
+                outputBase: 10,
+                outputQuote: 9,
+                outputLiquidity: 9,
+            },
+        ].forEach(test => {
+            it(test.title, async () => {
+                const resInitial = expect(market.connect(exchange).addLiquidity(test.initialBase, test.initialQuote))
+                await resInitial.to
+                    .emit(market, "LiquidityAdded")
+                    .withArgs(test.initialBase, test.initialQuote, test.initialLiquidity - 1000)
+
+                const res = expect(market.connect(exchange).addLiquidity(test.base, test.quote))
+                await res.to
+                    .emit(market, "LiquidityAdded")
+                    .withArgs(test.outputBase, test.outputQuote, test.outputLiquidity)
+                const poolInfo = await market.poolInfo()
+                expect(poolInfo.base).to.eq(test.initialBase + test.outputBase)
+                expect(poolInfo.quote).to.eq(test.initialQuote + test.outputQuote)
+                expect(poolInfo.totalLiquidity).to.eq(BigNumber.from(test.initialLiquidity).add(test.outputLiquidity))
             })
         })
     })
