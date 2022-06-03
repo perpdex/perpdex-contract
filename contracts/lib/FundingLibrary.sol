@@ -41,10 +41,8 @@ library FundingLibrary {
         uint256 elapsedSec = now.sub(fundingInfo.prevIndexPriceTimestamp);
         if (elapsedSec == 0) return 0;
 
-        uint256 indexPriceBase =
-            params.priceFeedBase != address(0) ? IPerpdexPriceFeed(params.priceFeedBase).getPrice() : 1;
-        uint256 indexPriceQuote =
-            params.priceFeedQuote != address(0) ? IPerpdexPriceFeed(params.priceFeedQuote).getPrice() : 1;
+        uint256 indexPriceBase = _getIndexPrice(params.priceFeedBase);
+        uint256 indexPriceQuote = _getIndexPrice(params.priceFeedQuote);
         if (
             (fundingInfo.prevIndexPriceBase == indexPriceBase && fundingInfo.prevIndexPriceQuote == indexPriceQuote) ||
             indexPriceBase == 0 ||
@@ -79,8 +77,8 @@ library FundingLibrary {
         uint256 base,
         uint256 quote
     ) internal view {
-        uint256 indexPriceBase = priceFeedBase != address(0) ? IPerpdexPriceFeed(priceFeedBase).getPrice() : 1;
-        uint256 indexPriceQuote = priceFeedQuote != address(0) ? IPerpdexPriceFeed(priceFeedQuote).getPrice() : 1;
+        uint256 indexPriceBase = _getIndexPrice(priceFeedBase);
+        uint256 indexPriceQuote = _getIndexPrice(priceFeedQuote);
         require(indexPriceBase > 0, "FL_VILP: invalid base price");
         require(indexPriceQuote > 0, "FL_VILP: invalid quote price");
 
@@ -89,6 +87,10 @@ library FundingLibrary {
             _calcPremiumX96(priceFeedBase, priceFeedQuote, indexPriceBase, indexPriceQuote, markPriceX96);
 
         require(premiumX96.abs() <= FixedPoint96.Q96.mulRatio(1e5), "FL_VILP: too far from index");
+    }
+
+    function _getIndexPrice(address priceFeed) private view returns (uint256) {
+        return priceFeed != address(0) ? IPerpdexPriceFeed(priceFeed).getPrice() : 1;
     }
 
     function _calcPremiumX96(

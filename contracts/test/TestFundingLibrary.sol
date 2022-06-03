@@ -17,6 +17,15 @@ contract TestFundingLibrary {
         emit ProcessFundingResult(fundingRateX96);
     }
 
+    function validateInitialLiquidityPrice(
+        address priceFeedBase,
+        address priceFeedQuote,
+        uint256 base,
+        uint256 quote
+    ) external view {
+        FundingLibrary.validateInitialLiquidityPrice(priceFeedBase, priceFeedQuote, base, quote);
+    }
+
     function setFundingInfo(MarketStructs.FundingInfo memory value) external {
         fundingInfo = value;
     }
