@@ -37,9 +37,6 @@ contract PerpdexMarket is IPerpdexMarket, ReentrancyGuard, Ownable {
         address exchangeArg,
         address priceFeedArg
     ) {
-        // BT_EANC: exchangeArg address is not contract
-        require(exchangeArg.isContract(), "BT_EANC");
-
         // BT_SANC: Price feed address is not contract
         require(priceFeedArg.isContract(), "BT_PANC");
 
@@ -106,12 +103,12 @@ contract PerpdexMarket is IPerpdexMarket, ReentrancyGuard, Ownable {
     }
 
     function setPoolFeeRatio(uint24 value) external onlyOwner nonReentrant {
-        require(value < 1e6);
+        require(value < 1e6, "PerpdexMarket: too large");
         poolFeeRatio = value;
     }
 
     function setFundingMaxPremiumRatio(uint24 value) external onlyOwner nonReentrant {
-        require(value < 1e6);
+        require(value < 1e6, "PerpdexMarket: too large");
         fundingMaxPremiumRatio = value;
     }
 

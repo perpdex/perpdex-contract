@@ -35,7 +35,7 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
     uint24 public override imRatio = 10e4;
     uint24 public override mmRatio = 5e4;
     uint24 public override liquidationRewardRatio = 20e4;
-    uint24 public override protocolFeeRatio = 3e3;
+    uint24 public override protocolFeeRatio = 0;
     mapping(address => bool) public override isMarketAllowed;
 
     //
