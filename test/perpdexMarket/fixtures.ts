@@ -23,6 +23,7 @@ export function createPerpdexMarketFixture(): (wallets, provider) => Promise<Per
             "USD",
             exchange.address,
             priceFeed.address,
+            ethers.constants.AddressZero,
         )) as PerpdexMarket
 
         return {

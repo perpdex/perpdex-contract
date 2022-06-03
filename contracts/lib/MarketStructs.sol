@@ -3,7 +3,8 @@ pragma solidity 0.7.6;
 
 library MarketStructs {
     struct FundingInfo {
-        uint256 prevIndexPrice;
+        uint256 prevIndexPriceBase;
+        uint256 prevIndexPriceQuote;
         uint256 prevIndexPriceTimestamp;
     }
 

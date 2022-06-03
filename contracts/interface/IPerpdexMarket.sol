@@ -4,6 +4,7 @@ pragma abicoder v2;
 
 interface IPerpdexMarket {
     event FundingPaid(int256 fundingRateX96);
+    event LiquidityAdded(uint256 base, uint256 quote, uint256 liquidity);
     event Swapped(bool isBaseToQuote, bool isExactInput, uint256 amount, uint256 oppositeAmount);
 
     function swap(

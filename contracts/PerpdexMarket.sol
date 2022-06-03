@@ -16,7 +16,8 @@ contract PerpdexMarket is IPerpdexMarket, ReentrancyGuard, Ownable {
 
     string public override symbol;
     address public immutable override exchange;
-    address public immutable priceFeed;
+    address public immutable priceFeedBase;
+    address public immutable priceFeedQuote;
 
     MarketStructs.PoolInfo public poolInfo;
     MarketStructs.FundingInfo public fundingInfo;
@@ -34,14 +35,16 @@ contract PerpdexMarket is IPerpdexMarket, ReentrancyGuard, Ownable {
     constructor(
         string memory symbolArg,
         address exchangeArg,
-        address priceFeedArg
+        address priceFeedBaseArg,
+        address priceFeedQuoteArg
     ) {
-        // BT_SANC: Price feed address is not contract
-        require(priceFeedArg.isContract(), "BT_PANC");
+        require(priceFeedBaseArg == address(0) || priceFeedBaseArg.isContract(), "PM_C: base price feed invalid");
+        require(priceFeedQuoteArg == address(0) || priceFeedQuoteArg.isContract(), "PM_C: quote price feed invalid");
 
         symbol = symbolArg;
         exchange = exchangeArg;
-        priceFeed = priceFeedArg;
+        priceFeedBase = priceFeedBaseArg;
+        priceFeedQuote = priceFeedQuoteArg;
 
         FundingLibrary.initializeFunding(fundingInfo);
         PoolLibrary.initializePool(poolInfo);
@@ -78,13 +81,14 @@ contract PerpdexMarket is IPerpdexMarket, ReentrancyGuard, Ownable {
         )
     {
         if (poolInfo.totalLiquidity == 0) {
-            // TODO: check if reasonable price
+            FundingLibrary.validateInitialLiquidityPrice(priceFeedBase, priceFeedQuote, baseShare, quoteBalance);
         }
 
         (base, quote, liquidity) = PoolLibrary.addLiquidity(
             poolInfo,
             PoolLibrary.AddLiquidityParams({ base: baseShare, quote: quoteBalance })
         );
+        emit LiquidityAdded(base, quote, liquidity);
 
         _rebase();
     }
@@ -180,7 +184,8 @@ contract PerpdexMarket is IPerpdexMarket, ReentrancyGuard, Ownable {
             FundingLibrary.rebase(
                 fundingInfo,
                 FundingLibrary.RebaseParams({
-                    priceFeed: priceFeed,
+                    priceFeedBase: priceFeedBase,
+                    priceFeedQuote: priceFeedQuote,
                     markPriceX96: getMarkPriceX96(),
                     maxPremiumRatio: fundingMaxPremiumRatio,
                     maxElapsedSec: fundingMaxElapsedSec,
