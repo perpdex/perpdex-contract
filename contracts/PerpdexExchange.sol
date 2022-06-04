@@ -12,12 +12,12 @@ import { MakerLibrary } from "./lib/MakerLibrary.sol";
 import { TakerLibrary } from "./lib/TakerLibrary.sol";
 import { VaultLibrary } from "./lib/VaultLibrary.sol";
 import { PerpMath } from "./lib/PerpMath.sol";
-import { PerpSafeCast } from "./lib/PerpSafeCast.sol";
+import { SafeCast } from "@openzeppelin/contracts/utils/SafeCast.sol";
 
 contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
     using Address for address;
     using PerpMath for uint256;
-    using PerpSafeCast for uint256;
+    using SafeCast for uint256;
 
     // states
     // trader

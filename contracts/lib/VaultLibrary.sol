@@ -7,12 +7,12 @@ import { SignedSafeMath } from "@openzeppelin/contracts/math/SignedSafeMath.sol"
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import { IERC20Metadata } from "../interface/IERC20Metadata.sol";
-import { PerpSafeCast } from "./PerpSafeCast.sol";
+import { SafeCast } from "@openzeppelin/contracts/utils/SafeCast.sol";
 import { AccountLibrary } from "./AccountLibrary.sol";
 import { PerpdexStructs } from "./PerpdexStructs.sol";
 
 library VaultLibrary {
-    using PerpSafeCast for uint256;
+    using SafeCast for uint256;
     using SafeMath for uint256;
     using SignedSafeMath for int256;
 

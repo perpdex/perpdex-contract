@@ -35,6 +35,7 @@ const config: HardhatUserConfig = {
     networks: {
         hardhat: {
             allowUnlimitedContractSize: true,
+            initialBaseFeePerGas: 0, // https://github.com/sc-forks/solidity-coverage/issues/652#issuecomment-896330136
         },
     },
     etherscan: {
@@ -49,8 +50,6 @@ const config: HardhatUserConfig = {
     dependencyCompiler: {
         // We have to compile from source since UniswapV3 doesn't provide artifacts in their npm package
         paths: [
-            "@uniswap/v3-core/contracts/UniswapV3Factory.sol",
-            "@uniswap/v3-core/contracts/UniswapV3Pool.sol",
             "deps/perpdex-oracle-contract/contracts/ChainlinkPriceFeed.sol",
             "deps/perpdex-oracle-contract/contracts/BandPriceFeed.sol",
             "deps/perpdex-oracle-contract/contracts/EmergencyPriceFeed.sol",
