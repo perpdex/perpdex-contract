@@ -700,6 +700,36 @@ describe("PerpdexExchange getters", () => {
                 hasEnoughMaintenanceMargin: true,
                 hasEnoughInitialMargin: true,
             },
+            {
+                title: "profit but no collateral",
+                collateralBalance: 0,
+                takerInfo: {
+                    baseBalanceShare: 25,
+                    quoteBalance: 0,
+                },
+                makerInfo: {
+                    baseDebtShare: 0,
+                    quoteDebt: 0,
+                    liquidity: 0,
+                    cumDeleveragedBaseSharePerLiquidityX96: 0,
+                    cumDeleveragedQuotePerLiquidityX96: 0,
+                },
+                poolInfo: {
+                    base: 10000,
+                    quote: 40000,
+                    totalLiquidity: 20000,
+                    cumDeleveragedBasePerLiquidityX96: 0,
+                    cumDeleveragedQuotePerLiquidityX96: 0,
+                    baseBalancePerShareX96: Q96,
+                },
+                totalAccountValue: 100,
+                positionShare: 25,
+                positionNotional: 100,
+                openPositionShare: 25,
+                openPositionNotional: 100,
+                hasEnoughMaintenanceMargin: true,
+                hasEnoughInitialMargin: false,
+            },
         ].forEach(test => {
             it(test.title, async () => {
                 await exchange.connect(owner).setImRatio(10e4)

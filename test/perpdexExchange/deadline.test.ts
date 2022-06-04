@@ -15,8 +15,6 @@ describe("PerpdexExchange deadline", () => {
     let alice: Wallet
     let nextBlockTimestamp: number
 
-    const Q96 = BigNumber.from(2).pow(96)
-
     beforeEach(async () => {
         fixture = await loadFixture(createPerpdexExchangeFixture())
         exchange = fixture.perpdexExchange

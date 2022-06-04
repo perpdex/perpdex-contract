@@ -1,8 +1,8 @@
 import { expect } from "chai"
 import { parseUnits } from "ethers/lib/utils"
 import { ethers, waffle } from "hardhat"
-import { TestPerpdexExchange, TestERC20 } from "../../../typechain"
-import { createPerpdexExchangeFixture } from "../fixtures"
+import { TestPerpdexExchange, TestERC20 } from "../../typechain"
+import { createPerpdexExchangeFixture } from "./fixtures"
 import { Wallet } from "ethers"
 
 describe("PerpdexExchange transfer", () => {
