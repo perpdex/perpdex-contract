@@ -44,6 +44,9 @@ export function createPerpdexExchangeFixture(
             ethers.constants.AddressZero,
         )) as TestPerpdexMarket
 
+        await perpdexMarket.connect(owner).setPoolFeeRatio(0)
+        await perpdexMarket.connect(owner).setFundingMaxPremiumRatio(0)
+
         return {
             perpdexExchange,
             perpdexMarket,
