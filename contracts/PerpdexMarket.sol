@@ -126,6 +126,7 @@ contract PerpdexMarket is IPerpdexMarket, ReentrancyGuard, Ownable {
 
     function setFundingRolloverSec(uint32 value) external onlyOwner nonReentrant {
         require(value <= 7 days, "PM_SFRS: too large");
+        require(value >= 1 hours, "PM_SFRS: too small");
         fundingRolloverSec = value;
     }
 

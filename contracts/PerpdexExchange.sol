@@ -224,6 +224,8 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
         onlyOwner
         nonReentrant
     {
+        require(value.priceLimitLiquidationRatio <= 5e5, "PE_SPLC: too large liquidation");
+        require(value.priceLimitNormalOrderRatio <= value.priceLimitLiquidationRatio, "PE_SPLC: invalid");
         priceLimitConfig = value;
     }
 
@@ -254,6 +256,7 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
     }
 
     function setIsMarketAllowed(address market, bool value) external override onlyOwner nonReentrant {
+        require(market.isContract(), "PE_SIMA: market address invalid");
         if (isMarketAllowed[market] != value) {
             isMarketAllowed[market] = value;
             emit IsMarketAllowedChanged(market, value);
