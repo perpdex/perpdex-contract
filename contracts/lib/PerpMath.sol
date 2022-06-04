@@ -4,14 +4,14 @@ pragma abicoder v2;
 
 import { FixedPoint96 } from "@uniswap/v3-core/contracts/libraries/FixedPoint96.sol";
 import { FullMath } from "@uniswap/v3-core/contracts/libraries/FullMath.sol";
-import { PerpSafeCast } from "./PerpSafeCast.sol";
-import { SafeMathUpgradeable } from "@openzeppelin/contracts-upgradeable/math/SafeMathUpgradeable.sol";
-import { SignedSafeMathUpgradeable } from "@openzeppelin/contracts-upgradeable/math/SignedSafeMathUpgradeable.sol";
+import { SafeCast } from "@openzeppelin/contracts/utils/SafeCast.sol";
+import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
+import { SignedSafeMath } from "@openzeppelin/contracts/math/SignedSafeMath.sol";
 
 library PerpMath {
-    using PerpSafeCast for int256;
-    using SignedSafeMathUpgradeable for int256;
-    using SafeMathUpgradeable for uint256;
+    using SafeCast for int256;
+    using SignedSafeMath for int256;
+    using SafeMath for uint256;
 
     function formatSqrtPriceX96ToPriceX96(uint160 sqrtPriceX96) internal pure returns (uint256) {
         return FullMath.mulDiv(sqrtPriceX96, sqrtPriceX96, FixedPoint96.Q96);
@@ -43,7 +43,7 @@ library PerpMath {
     }
 
     function neg256(uint256 a) internal pure returns (int256) {
-        return -PerpSafeCast.toInt256(a);
+        return -SafeCast.toInt256(a);
     }
 
     function neg128(int128 a) internal pure returns (int128) {
@@ -52,7 +52,7 @@ library PerpMath {
     }
 
     function neg128(uint128 a) internal pure returns (int128) {
-        return -PerpSafeCast.toInt128(a);
+        return -SafeCast.toInt128(a);
     }
 
     function divBy10_18(int256 value) internal pure returns (int256) {
@@ -90,7 +90,7 @@ library PerpMath {
 
         uint256 unsignedResult = FullMath.mulDiv(unsignedA, unsignedB, denominator);
 
-        result = negative ? neg256(unsignedResult) : PerpSafeCast.toInt256(unsignedResult);
+        result = negative ? neg256(unsignedResult) : SafeCast.toInt256(unsignedResult);
 
         return result;
     }

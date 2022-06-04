@@ -3,12 +3,12 @@ pragma solidity 0.7.6;
 
 import { IPerpdexMarket } from "../interface/IPerpdexMarket.sol";
 import { PerpMath } from "./PerpMath.sol";
-import { PerpSafeCast } from "./PerpSafeCast.sol";
+import { SafeCast } from "@openzeppelin/contracts/utils/SafeCast.sol";
 
 library MarketLibrary {
     using PerpMath for int256;
     using PerpMath for uint256;
-    using PerpSafeCast for uint256;
+    using SafeCast for uint256;
 
     function swap(
         address market,

@@ -6,7 +6,7 @@ import { Math } from "../amm/uniswap_v2/libraries/Math.sol";
 import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
 import { SignedSafeMath } from "@openzeppelin/contracts/math/SignedSafeMath.sol";
 import { PerpMath } from "./PerpMath.sol";
-import { PerpSafeCast } from "./PerpSafeCast.sol";
+import { SafeCast } from "@openzeppelin/contracts/utils/SafeCast.sol";
 import { MarketStructs } from "./MarketStructs.sol";
 import { IPerpdexPriceFeed } from "../interface/IPerpdexPriceFeed.sol";
 import { FullMath } from "@uniswap/v3-core/contracts/libraries/FullMath.sol";
@@ -15,8 +15,8 @@ import { FixedPoint96 } from "@uniswap/v3-core/contracts/libraries/FixedPoint96.
 library FundingLibrary {
     using PerpMath for int256;
     using PerpMath for uint256;
-    using PerpSafeCast for int256;
-    using PerpSafeCast for uint256;
+    using SafeCast for int256;
+    using SafeCast for uint256;
     using SafeMath for uint256;
     using SignedSafeMath for int256;
 
