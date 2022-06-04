@@ -18,6 +18,30 @@ library AccountLibrary {
     using SafeMath for uint256;
     using SignedSafeMath for int256;
 
+    function updateMarkets(
+        PerpdexStructs.AccountInfo storage accountInfo,
+        address market,
+        uint8 maxMarketsPerAccount
+    ) internal {
+        require(market != address(0), "AL_UP: market address is zero");
+
+        bool enabled =
+            accountInfo.takerInfos[market].baseBalanceShare != 0 || accountInfo.makerInfos[market].liquidity != 0;
+        address[] storage markets = accountInfo.markets;
+        uint256 length = markets.length;
+        for (uint256 i = 0; i < length; ++i) {
+            if (markets[i] == market) {
+                if (!enabled) {
+                    markets[i] = markets[length - 1];
+                    markets.pop();
+                }
+                return;
+            }
+        }
+        markets.push(market);
+        require(markets.length <= maxMarketsPerAccount, "AL_UP: too many markets");
+    }
+
     function getTotalAccountValue(PerpdexStructs.AccountInfo storage accountInfo) internal view returns (int256) {
         address[] storage markets = accountInfo.markets;
         int256 accountValue = accountInfo.vaultInfo.collateralBalance;
@@ -140,29 +164,5 @@ library AccountLibrary {
         return
             accountValue.min(accountInfo.vaultInfo.collateralBalance) >=
             totalOpenPositionNotional.mulRatio(imRatio).toInt256();
-    }
-
-    function updateMarkets(
-        PerpdexStructs.AccountInfo storage accountInfo,
-        address market,
-        uint8 maxMarketsPerAccount
-    ) internal {
-        require(market != address(0));
-
-        bool enabled =
-            accountInfo.takerInfos[market].baseBalanceShare != 0 || accountInfo.makerInfos[market].liquidity != 0;
-        address[] storage markets = accountInfo.markets;
-        uint256 length = markets.length;
-        for (uint256 i = 0; i < length; ++i) {
-            if (markets[i] == market) {
-                if (!enabled) {
-                    markets[i] = markets[length - 1];
-                    markets.pop();
-                }
-                return;
-            }
-        }
-        markets.push(market);
-        require(markets.length <= maxMarketsPerAccount);
     }
 }

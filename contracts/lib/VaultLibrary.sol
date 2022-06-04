@@ -60,7 +60,7 @@ library VaultLibrary {
     ) internal {
         accountInfo.vaultInfo.collateralBalance = accountInfo.vaultInfo.collateralBalance.add(amount.toInt256());
         insuranceFundInfo.balance = insuranceFundInfo.balance.sub(amount.toInt256());
-        require(insuranceFundInfo.balance >= 0);
+        require(insuranceFundInfo.balance >= 0, "VL_TIF: negative balance");
     }
 
     function transferProtocolFee(
@@ -80,7 +80,9 @@ library VaultLibrary {
         // check for deflationary tokens by assuring balances before and after transferring to be the same
         uint256 balanceBefore = IERC20Metadata(token).balanceOf(address(this));
         SafeERC20.safeTransferFrom(IERC20(token), from, address(this), amount);
-        // V_IBA: inconsistent balance amount, to prevent from deflationary tokens
-        require((IERC20Metadata(token).balanceOf(address(this)).sub(balanceBefore)) == amount, "V_IBA");
+        require(
+            (IERC20Metadata(token).balanceOf(address(this)).sub(balanceBefore)) == amount,
+            "VL_TTI: inconsistent balance"
+        );
     }
 }

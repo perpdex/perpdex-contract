@@ -59,7 +59,7 @@ library MakerLibrary {
     }
 
     modifier checkDeadline(uint256 deadline) {
-        require(block.timestamp <= deadline, "CH_TE");
+        require(block.timestamp <= deadline, "ML_CD: too late");
         _;
     }
 
@@ -68,7 +68,7 @@ library MakerLibrary {
         checkDeadline(params.deadline)
         returns (AddLiquidityResponse memory)
     {
-        require(params.isMarketAllowed);
+        require(params.isMarketAllowed, "ML_AL: add liquidity forbidden");
 
         PerpdexStructs.MakerInfo storage makerInfo = accountInfo.makerInfos[params.market];
         _applyDeleveraged(makerInfo, params.market);
@@ -87,10 +87,10 @@ library MakerLibrary {
 
         AccountLibrary.updateMarkets(accountInfo, params.market, params.maxMarketsPerAccount);
 
-        require(AccountLibrary.hasEnoughInitialMargin(accountInfo, params.imRatio));
+        require(AccountLibrary.hasEnoughInitialMargin(accountInfo, params.imRatio), "ML_AL: not enough im");
 
-        require(baseShare >= params.minBase);
-        require(quoteBalance >= params.minQuote);
+        require(baseShare >= params.minBase, "ML_AL: too small output base");
+        require(quoteBalance >= params.minQuote, "ML_AL: too small output quote");
 
         return AddLiquidityResponse({ base: baseShare, quote: quoteBalance, liquidity: liquidity });
     }
@@ -101,7 +101,7 @@ library MakerLibrary {
         returns (RemoveLiquidityResponse memory funcResponse)
     {
         if (!params.makerIsSender) {
-            require(!AccountLibrary.hasEnoughMaintenanceMargin(accountInfo, params.mmRatio));
+            require(!AccountLibrary.hasEnoughMaintenanceMargin(accountInfo, params.mmRatio), "ML_RL: enough mm");
         }
 
         {
@@ -112,8 +112,8 @@ library MakerLibrary {
             (uint256 resBaseShare, uint256 resQuoteBalance) =
                 IPerpdexMarket(params.market).removeLiquidity(params.liquidity);
 
-            require(resBaseShare >= params.minBase);
-            require(resQuoteBalance >= params.minQuote);
+            require(resBaseShare >= params.minBase, "ML_RL: too small output base");
+            require(resQuoteBalance >= params.minQuote, "ML_RL: too small output base");
 
             funcResponse.base = resBaseShare;
             funcResponse.quote = resQuoteBalance;

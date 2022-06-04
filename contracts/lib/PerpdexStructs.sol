@@ -38,7 +38,7 @@ library PerpdexStructs {
 
     struct PriceLimitInfo {
         uint256 referencePrice;
-        uint256 referenceTimestamp;
+        uint256 referenceBlockNumber;
     }
 
     struct PriceLimitConfig {

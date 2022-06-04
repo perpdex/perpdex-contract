@@ -146,10 +146,6 @@ contract PerpdexMarket is IPerpdexMarket, ReentrancyGuard, Ownable {
         );
     }
 
-    function getMarkPriceX96() public view override returns (uint256) {
-        return PoolLibrary.getMarkPriceX96(poolInfo.base, poolInfo.quote, poolInfo.baseBalancePerShareX96);
-    }
-
     function getShareMarkPriceX96() external view override returns (uint256) {
         return PoolLibrary.getShareMarkPriceX96(poolInfo.base, poolInfo.quote);
     }
@@ -179,6 +175,10 @@ contract PerpdexMarket is IPerpdexMarket, ReentrancyGuard, Ownable {
 
     function baseBalancePerShareX96() external view override returns (uint256) {
         return poolInfo.baseBalancePerShareX96;
+    }
+
+    function getMarkPriceX96() public view override returns (uint256) {
+        return PoolLibrary.getMarkPriceX96(poolInfo.base, poolInfo.quote, poolInfo.baseBalancePerShareX96);
     }
 
     function _processFunding() internal {
