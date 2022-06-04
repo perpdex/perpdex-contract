@@ -57,7 +57,9 @@ describe("Vault deposit test", () => {
 
         it("force error, inconsistent vault balance with deflationary token", async () => {
             usdc.setTransferFeeRatio(50)
-            await expect(perpdexExchange.connect(alice).deposit(parseUsdc("100"))).to.be.revertedWith("V_IBA")
+            await expect(perpdexExchange.connect(alice).deposit(parseUsdc("100"))).to.be.revertedWith(
+                "VL_TTI: inconsistent balance",
+            )
             usdc.setTransferFeeRatio(0)
         })
 
