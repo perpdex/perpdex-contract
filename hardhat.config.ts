@@ -35,6 +35,7 @@ const config: HardhatUserConfig = {
     networks: {
         hardhat: {
             allowUnlimitedContractSize: true,
+            initialBaseFeePerGas: 0, // https://github.com/sc-forks/solidity-coverage/issues/652#issuecomment-896330136
         },
     },
     etherscan: {
