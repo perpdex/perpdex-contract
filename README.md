@@ -9,6 +9,18 @@ Please check out:
 - [PerpDEX website](https://perpdex.com/)
 <!-- - [PerpDEX docs](https://docs.perpdex.com/) -->
 
+## deploy
+
+```bash
+npx hardhat deploy --network rinkeby
+```
+
+## verify
+
+```bash
+npx hardhat etherscan-verify --network rinkeby --force-license --license GPL-3.0
+```
+
 ## Local Development
 
 You need Node.js 16+ to build. Use [nvm](https://github.com/nvm-sh/nvm) to install it.
