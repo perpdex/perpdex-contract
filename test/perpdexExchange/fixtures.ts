@@ -1,7 +1,6 @@
 import { MockContract, smockit } from "@eth-optimism/smock"
 import { ethers } from "hardhat"
 import { PerpdexExchange, PerpdexMarket, TestERC20 } from "../../typechain"
-import { ChainlinkPriceFeed } from "../../typechain/perp-oracle"
 
 export interface PerpdexExchangeFixture {
     perpdexExchange: PerpdexExchange
