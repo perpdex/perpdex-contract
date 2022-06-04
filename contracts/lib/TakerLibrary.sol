@@ -4,7 +4,7 @@ pragma abicoder v2;
 
 import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
 import { SignedSafeMath } from "@openzeppelin/contracts/math/SignedSafeMath.sol";
-import { FullMath } from "@uniswap/lib/contracts/libraries/FullMath.sol";
+import { FullMath } from "@uniswap/v3-core/contracts/libraries/FullMath.sol";
 import { PerpMath } from "./PerpMath.sol";
 import { PerpSafeCast } from "./PerpSafeCast.sol";
 import { IPerpdexMarket } from "../interface/IPerpdexMarket.sol";
@@ -288,7 +288,7 @@ library TakerLibrary {
             quote = quote.sub(protocolFee.toInt256());
         } else {
             // exact quote
-            protocolFee = amount - amount.divRatio(1e6 + protocolFeeRatio);
+            protocolFee = amount.sub(amount.divRatio(1e6 + protocolFeeRatio));
 
             (base, ) = MarketLibrary.swap(market, isBaseToQuote, isExactInput, amount.sub(protocolInfo.protocolFee));
             quote = isBaseToQuote ? amount.toInt256() : amount.neg256();

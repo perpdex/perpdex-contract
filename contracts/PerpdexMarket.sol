@@ -16,44 +16,38 @@ contract PerpdexMarket is IPerpdexMarket, ReentrancyGuard, Ownable {
 
     string public override symbol;
     address public immutable override exchange;
-    address public immutable priceFeed;
+    address public immutable priceFeedBase;
+    address public immutable priceFeedQuote;
 
     MarketStructs.PoolInfo public poolInfo;
     MarketStructs.FundingInfo public fundingInfo;
 
-    uint24 public poolFeeRatio;
-    uint24 public fundingMaxPremiumRatio;
-    uint32 public fundingMaxElapsedSec;
-    uint32 public fundingRolloverSec;
+    uint24 public poolFeeRatio = 3e3;
+    uint24 public fundingMaxPremiumRatio = 1e4;
+    uint32 public fundingMaxElapsedSec = 1 days;
+    uint32 public fundingRolloverSec = 1 days;
 
     modifier onlyExchange() {
-        // BT_CNCH: caller not Exchange
-        require(exchange == msg.sender, "BT_CNE");
+        require(exchange == msg.sender, "PM_OE: caller is not exchange");
         _;
     }
 
     constructor(
         string memory symbolArg,
         address exchangeArg,
-        address priceFeedArg
+        address priceFeedBaseArg,
+        address priceFeedQuoteArg
     ) {
-        // BT_EANC: exchangeArg address is not contract
-        require(exchangeArg.isContract(), "BT_EANC");
-
-        // BT_SANC: Price feed address is not contract
-        require(priceFeedArg.isContract(), "BT_PANC");
+        require(priceFeedBaseArg == address(0) || priceFeedBaseArg.isContract(), "PM_C: base price feed invalid");
+        require(priceFeedQuoteArg == address(0) || priceFeedQuoteArg.isContract(), "PM_C: quote price feed invalid");
 
         symbol = symbolArg;
         exchange = exchangeArg;
-        priceFeed = priceFeedArg;
+        priceFeedBase = priceFeedBaseArg;
+        priceFeedQuote = priceFeedQuoteArg;
 
         FundingLibrary.initializeFunding(fundingInfo);
         PoolLibrary.initializePool(poolInfo);
-
-        poolFeeRatio = 3e3;
-        fundingMaxPremiumRatio = 1e4;
-        fundingMaxElapsedSec = 1 days;
-        fundingRolloverSec = 1 days;
     }
 
     function swap(
@@ -70,7 +64,9 @@ contract PerpdexMarket is IPerpdexMarket, ReentrancyGuard, Ownable {
                 feeRatio: poolFeeRatio
             })
         );
-        _rebase();
+        emit Swapped(isBaseToQuote, isExactInput, amount, oppositeAmount);
+
+        _processFunding();
     }
 
     function addLiquidity(uint256 baseShare, uint256 quoteBalance)
@@ -85,15 +81,16 @@ contract PerpdexMarket is IPerpdexMarket, ReentrancyGuard, Ownable {
         )
     {
         if (poolInfo.totalLiquidity == 0) {
-            // TODO: check if reasonable price
+            FundingLibrary.validateInitialLiquidityPrice(priceFeedBase, priceFeedQuote, baseShare, quoteBalance);
         }
 
         (base, quote, liquidity) = PoolLibrary.addLiquidity(
             poolInfo,
             PoolLibrary.AddLiquidityParams({ base: baseShare, quote: quoteBalance })
         );
+        emit LiquidityAdded(base, quote, liquidity);
 
-        _rebase();
+        _processFunding();
     }
 
     function removeLiquidity(uint256 liquidity)
@@ -107,26 +104,28 @@ contract PerpdexMarket is IPerpdexMarket, ReentrancyGuard, Ownable {
             poolInfo,
             PoolLibrary.RemoveLiquidityParams({ liquidity: liquidity })
         );
-        _rebase();
+        emit LiquidityRemoved(base, quote, liquidity);
+
+        _processFunding();
     }
 
     function setPoolFeeRatio(uint24 value) external onlyOwner nonReentrant {
-        require(value < 1e6);
+        require(value <= 5e4, "PM_SPFR: too large");
         poolFeeRatio = value;
     }
 
     function setFundingMaxPremiumRatio(uint24 value) external onlyOwner nonReentrant {
-        require(value < 1e6);
+        require(value <= 1e5, "PM_SFMPR: too large");
         fundingMaxPremiumRatio = value;
     }
 
     function setFundingMaxElapsedSec(uint32 value) external onlyOwner nonReentrant {
-        require(value <= 7 days);
+        require(value <= 7 days, "PM_SFMES: too large");
         fundingMaxElapsedSec = value;
     }
 
     function setFundingRolloverSec(uint32 value) external onlyOwner nonReentrant {
-        require(value <= 7 days);
+        require(value <= 7 days, "PM_SFRS: too large");
         fundingRolloverSec = value;
     }
 
@@ -134,7 +133,7 @@ contract PerpdexMarket is IPerpdexMarket, ReentrancyGuard, Ownable {
         bool isBaseToQuote,
         bool isExactInput,
         uint256 amount
-    ) external view override onlyExchange returns (uint256 oppositeAmount) {
+    ) external view override returns (uint256 oppositeAmount) {
         oppositeAmount = PoolLibrary.swapDry(
             poolInfo.base,
             poolInfo.quote,
@@ -148,7 +147,7 @@ contract PerpdexMarket is IPerpdexMarket, ReentrancyGuard, Ownable {
     }
 
     function getMarkPriceX96() public view override returns (uint256) {
-        return PoolLibrary.getMarkPriceX96(poolInfo.base, poolInfo.quote, poolInfo.baseBalancePerShare);
+        return PoolLibrary.getMarkPriceX96(poolInfo.base, poolInfo.quote, poolInfo.baseBalancePerShareX96);
     }
 
     function getShareMarkPriceX96() external view override returns (uint256) {
@@ -161,39 +160,43 @@ contract PerpdexMarket is IPerpdexMarket, ReentrancyGuard, Ownable {
 
     function getLiquidityDeleveraged(
         uint256 liquidity,
-        uint256 cumDeleveragedBasePerLiquidity,
-        uint256 cumDeleveragedQuotePerLiquidity
+        uint256 cumDeleveragedBasePerLiquidityX96,
+        uint256 cumDeleveragedQuotePerLiquidityX96
     ) external view override returns (uint256, uint256) {
         return
             PoolLibrary.getLiquidityDeleveraged(
-                poolInfo.cumDeleveragedBasePerLiquidity,
-                poolInfo.cumDeleveragedQuotePerLiquidity,
+                poolInfo.cumDeleveragedBasePerLiquidityX96,
+                poolInfo.cumDeleveragedQuotePerLiquidityX96,
                 liquidity,
-                cumDeleveragedBasePerLiquidity,
-                cumDeleveragedQuotePerLiquidity
+                cumDeleveragedBasePerLiquidityX96,
+                cumDeleveragedQuotePerLiquidityX96
             );
     }
 
-    function getCumDeleveragedPerLiquidity() external view override returns (uint256, uint256) {
-        return (poolInfo.cumDeleveragedBasePerLiquidity, poolInfo.cumDeleveragedQuotePerLiquidity);
+    function getCumDeleveragedPerLiquidityX96() external view override returns (uint256, uint256) {
+        return (poolInfo.cumDeleveragedBasePerLiquidityX96, poolInfo.cumDeleveragedQuotePerLiquidityX96);
     }
 
-    function baseBalancePerShare() external view override returns (uint256) {
-        return poolInfo.baseBalancePerShare;
+    function baseBalancePerShareX96() external view override returns (uint256) {
+        return poolInfo.baseBalancePerShareX96;
     }
 
-    function _rebase() private {
+    function _processFunding() internal {
         int256 fundingRateX96 =
-            FundingLibrary.rebase(
+            FundingLibrary.processFunding(
                 fundingInfo,
-                FundingLibrary.RebaseParams({
-                    priceFeed: priceFeed,
+                FundingLibrary.ProcessFundingParams({
+                    priceFeedBase: priceFeedBase,
+                    priceFeedQuote: priceFeedQuote,
                     markPriceX96: getMarkPriceX96(),
                     maxPremiumRatio: fundingMaxPremiumRatio,
                     maxElapsedSec: fundingMaxElapsedSec,
                     rolloverSec: fundingRolloverSec
                 })
             );
-        return PoolLibrary.applyFunding(poolInfo, fundingRateX96);
+        if (fundingRateX96 == 0) return;
+
+        PoolLibrary.applyFunding(poolInfo, fundingRateX96);
+        emit FundingPaid(fundingRateX96);
     }
 }

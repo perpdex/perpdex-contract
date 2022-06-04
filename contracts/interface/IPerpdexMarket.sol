@@ -3,6 +3,11 @@ pragma solidity >=0.7.6;
 pragma abicoder v2;
 
 interface IPerpdexMarket {
+    event FundingPaid(int256 fundingRateX96);
+    event LiquidityAdded(uint256 base, uint256 quote, uint256 liquidity);
+    event LiquidityRemoved(uint256 base, uint256 quote, uint256 liquidity);
+    event Swapped(bool isBaseToQuote, bool isExactInput, uint256 amount, uint256 oppositeAmount);
+
     function swap(
         bool isBaseToQuote,
         bool isExactInput,
@@ -39,11 +44,11 @@ interface IPerpdexMarket {
 
     function getLiquidityDeleveraged(
         uint256 liquidity,
-        uint256 cumDeleveragedBasePerLiquidity,
-        uint256 cumDeleveragedQuotePerLiquidity
+        uint256 cumDeleveragedBasePerLiquidityX96,
+        uint256 cumDeleveragedQuotePerLiquidityX96
     ) external view returns (uint256, uint256);
 
-    function getCumDeleveragedPerLiquidity() external view returns (uint256, uint256);
+    function getCumDeleveragedPerLiquidityX96() external view returns (uint256, uint256);
 
-    function baseBalancePerShare() external view returns (uint256);
+    function baseBalancePerShareX96() external view returns (uint256);
 }

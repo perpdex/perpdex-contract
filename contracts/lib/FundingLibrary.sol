@@ -9,7 +9,7 @@ import { PerpMath } from "./PerpMath.sol";
 import { PerpSafeCast } from "./PerpSafeCast.sol";
 import { MarketStructs } from "./MarketStructs.sol";
 import { IPerpdexPriceFeed } from "../interface/IPerpdexPriceFeed.sol";
-import { FullMath } from "@uniswap/lib/contracts/libraries/FullMath.sol";
+import { FullMath } from "@uniswap/v3-core/contracts/libraries/FullMath.sol";
 import { FixedPoint96 } from "@uniswap/v3-core/contracts/libraries/FixedPoint96.sol";
 
 library FundingLibrary {
@@ -20,8 +20,9 @@ library FundingLibrary {
     using SafeMath for uint256;
     using SignedSafeMath for int256;
 
-    struct RebaseParams {
-        address priceFeed;
+    struct ProcessFundingParams {
+        address priceFeedBase;
+        address priceFeedQuote;
         uint256 markPriceX96;
         uint24 maxPremiumRatio;
         uint32 maxElapsedSec;
@@ -32,7 +33,7 @@ library FundingLibrary {
         fundingInfo.prevIndexPriceTimestamp = block.timestamp;
     }
 
-    function rebase(MarketStructs.FundingInfo storage fundingInfo, RebaseParams memory params)
+    function processFunding(MarketStructs.FundingInfo storage fundingInfo, ProcessFundingParams memory params)
         internal
         returns (int256 fundingRateX96)
     {
@@ -40,22 +41,80 @@ library FundingLibrary {
         uint256 elapsedSec = now.sub(fundingInfo.prevIndexPriceTimestamp);
         if (elapsedSec == 0) return 0;
 
-        // TODO: process decimals
-        // TODO: process inverse
-        uint256 indexPrice = IPerpdexPriceFeed(params.priceFeed).getPrice();
-        if (fundingInfo.prevIndexPrice == indexPrice || indexPrice == 0) {
+        uint256 indexPriceBase = _getIndexPrice(params.priceFeedBase);
+        uint256 indexPriceQuote = _getIndexPrice(params.priceFeedQuote);
+        if (
+            (fundingInfo.prevIndexPriceBase == indexPriceBase && fundingInfo.prevIndexPriceQuote == indexPriceQuote) ||
+            indexPriceBase == 0 ||
+            indexPriceQuote == 0
+        ) {
             return 0;
         }
 
         elapsedSec = Math.min(elapsedSec, params.maxElapsedSec);
 
         int256 premiumX96 =
-            FullMath.mulDiv(params.markPriceX96, FixedPoint96.Q96, indexPrice).toInt256() - FixedPoint96.Q96.toInt256();
+            _calcPremiumX96(
+                params.priceFeedBase,
+                params.priceFeedQuote,
+                indexPriceBase,
+                indexPriceQuote,
+                params.markPriceX96
+            );
+
         int256 maxPremiumX96 = FixedPoint96.Q96.mulRatio(params.maxPremiumRatio).toInt256();
         premiumX96 = (-maxPremiumX96).max(maxPremiumX96.min(premiumX96));
         fundingRateX96 = premiumX96.mulDiv(elapsedSec.toInt256(), params.rolloverSec);
 
-        fundingInfo.prevIndexPrice = indexPrice;
+        fundingInfo.prevIndexPriceBase = indexPriceBase;
+        fundingInfo.prevIndexPriceQuote = indexPriceQuote;
         fundingInfo.prevIndexPriceTimestamp = now;
+    }
+
+    function validateInitialLiquidityPrice(
+        address priceFeedBase,
+        address priceFeedQuote,
+        uint256 base,
+        uint256 quote
+    ) internal view {
+        uint256 indexPriceBase = _getIndexPrice(priceFeedBase);
+        uint256 indexPriceQuote = _getIndexPrice(priceFeedQuote);
+        require(indexPriceBase > 0, "FL_VILP: invalid base price");
+        require(indexPriceQuote > 0, "FL_VILP: invalid quote price");
+
+        uint256 markPriceX96 = FullMath.mulDiv(quote, FixedPoint96.Q96, base);
+        int256 premiumX96 =
+            _calcPremiumX96(priceFeedBase, priceFeedQuote, indexPriceBase, indexPriceQuote, markPriceX96);
+
+        require(premiumX96.abs() <= FixedPoint96.Q96.mulRatio(1e5), "FL_VILP: too far from index");
+    }
+
+    function _getIndexPrice(address priceFeed) private view returns (uint256) {
+        return priceFeed != address(0) ? IPerpdexPriceFeed(priceFeed).getPrice() : 1;
+    }
+
+    function _calcPremiumX96(
+        address priceFeedBase,
+        address priceFeedQuote,
+        uint256 indexPriceBase,
+        uint256 indexPriceQuote,
+        uint256 markPriceX96
+    ) private view returns (int256 premiumX96) {
+        uint256 priceRatioX96 = markPriceX96;
+        if (priceFeedBase != address(0)) {
+            priceRatioX96 = FullMath.mulDiv(
+                priceRatioX96,
+                10**IPerpdexPriceFeed(priceFeedBase).decimals(),
+                indexPriceBase
+            );
+        }
+        if (priceFeedQuote != address(0)) {
+            priceRatioX96 = FullMath.mulDiv(
+                priceRatioX96,
+                indexPriceQuote,
+                10**IPerpdexPriceFeed(priceFeedQuote).decimals()
+            );
+        }
+        premiumX96 = priceRatioX96.toInt256().sub(FixedPoint96.Q96.toInt256());
     }
 }

@@ -8,7 +8,7 @@ import { SignedSafeMath } from "@openzeppelin/contracts/math/SignedSafeMath.sol"
 import { PerpMath } from "./PerpMath.sol";
 import { PerpSafeCast } from "./PerpSafeCast.sol";
 import { MarketStructs } from "./MarketStructs.sol";
-import { FullMath } from "@uniswap/lib/contracts/libraries/FullMath.sol";
+import { FullMath } from "@uniswap/v3-core/contracts/libraries/FullMath.sol";
 import { FixedPoint96 } from "@uniswap/v3-core/contracts/libraries/FixedPoint96.sol";
 
 library PoolLibrary {
@@ -38,7 +38,7 @@ library PoolLibrary {
     }
 
     function initializePool(MarketStructs.PoolInfo storage poolInfo) internal {
-        poolInfo.baseBalancePerShare = 1 << 64;
+        poolInfo.baseBalancePerShareX96 = FixedPoint96.Q96;
     }
 
     function applyFunding(MarketStructs.PoolInfo storage poolInfo, int256 fundingRateX96) internal {
@@ -47,24 +47,24 @@ library PoolLibrary {
         if (fundingRateX96 > 0) {
             uint256 poolQuote = poolInfo.quote;
             uint256 deleveratedQuote = FullMath.mulDiv(poolQuote, fundingRateX96.abs(), FixedPoint96.Q96);
-            poolInfo.quote = poolQuote - deleveratedQuote;
-            poolInfo.cumDeleveragedQuotePerLiquidity = poolInfo.cumDeleveragedQuotePerLiquidity.add(
-                deleveratedQuote.div(poolInfo.totalLiquidity)
+            poolInfo.quote = poolQuote.sub(deleveratedQuote);
+            poolInfo.cumDeleveragedQuotePerLiquidityX96 = poolInfo.cumDeleveragedQuotePerLiquidityX96.add(
+                FullMath.mulDiv(deleveratedQuote, FixedPoint96.Q96, poolInfo.totalLiquidity)
             );
         } else {
             uint256 poolBase = poolInfo.base;
             uint256 deleveratedBase =
                 poolBase.sub(FullMath.mulDiv(poolBase, FixedPoint96.Q96, FixedPoint96.Q96.add(fundingRateX96.abs())));
-            poolInfo.base = poolBase - deleveratedBase;
-            poolInfo.cumDeleveragedBasePerLiquidity = poolInfo.cumDeleveragedBasePerLiquidity.add(
-                deleveratedBase.div(poolInfo.totalLiquidity)
+            poolInfo.base = poolBase.sub(deleveratedBase);
+            poolInfo.cumDeleveragedBasePerLiquidityX96 = poolInfo.cumDeleveragedBasePerLiquidityX96.add(
+                FullMath.mulDiv(deleveratedBase, FixedPoint96.Q96, poolInfo.totalLiquidity)
             );
         }
 
-        poolInfo.baseBalancePerShare = FullMath.mulDiv(
-            poolInfo.baseBalancePerShare,
-            FixedPoint96.Q96,
-            FixedPoint96.Q96.toInt256().sub(fundingRateX96).toUint256()
+        poolInfo.baseBalancePerShareX96 = FullMath.mulDiv(
+            poolInfo.baseBalancePerShareX96,
+            FixedPoint96.Q96.toInt256().sub(fundingRateX96).toUint256(),
+            FixedPoint96.Q96
         );
     }
 
@@ -72,19 +72,19 @@ library PoolLibrary {
         uint256 output = swapDry(poolInfo.base, poolInfo.quote, params);
         if (params.isExactInput) {
             if (params.isBaseToQuote) {
-                poolInfo.base = poolInfo.base.sub(params.amount);
-                poolInfo.quote = poolInfo.quote.add(output);
+                poolInfo.base = poolInfo.base.add(params.amount);
+                poolInfo.quote = poolInfo.quote.sub(output);
             } else {
-                poolInfo.base = poolInfo.base.add(output);
-                poolInfo.quote = poolInfo.quote.sub(params.amount);
+                poolInfo.base = poolInfo.base.sub(output);
+                poolInfo.quote = poolInfo.quote.add(params.amount);
             }
         } else {
             if (params.isBaseToQuote) {
-                poolInfo.base = poolInfo.base.sub(output);
-                poolInfo.quote = poolInfo.quote.add(params.amount);
+                poolInfo.base = poolInfo.base.add(output);
+                poolInfo.quote = poolInfo.quote.sub(params.amount);
             } else {
-                poolInfo.base = poolInfo.base.add(params.amount);
-                poolInfo.quote = poolInfo.quote.sub(output);
+                poolInfo.base = poolInfo.base.sub(params.amount);
+                poolInfo.quote = poolInfo.quote.add(output);
             }
         }
         return output;
@@ -94,28 +94,25 @@ library PoolLibrary {
         uint256 base,
         uint256 quote,
         SwapParams memory params
-    ) internal view returns (uint256) {
-        uint256 output;
-        uint256 invariant = base.mul(quote);
+    ) internal view returns (uint256 output) {
         uint24 onePlusFeeRatio = 1e6 + params.feeRatio;
 
         if (params.isExactInput) {
+            uint256 amountDivFee = params.amount.divRatio(onePlusFeeRatio);
             if (params.isBaseToQuote) {
-                output = quote.sub(invariant.div(base + params.amount.divRatio(onePlusFeeRatio)));
+                output = quote.sub(FullMath.mulDivRoundingUp(base, quote, base.add(amountDivFee)));
             } else {
-                output = base.sub(invariant.div(quote + params.amount.divRatio(onePlusFeeRatio)));
+                output = base.sub(FullMath.mulDivRoundingUp(base, quote, quote.add(amountDivFee)));
             }
         } else {
             if (params.isBaseToQuote) {
-                output = invariant.div(quote - params.amount).sub(base);
+                output = FullMath.mulDivRoundingUp(base, quote, quote.sub(params.amount)).sub(base);
             } else {
-                output = invariant.div(base - params.amount).sub(quote);
+                output = FullMath.mulDivRoundingUp(base, quote, base.sub(params.amount)).sub(quote);
             }
             output = output.mulRatio(onePlusFeeRatio);
         }
-        require(output > 0);
-
-        return output;
+        require(output > 0, "PL_SD: output is zero");
     }
 
     function addLiquidity(MarketStructs.PoolInfo storage poolInfo, AddLiquidityParams memory params)
@@ -129,12 +126,14 @@ library PoolLibrary {
         uint256 poolTotalLiquidity = poolInfo.totalLiquidity;
 
         if (poolTotalLiquidity == 0) {
+            uint256 totalLiquidity = Math.sqrt(params.base.mul(params.quote));
+            uint256 liquidity = totalLiquidity.sub(MINIMUM_LIQUIDITY);
+            require(params.base > 0 && params.quote > 0 && liquidity > 0, "PL_AL: initial liquidity zero");
+
             poolInfo.base = params.base;
             poolInfo.quote = params.quote;
-            uint256 totalLiquidity = Math.sqrt(params.base.mul(params.quote));
-            require(totalLiquidity > MINIMUM_LIQUIDITY);
             poolInfo.totalLiquidity = totalLiquidity;
-            return (params.base, params.quote, totalLiquidity.sub(MINIMUM_LIQUIDITY));
+            return (params.base, params.quote, liquidity);
         }
 
         uint256 poolBase = poolInfo.base;
@@ -147,7 +146,7 @@ library PoolLibrary {
                 FullMath.mulDiv(base, poolTotalLiquidity, poolBase),
                 FullMath.mulDiv(quote, poolTotalLiquidity, poolQuote)
             );
-        require(base > 0 && quote > 0 && liquidity > 0);
+        require(base > 0 && quote > 0 && liquidity > 0, "PL_AL: liquidity zero");
 
         poolInfo.base = poolBase.add(base);
         poolInfo.quote = poolQuote.add(quote);
@@ -165,23 +164,25 @@ library PoolLibrary {
         uint256 poolTotalLiquidity = poolInfo.totalLiquidity;
         uint256 base = FullMath.mulDiv(params.liquidity, poolBase, poolTotalLiquidity);
         uint256 quote = FullMath.mulDiv(params.liquidity, poolQuote, poolTotalLiquidity);
-        require(base > 0 && quote > 0);
+        require(base > 0 && quote > 0, "PL_RL: output is zero");
         poolInfo.base = poolBase.sub(base);
         poolInfo.quote = poolQuote.sub(quote);
-        poolInfo.totalLiquidity = poolTotalLiquidity.sub(params.liquidity);
+        uint256 totalLiquidity = poolTotalLiquidity.sub(params.liquidity);
+        require(totalLiquidity >= MINIMUM_LIQUIDITY, "PL_RL: min liquidity");
+        poolInfo.totalLiquidity = totalLiquidity;
         return (base, quote);
     }
 
     function getMarkPriceX96(
         uint256 base,
         uint256 quote,
-        uint256 baseBalancePerShare
+        uint256 baseBalancePerShareX96
     ) internal pure returns (uint256) {
-        return quote.div(base.mul(baseBalancePerShare));
+        return FullMath.mulDiv(getShareMarkPriceX96(base, quote), FixedPoint96.Q96, baseBalancePerShareX96);
     }
 
     function getShareMarkPriceX96(uint256 base, uint256 quote) internal pure returns (uint256) {
-        return quote.div(base);
+        return FullMath.mulDiv(quote, FixedPoint96.Q96, base);
     }
 
     function getLiquidityValue(MarketStructs.PoolInfo storage poolInfo, uint256 liquidity)
@@ -196,15 +197,20 @@ library PoolLibrary {
     }
 
     function getLiquidityDeleveraged(
-        uint256 poolCumDeleveragedBasePerLiquidity,
-        uint256 poolCumDeleveragedQuotePerLiquidity,
+        uint256 poolCumDeleveragedBasePerLiquidityX96,
+        uint256 poolCumDeleveragedQuotePerLiquidityX96,
         uint256 liquidity,
-        uint256 cumDeleveragedBasePerLiquidity,
-        uint256 cumDeleveragedQuotePerLiquidity
+        uint256 cumDeleveragedBasePerLiquidityX96,
+        uint256 cumDeleveragedQuotePerLiquidityX96
     ) internal pure returns (uint256, uint256) {
-        uint256 deleveragedBasePerLiquidity = cumDeleveragedBasePerLiquidity - poolCumDeleveragedBasePerLiquidity;
-        uint256 deleveragedQuotePerLiquidity = cumDeleveragedQuotePerLiquidity - poolCumDeleveragedQuotePerLiquidity;
+        uint256 deleveragedBasePerLiquidityX96 =
+            poolCumDeleveragedBasePerLiquidityX96.sub(cumDeleveragedBasePerLiquidityX96);
+        uint256 deleveragedQuotePerLiquidityX96 =
+            poolCumDeleveragedQuotePerLiquidityX96.sub(cumDeleveragedQuotePerLiquidityX96);
 
-        return (liquidity.mul(deleveragedBasePerLiquidity), liquidity.mul(deleveragedQuotePerLiquidity));
+        return (
+            FullMath.mulDiv(liquidity, deleveragedBasePerLiquidityX96, FixedPoint96.Q96),
+            FullMath.mulDiv(liquidity, deleveragedQuotePerLiquidityX96, FixedPoint96.Q96)
+        );
     }
 }

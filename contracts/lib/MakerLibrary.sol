@@ -2,7 +2,7 @@
 pragma solidity 0.7.6;
 pragma abicoder v2;
 
-import { FullMath } from "@uniswap/lib/contracts/libraries/FullMath.sol";
+import { FullMath } from "@uniswap/v3-core/contracts/libraries/FullMath.sol";
 import { FixedPoint96 } from "@uniswap/v3-core/contracts/libraries/FixedPoint96.sol";
 import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
 import { SignedSafeMath } from "@openzeppelin/contracts/math/SignedSafeMath.sol";
@@ -76,14 +76,14 @@ library MakerLibrary {
         (uint256 baseShare, uint256 quoteBalance, uint256 liquidity) =
             IPerpdexMarket(params.market).addLiquidity(params.base, params.quote);
 
-        (uint256 cumDeleveragedBaseSharePerLiquidity, uint256 cumDeleveragedQuotePerLiquidity) =
-            IPerpdexMarket(params.market).getCumDeleveragedPerLiquidity();
+        (uint256 cumDeleveragedBaseSharePerLiquidityX96, uint256 cumDeleveragedQuotePerLiquidityX96) =
+            IPerpdexMarket(params.market).getCumDeleveragedPerLiquidityX96();
 
         makerInfo.baseDebtShare = makerInfo.baseDebtShare.add(baseShare);
         makerInfo.quoteDebt = makerInfo.quoteDebt.add(quoteBalance);
         makerInfo.liquidity = makerInfo.liquidity.add(liquidity);
-        makerInfo.cumDeleveragedBaseSharePerLiquidity = cumDeleveragedBaseSharePerLiquidity;
-        makerInfo.cumDeleveragedQuotePerLiquidity = cumDeleveragedQuotePerLiquidity;
+        makerInfo.cumDeleveragedBaseSharePerLiquidityX96 = cumDeleveragedBaseSharePerLiquidityX96;
+        makerInfo.cumDeleveragedQuotePerLiquidityX96 = cumDeleveragedQuotePerLiquidityX96;
 
         AccountLibrary.updateMarkets(accountInfo, params.market, params.maxMarketsPerAccount);
 
@@ -120,12 +120,12 @@ library MakerLibrary {
         }
 
         {
-            (uint256 cumDeleveragedBaseSharePerLiquidity, uint256 cumDeleveragedQuotePerLiquidity) =
-                IPerpdexMarket(params.market).getCumDeleveragedPerLiquidity();
+            (uint256 cumDeleveragedBaseSharePerLiquidityX96, uint256 cumDeleveragedQuotePerLiquidityX96) =
+                IPerpdexMarket(params.market).getCumDeleveragedPerLiquidityX96();
 
             PerpdexStructs.MakerInfo storage makerInfo = accountInfo.makerInfos[params.market];
-            makerInfo.cumDeleveragedBaseSharePerLiquidity = cumDeleveragedBaseSharePerLiquidity;
-            makerInfo.cumDeleveragedQuotePerLiquidity = cumDeleveragedQuotePerLiquidity;
+            makerInfo.cumDeleveragedBaseSharePerLiquidityX96 = cumDeleveragedBaseSharePerLiquidityX96;
+            makerInfo.cumDeleveragedQuotePerLiquidityX96 = cumDeleveragedQuotePerLiquidityX96;
         }
 
         {
@@ -156,8 +156,8 @@ library MakerLibrary {
         (uint256 deleveragedBaseShare, uint256 deleveragedQuoteBalance) =
             IPerpdexMarket(market).getLiquidityDeleveraged(
                 makerInfo.liquidity,
-                makerInfo.cumDeleveragedBaseSharePerLiquidity,
-                makerInfo.cumDeleveragedQuotePerLiquidity
+                makerInfo.cumDeleveragedBaseSharePerLiquidityX96,
+                makerInfo.cumDeleveragedQuotePerLiquidityX96
             );
         makerInfo.baseDebtShare = makerInfo.baseDebtShare.sub(deleveragedBaseShare);
         makerInfo.quoteDebt = makerInfo.quoteDebt.sub(deleveragedQuoteBalance);

@@ -5,7 +5,7 @@ import { FixedPoint96 } from "@uniswap/v3-core/contracts/libraries/FixedPoint96.
 import { PerpMath } from "./PerpMath.sol";
 import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
 import { SignedSafeMath } from "@openzeppelin/contracts/math/SignedSafeMath.sol";
-import { FullMath } from "@uniswap/lib/contracts/libraries/FullMath.sol";
+import { FullMath } from "@uniswap/v3-core/contracts/libraries/FullMath.sol";
 import { PerpSafeCast } from "./PerpSafeCast.sol";
 import { IPerpdexMarket } from "../interface/IPerpdexMarket.sol";
 import { PerpdexStructs } from "./PerpdexStructs.sol";
@@ -33,8 +33,8 @@ library AccountLibrary {
             (uint256 deleveragedBaseShare, uint256 deleveragedQuoteBalance) =
                 IPerpdexMarket(market).getLiquidityDeleveraged(
                     makerInfo.liquidity,
-                    makerInfo.cumDeleveragedBaseSharePerLiquidity,
-                    makerInfo.cumDeleveragedQuotePerLiquidity
+                    makerInfo.cumDeleveragedBaseSharePerLiquidityX96,
+                    makerInfo.cumDeleveragedQuotePerLiquidityX96
                 );
 
             int256 positionShare = baseShare.add(poolBaseShare.add(deleveragedBaseShare).toInt256());
@@ -57,8 +57,8 @@ library AccountLibrary {
         (uint256 deleveragedBaseShare, ) =
             IPerpdexMarket(market).getLiquidityDeleveraged(
                 makerInfo.liquidity,
-                makerInfo.cumDeleveragedBaseSharePerLiquidity,
-                makerInfo.cumDeleveragedQuotePerLiquidity
+                makerInfo.cumDeleveragedBaseSharePerLiquidityX96,
+                makerInfo.cumDeleveragedQuotePerLiquidityX96
             );
         return baseShare.add(poolBaseShare.add(deleveragedBaseShare).toInt256());
     }
