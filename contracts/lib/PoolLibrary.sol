@@ -19,8 +19,6 @@ library PoolLibrary {
     using SafeMath for uint256;
     using SignedSafeMath for int256;
 
-    uint256 public constant MINIMUM_LIQUIDITY = 1e3;
-
     struct SwapParams {
         bool isBaseToQuote;
         bool isExactInput;
@@ -36,6 +34,8 @@ library PoolLibrary {
     struct RemoveLiquidityParams {
         uint256 liquidity;
     }
+
+    uint256 public constant MINIMUM_LIQUIDITY = 1e3;
 
     function initializePool(MarketStructs.PoolInfo storage poolInfo) internal {
         poolInfo.baseBalancePerShareX96 = FixedPoint96.Q96;
@@ -90,31 +90,6 @@ library PoolLibrary {
         return output;
     }
 
-    function swapDry(
-        uint256 base,
-        uint256 quote,
-        SwapParams memory params
-    ) internal view returns (uint256 output) {
-        uint24 onePlusFeeRatio = 1e6 + params.feeRatio;
-
-        if (params.isExactInput) {
-            uint256 amountDivFee = params.amount.divRatio(onePlusFeeRatio);
-            if (params.isBaseToQuote) {
-                output = quote.sub(FullMath.mulDivRoundingUp(base, quote, base.add(amountDivFee)));
-            } else {
-                output = base.sub(FullMath.mulDivRoundingUp(base, quote, quote.add(amountDivFee)));
-            }
-        } else {
-            if (params.isBaseToQuote) {
-                output = FullMath.mulDivRoundingUp(base, quote, quote.sub(params.amount)).sub(base);
-            } else {
-                output = FullMath.mulDivRoundingUp(base, quote, base.sub(params.amount)).sub(quote);
-            }
-            output = output.mulRatio(onePlusFeeRatio);
-        }
-        require(output > 0, "PL_SD: output is zero");
-    }
-
     function addLiquidity(MarketStructs.PoolInfo storage poolInfo, AddLiquidityParams memory params)
         internal
         returns (
@@ -124,10 +99,11 @@ library PoolLibrary {
         )
     {
         uint256 poolTotalLiquidity = poolInfo.totalLiquidity;
+        uint256 liquidity;
 
         if (poolTotalLiquidity == 0) {
             uint256 totalLiquidity = Math.sqrt(params.base.mul(params.quote));
-            uint256 liquidity = totalLiquidity.sub(MINIMUM_LIQUIDITY);
+            liquidity = totalLiquidity.sub(MINIMUM_LIQUIDITY);
             require(params.base > 0 && params.quote > 0 && liquidity > 0, "PL_AL: initial liquidity zero");
 
             poolInfo.base = params.base;
@@ -141,11 +117,10 @@ library PoolLibrary {
 
         uint256 base = Math.min(params.base, FullMath.mulDiv(params.quote, poolBase, poolQuote));
         uint256 quote = Math.min(params.quote, FullMath.mulDiv(params.base, poolQuote, poolBase));
-        uint256 liquidity =
-            Math.min(
-                FullMath.mulDiv(base, poolTotalLiquidity, poolBase),
-                FullMath.mulDiv(quote, poolTotalLiquidity, poolQuote)
-            );
+        liquidity = Math.min(
+            FullMath.mulDiv(base, poolTotalLiquidity, poolBase),
+            FullMath.mulDiv(quote, poolTotalLiquidity, poolQuote)
+        );
         require(base > 0 && quote > 0 && liquidity > 0, "PL_AL: liquidity zero");
 
         poolInfo.base = poolBase.add(base);
@@ -173,6 +148,42 @@ library PoolLibrary {
         return (base, quote);
     }
 
+    function getLiquidityValue(MarketStructs.PoolInfo storage poolInfo, uint256 liquidity)
+        internal
+        view
+        returns (uint256, uint256)
+    {
+        return (
+            FullMath.mulDiv(liquidity, poolInfo.base, poolInfo.totalLiquidity),
+            FullMath.mulDiv(liquidity, poolInfo.quote, poolInfo.totalLiquidity)
+        );
+    }
+
+    function swapDry(
+        uint256 base,
+        uint256 quote,
+        SwapParams memory params
+    ) internal pure returns (uint256 output) {
+        uint24 onePlusFeeRatio = 1e6 + params.feeRatio;
+
+        if (params.isExactInput) {
+            uint256 amountDivFee = params.amount.divRatio(onePlusFeeRatio);
+            if (params.isBaseToQuote) {
+                output = quote.sub(FullMath.mulDivRoundingUp(base, quote, base.add(amountDivFee)));
+            } else {
+                output = base.sub(FullMath.mulDivRoundingUp(base, quote, quote.add(amountDivFee)));
+            }
+        } else {
+            if (params.isBaseToQuote) {
+                output = FullMath.mulDivRoundingUp(base, quote, quote.sub(params.amount)).sub(base);
+            } else {
+                output = FullMath.mulDivRoundingUp(base, quote, base.sub(params.amount)).sub(quote);
+            }
+            output = output.mulRatio(onePlusFeeRatio);
+        }
+        require(output > 0, "PL_SD: output is zero");
+    }
+
     function getMarkPriceX96(
         uint256 base,
         uint256 quote,
@@ -183,17 +194,6 @@ library PoolLibrary {
 
     function getShareMarkPriceX96(uint256 base, uint256 quote) internal pure returns (uint256) {
         return FullMath.mulDiv(quote, FixedPoint96.Q96, base);
-    }
-
-    function getLiquidityValue(MarketStructs.PoolInfo storage poolInfo, uint256 liquidity)
-        internal
-        view
-        returns (uint256, uint256)
-    {
-        return (
-            FullMath.mulDiv(liquidity, poolInfo.base, poolInfo.totalLiquidity),
-            FullMath.mulDiv(liquidity, poolInfo.quote, poolInfo.totalLiquidity)
-        );
     }
 
     function getLiquidityDeleveraged(

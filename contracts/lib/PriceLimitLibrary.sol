@@ -10,6 +10,14 @@ library PriceLimitLibrary {
     using PerpMath for uint256;
     using SafeMath for uint256;
 
+    // should call before all price changes
+    function update(PerpdexStructs.PriceLimitInfo storage priceLimitInfo, uint256 price) internal {
+        if (priceLimitInfo.referenceBlockNumber < block.number) {
+            priceLimitInfo.referencePrice = price;
+            priceLimitInfo.referenceBlockNumber = block.number;
+        }
+    }
+
     function isNormalOrderAllowed(
         PerpdexStructs.PriceLimitInfo storage priceLimitInfo,
         PerpdexStructs.PriceLimitConfig memory config,
@@ -24,14 +32,6 @@ library PriceLimitLibrary {
         uint256 price
     ) internal view returns (bool) {
         return _isWithinPriceLimit(priceLimitInfo.referencePrice, price, config.priceLimitLiquidationRatio);
-    }
-
-    // should call before all price changes
-    function update(PerpdexStructs.PriceLimitInfo storage priceLimitInfo, uint256 price) internal {
-        if (priceLimitInfo.referenceTimestamp < block.timestamp) {
-            priceLimitInfo.referencePrice = price;
-            priceLimitInfo.referenceTimestamp = block.timestamp;
-        }
     }
 
     function _isWithinPriceLimit(

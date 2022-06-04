@@ -127,7 +127,10 @@ interface IPerpdexExchange {
 
     function accountInfos(address trader) external view returns (PerpdexStructs.VaultInfo memory);
 
-    function priceLimitInfos(address market) external view returns (uint256 referencePrice, uint256 referenceTimestamp);
+    function priceLimitInfos(address market)
+        external
+        view
+        returns (uint256 referencePrice, uint256 referenceBlockNumber);
 
     function insuranceFundInfo() external view returns (int256 balance);
 

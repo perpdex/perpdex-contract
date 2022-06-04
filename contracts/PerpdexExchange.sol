@@ -133,35 +133,6 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
         return (response.exchangedBase, response.exchangedQuote);
     }
 
-    function openPositionDry(OpenPositionParams calldata params, address trader)
-        external
-        view
-        override
-        returns (int256 base, int256 quote)
-    {
-        TakerLibrary.OpenPositionResponse memory response =
-            TakerLibrary.openPositionDry(
-                accountInfos[trader],
-                priceLimitInfos[params.market],
-                TakerLibrary.OpenPositionParams({
-                    market: params.market,
-                    isBaseToQuote: params.isBaseToQuote,
-                    isExactInput: params.isExactInput,
-                    amount: params.amount,
-                    oppositeAmountBound: params.oppositeAmountBound,
-                    deadline: params.deadline,
-                    priceLimitConfig: priceLimitConfig,
-                    isMarketAllowed: isMarketAllowed[params.market],
-                    mmRatio: mmRatio,
-                    imRatio: imRatio,
-                    maxMarketsPerAccount: maxMarketsPerAccount,
-                    protocolFeeRatio: protocolFeeRatio
-                })
-            );
-
-        return (response.exchangedBase, response.exchangedQuote);
-    }
-
     function liquidate(LiquidateParams calldata params)
         external
         override
@@ -247,6 +218,145 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
         return removeLiquidity(params, _msgSender());
     }
 
+    function setPriceLimitConfig(PerpdexStructs.PriceLimitConfig calldata value)
+        external
+        override
+        onlyOwner
+        nonReentrant
+    {
+        priceLimitConfig = value;
+    }
+
+    function setMaxMarketsPerAccount(uint8 value) external override onlyOwner nonReentrant {
+        maxMarketsPerAccount = value;
+    }
+
+    function setImRatio(uint24 value) external override onlyOwner nonReentrant {
+        require(value < 1e6, "PE_SIR: too large");
+        require(value >= mmRatio, "PE_SIR: smaller than mmRatio");
+        imRatio = value;
+    }
+
+    function setMmRatio(uint24 value) external override onlyOwner nonReentrant {
+        require(value <= imRatio, "PE_SMR: bigger than imRatio");
+        require(value > 0, "PE_SMR: zero");
+        mmRatio = value;
+    }
+
+    function setLiquidationRewardRatio(uint24 value) external override onlyOwner nonReentrant {
+        require(value < 1e6, "PE_SLRR: too large");
+        liquidationRewardRatio = value;
+    }
+
+    function setProtocolFeeRatio(uint24 value) external override onlyOwner nonReentrant {
+        require(value < 1e4, "PE_SPFR: too large");
+        protocolFeeRatio = value;
+    }
+
+    function setIsMarketAllowed(address market, bool value) external override onlyOwner nonReentrant {
+        if (isMarketAllowed[market] != value) {
+            isMarketAllowed[market] = value;
+            emit IsMarketAllowedChanged(market, value);
+        }
+    }
+
+    //
+    // EXTERNAL VIEW
+    //
+
+    // all raw information can be retrieved through getters (including default getters)
+
+    function getTakerInfo(address trader, address market)
+        external
+        view
+        override
+        returns (PerpdexStructs.TakerInfo memory)
+    {
+        return accountInfos[trader].takerInfos[market];
+    }
+
+    function getMakerInfo(address trader, address market)
+        external
+        view
+        override
+        returns (PerpdexStructs.MakerInfo memory)
+    {
+        return accountInfos[trader].makerInfos[market];
+    }
+
+    function getAccountMarkets(address trader) external view override returns (address[] memory) {
+        return accountInfos[trader].markets;
+    }
+
+    // dry run
+
+    function openPositionDry(OpenPositionParams calldata params, address trader)
+        external
+        view
+        override
+        returns (int256 base, int256 quote)
+    {
+        TakerLibrary.OpenPositionResponse memory response =
+            TakerLibrary.openPositionDry(
+                accountInfos[trader],
+                priceLimitInfos[params.market],
+                TakerLibrary.OpenPositionParams({
+                    market: params.market,
+                    isBaseToQuote: params.isBaseToQuote,
+                    isExactInput: params.isExactInput,
+                    amount: params.amount,
+                    oppositeAmountBound: params.oppositeAmountBound,
+                    deadline: params.deadline,
+                    priceLimitConfig: priceLimitConfig,
+                    isMarketAllowed: isMarketAllowed[params.market],
+                    mmRatio: mmRatio,
+                    imRatio: imRatio,
+                    maxMarketsPerAccount: maxMarketsPerAccount,
+                    protocolFeeRatio: protocolFeeRatio
+                })
+            );
+
+        return (response.exchangedBase, response.exchangedQuote);
+    }
+
+    // convenient getters
+
+    function getTotalAccountValue(address trader) external view override returns (int256) {
+        return AccountLibrary.getTotalAccountValue(accountInfos[trader]);
+    }
+
+    function getPositionShare(address trader, address market) external view override returns (int256) {
+        return AccountLibrary.getPositionShare(accountInfos[trader], market);
+    }
+
+    function getPositionNotional(address trader, address market) external view override returns (int256) {
+        return AccountLibrary.getPositionNotional(accountInfos[trader], market);
+    }
+
+    function getTotalPositionNotional(address trader) external view override returns (uint256) {
+        return AccountLibrary.getTotalPositionNotional(accountInfos[trader]);
+    }
+
+    function getOpenPositionShare(address trader, address market) external view override returns (uint256) {
+        return AccountLibrary.getOpenPositionShare(accountInfos[trader], market);
+    }
+
+    function getOpenPositionNotional(address trader, address market) external view override returns (uint256) {
+        return AccountLibrary.getOpenPositionNotional(accountInfos[trader], market);
+    }
+
+    function getTotalOpenPositionNotional(address trader) external view override returns (uint256) {
+        return AccountLibrary.getTotalOpenPositionNotional(accountInfos[trader]);
+    }
+
+    function hasEnoughMaintenanceMargin(address trader) external view override returns (bool) {
+        return AccountLibrary.hasEnoughMaintenanceMargin(accountInfos[trader], mmRatio);
+    }
+
+    function hasEnoughInitialMargin(address trader) external view override returns (bool) {
+        return AccountLibrary.hasEnoughInitialMargin(accountInfos[trader], imRatio);
+    }
+
     function removeLiquidity(RemoveLiquidityParams calldata params, address maker)
         public
         override
@@ -287,113 +397,5 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
         );
 
         return RemoveLiquidityResponse({ base: response.base, quote: response.quote });
-    }
-
-    function setPriceLimitConfig(PerpdexStructs.PriceLimitConfig calldata value)
-        external
-        override
-        onlyOwner
-        nonReentrant
-    {
-        priceLimitConfig = value;
-    }
-
-    function setMaxMarketsPerAccount(uint8 value) external override onlyOwner nonReentrant {
-        maxMarketsPerAccount = value;
-    }
-
-    function setImRatio(uint24 value) external override onlyOwner nonReentrant {
-        require(value < 1e6);
-        require(value >= mmRatio);
-        imRatio = value;
-    }
-
-    function setMmRatio(uint24 value) external override onlyOwner nonReentrant {
-        require(value <= imRatio);
-        require(value > 0);
-        mmRatio = value;
-    }
-
-    function setLiquidationRewardRatio(uint24 value) external override onlyOwner nonReentrant {
-        require(value < 1e6);
-        liquidationRewardRatio = value;
-    }
-
-    function setProtocolFeeRatio(uint24 value) external override onlyOwner nonReentrant {
-        require(value < 1e4);
-        protocolFeeRatio = value;
-    }
-
-    function setIsMarketAllowed(address market, bool value) external override onlyOwner nonReentrant {
-        if (isMarketAllowed[market] != value) {
-            isMarketAllowed[market] = value;
-            emit IsMarketAllowedChanged(market, value);
-        }
-    }
-
-    //
-    // EXTERNAL VIEW
-    //
-
-    // all raw information can be retrieved through getters (including default getters)
-
-    function getTakerInfo(address trader, address market)
-        external
-        view
-        override
-        returns (PerpdexStructs.TakerInfo memory)
-    {
-        return accountInfos[trader].takerInfos[market];
-    }
-
-    function getMakerInfo(address trader, address market)
-        external
-        view
-        override
-        returns (PerpdexStructs.MakerInfo memory)
-    {
-        return accountInfos[trader].makerInfos[market];
-    }
-
-    function getAccountMarkets(address trader) external view override returns (address[] memory) {
-        return accountInfos[trader].markets;
-    }
-
-    // convenient getters
-
-    function getTotalAccountValue(address trader) external view override returns (int256) {
-        return AccountLibrary.getTotalAccountValue(accountInfos[trader]);
-    }
-
-    function getPositionShare(address trader, address market) external view override returns (int256) {
-        return AccountLibrary.getPositionShare(accountInfos[trader], market);
-    }
-
-    function getPositionNotional(address trader, address market) external view override returns (int256) {
-        return AccountLibrary.getPositionNotional(accountInfos[trader], market);
-    }
-
-    function getTotalPositionNotional(address trader) external view override returns (uint256) {
-        return AccountLibrary.getTotalPositionNotional(accountInfos[trader]);
-    }
-
-    function getOpenPositionShare(address trader, address market) external view override returns (uint256) {
-        return AccountLibrary.getOpenPositionShare(accountInfos[trader], market);
-    }
-
-    function getOpenPositionNotional(address trader, address market) external view override returns (uint256) {
-        return AccountLibrary.getOpenPositionNotional(accountInfos[trader], market);
-    }
-
-    function getTotalOpenPositionNotional(address trader) external view override returns (uint256) {
-        return AccountLibrary.getTotalOpenPositionNotional(accountInfos[trader]);
-    }
-
-    function hasEnoughMaintenanceMargin(address trader) external view override returns (bool) {
-        return AccountLibrary.hasEnoughMaintenanceMargin(accountInfos[trader], mmRatio);
-    }
-
-    function hasEnoughInitialMargin(address trader) external view override returns (bool) {
-        return AccountLibrary.hasEnoughInitialMargin(accountInfos[trader], imRatio);
     }
 }

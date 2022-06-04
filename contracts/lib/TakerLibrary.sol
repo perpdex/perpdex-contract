@@ -62,7 +62,7 @@ library TakerLibrary {
     }
 
     modifier checkDeadline(uint256 deadline) {
-        require(block.timestamp <= deadline, "CH_TE");
+        require(block.timestamp <= deadline, "TL_CD: too late");
         _;
     }
 
@@ -72,7 +72,7 @@ library TakerLibrary {
         PerpdexStructs.ProtocolInfo storage protocolInfo,
         OpenPositionParams memory params
     ) internal checkDeadline(params.deadline) returns (OpenPositionResponse memory) {
-        require(AccountLibrary.hasEnoughMaintenanceMargin(accountInfo, params.mmRatio));
+        require(AccountLibrary.hasEnoughMaintenanceMargin(accountInfo, params.mmRatio), "TL_OP: not enough mm");
 
         (int256 exchangedBase, int256 exchangedQuote, int256 realizedPnL) =
             _doSwap(
@@ -89,13 +89,19 @@ library TakerLibrary {
             );
 
         if (!params.isMarketAllowed) {
-            require(accountInfo.takerInfos[params.market].baseBalanceShare.sign() * exchangedBase.sign() <= 0);
+            require(
+                accountInfo.takerInfos[params.market].baseBalanceShare.sign() * exchangedBase.sign() <= 0,
+                "TL_OP: open is forbidden"
+            );
         }
 
         uint256 priceAfterX96 = _getPriceX96(params.market);
-        require(PriceLimitLibrary.isNormalOrderAllowed(priceLimitInfo, params.priceLimitConfig, priceAfterX96));
+        require(
+            PriceLimitLibrary.isNormalOrderAllowed(priceLimitInfo, params.priceLimitConfig, priceAfterX96),
+            "TL_OP: normal order forbidden"
+        );
 
-        require(AccountLibrary.hasEnoughInitialMargin(accountInfo, params.imRatio));
+        require(AccountLibrary.hasEnoughInitialMargin(accountInfo, params.imRatio), "TL_OP: not enough im");
 
         return
             OpenPositionResponse({
@@ -103,42 +109,6 @@ library TakerLibrary {
                 exchangedQuote: exchangedQuote,
                 realizedPnL: realizedPnL,
                 priceAfterX96: priceAfterX96
-            });
-    }
-
-    function openPositionDry(
-        PerpdexStructs.AccountInfo storage accountInfo,
-        PerpdexStructs.PriceLimitInfo storage priceLimitInfo,
-        OpenPositionParams memory params
-    ) internal view checkDeadline(params.deadline) returns (OpenPositionResponse memory) {
-        require(AccountLibrary.hasEnoughMaintenanceMargin(accountInfo, params.mmRatio));
-
-        (int256 exchangedBase, int256 exchangedQuote) =
-            _doSwapDry(
-                accountInfo,
-                priceLimitInfo,
-                params.market,
-                params.isBaseToQuote,
-                params.isExactInput,
-                params.amount,
-                params.oppositeAmountBound,
-                params.maxMarketsPerAccount
-            );
-
-        if (!params.isMarketAllowed) {
-            require(accountInfo.takerInfos[params.market].baseBalanceShare.sign() * exchangedBase.sign() <= 0);
-        }
-
-        // disable price limit
-
-        require(AccountLibrary.hasEnoughInitialMargin(accountInfo, params.imRatio));
-
-        return
-            OpenPositionResponse({
-                exchangedBase: exchangedBase,
-                exchangedQuote: exchangedQuote,
-                realizedPnL: 0,
-                priceAfterX96: 0
             });
     }
 
@@ -150,13 +120,13 @@ library TakerLibrary {
         PerpdexStructs.InsuranceFundInfo storage insuranceFundInfo,
         LiquidateParams memory params
     ) internal checkDeadline(params.deadline) returns (LiquidateResponse memory result) {
-        require(!AccountLibrary.hasEnoughMaintenanceMargin(accountInfo, params.mmRatio));
+        require(!AccountLibrary.hasEnoughMaintenanceMargin(accountInfo, params.mmRatio), "TL_L: enough mm");
 
         bool isLong;
         {
             PerpdexStructs.TakerInfo storage takerInfo = accountInfo.takerInfos[params.market];
             isLong = takerInfo.baseBalanceShare > 0 ? true : false;
-            require(params.amount <= takerInfo.baseBalanceShare.abs());
+            require(params.amount <= takerInfo.baseBalanceShare.abs(), "TL_L: too large amount");
         }
 
         (result.exchangedBase, result.exchangedQuote, result.realizedPnL) = _doSwap(
@@ -173,7 +143,10 @@ library TakerLibrary {
         );
 
         result.priceAfterX96 = _getPriceX96(params.market);
-        require(PriceLimitLibrary.isLiquidationAllowed(priceLimitInfo, params.priceLimitConfig, result.priceAfterX96));
+        require(
+            PriceLimitLibrary.isLiquidationAllowed(priceLimitInfo, params.priceLimitConfig, result.priceAfterX96),
+            "TL_L: liquidation forbidden"
+        );
 
         _processLiquidationFee(
             accountInfo.vaultInfo,
@@ -193,7 +166,7 @@ library TakerLibrary {
         int256 quoteFee,
         uint8 maxMarketsPerAccount
     ) internal returns (int256) {
-        require(baseShare.sign() * quoteBalance.sign() == -1);
+        require(baseShare.sign() * quoteBalance.sign() == -1, "TL_ATTB: invalid input");
 
         PerpdexStructs.TakerInfo storage takerInfo = accountInfo.takerInfos[market];
 
@@ -224,8 +197,42 @@ library TakerLibrary {
         return realizedPnL;
     }
 
-    function _getPriceX96(address market) private view returns (uint256) {
-        return IPerpdexMarket(market).getMarkPriceX96();
+    function openPositionDry(
+        PerpdexStructs.AccountInfo storage accountInfo,
+        PerpdexStructs.PriceLimitInfo storage priceLimitInfo,
+        OpenPositionParams memory params
+    ) internal view checkDeadline(params.deadline) returns (OpenPositionResponse memory) {
+        require(AccountLibrary.hasEnoughMaintenanceMargin(accountInfo, params.mmRatio), "TL_OPD: not enough mm");
+
+        (int256 exchangedBase, int256 exchangedQuote) =
+            _doSwapDry(
+                accountInfo,
+                priceLimitInfo,
+                params.market,
+                params.isBaseToQuote,
+                params.isExactInput,
+                params.amount,
+                params.oppositeAmountBound
+            );
+
+        if (!params.isMarketAllowed) {
+            require(
+                accountInfo.takerInfos[params.market].baseBalanceShare.sign() * exchangedBase.sign() <= 0,
+                "TL_OPD: open is forbidden"
+            );
+        }
+
+        // disable price limit
+
+        require(AccountLibrary.hasEnoughInitialMargin(accountInfo, params.imRatio), "TL_OPD: not enough im");
+
+        return
+            OpenPositionResponse({
+                exchangedBase: exchangedBase,
+                exchangedQuote: exchangedQuote,
+                realizedPnL: 0,
+                priceAfterX96: 0
+            });
     }
 
     function _doSwap(
@@ -297,23 +304,6 @@ library TakerLibrary {
         protocolInfo.protocolFee = protocolInfo.protocolFee.add(protocolFee);
     }
 
-    function _doSwapDry(
-        PerpdexStructs.AccountInfo storage accountInfo,
-        PerpdexStructs.PriceLimitInfo storage priceLimitInfo,
-        address market,
-        bool isBaseToQuote,
-        bool isExactInput,
-        uint256 amount,
-        uint256 oppositeAmountBound,
-        uint8 maxMarketsPerAccount
-    ) private view returns (int256 base, int256 quote) {
-        // disable price limit
-
-        (base, quote) = MarketLibrary.swapDry(market, isBaseToQuote, isExactInput, amount);
-
-        _validateSlippage(isBaseToQuote, isExactInput, base, quote, oppositeAmountBound);
-    }
-
     function _processLiquidationFee(
         PerpdexStructs.VaultInfo storage vaultInfo,
         PerpdexStructs.VaultInfo storage liquidatorVaultInfo,
@@ -333,6 +323,26 @@ library TakerLibrary {
         return penalty;
     }
 
+    function _getPriceX96(address market) private view returns (uint256) {
+        return IPerpdexMarket(market).getMarkPriceX96();
+    }
+
+    function _doSwapDry(
+        PerpdexStructs.AccountInfo storage accountInfo,
+        PerpdexStructs.PriceLimitInfo storage priceLimitInfo,
+        address market,
+        bool isBaseToQuote,
+        bool isExactInput,
+        uint256 amount,
+        uint256 oppositeAmountBound
+    ) private view returns (int256 base, int256 quote) {
+        // disable price limit
+
+        (base, quote) = MarketLibrary.swapDry(market, isBaseToQuote, isExactInput, amount);
+
+        _validateSlippage(isBaseToQuote, isExactInput, base, quote, oppositeAmountBound);
+    }
+
     function _validateSlippage(
         bool isBaseToQuote,
         bool isExactInput,
@@ -342,9 +352,9 @@ library TakerLibrary {
     ) private pure {
         uint256 oppositeAmount = isBaseToQuote == isExactInput ? quote.abs() : base.abs();
         if (isExactInput) {
-            require(oppositeAmount >= oppositeAmountBound);
+            require(oppositeAmount >= oppositeAmountBound, "TL_VS: too small opposite amount");
         } else {
-            require(oppositeAmount <= oppositeAmountBound);
+            require(oppositeAmount <= oppositeAmountBound, "TL_VS: too large opposite amount");
         }
     }
 }

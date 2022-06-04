@@ -35,7 +35,7 @@ library MarketLibrary {
         bool isExactInput,
         uint256 amount,
         uint256 resAmount
-    ) internal view returns (int256, int256) {
+    ) private pure returns (int256, int256) {
         if (isExactInput) {
             if (isBaseToQuote) {
                 return (amount.neg256(), resAmount.toInt256());

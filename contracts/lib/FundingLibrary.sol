@@ -37,8 +37,8 @@ library FundingLibrary {
         internal
         returns (int256 fundingRateX96)
     {
-        uint256 now = block.timestamp;
-        uint256 elapsedSec = now.sub(fundingInfo.prevIndexPriceTimestamp);
+        uint256 currentTimestamp = block.timestamp;
+        uint256 elapsedSec = currentTimestamp.sub(fundingInfo.prevIndexPriceTimestamp);
         if (elapsedSec == 0) return 0;
 
         uint256 indexPriceBase = _getIndexPrice(params.priceFeedBase);
@@ -68,7 +68,7 @@ library FundingLibrary {
 
         fundingInfo.prevIndexPriceBase = indexPriceBase;
         fundingInfo.prevIndexPriceQuote = indexPriceQuote;
-        fundingInfo.prevIndexPriceTimestamp = now;
+        fundingInfo.prevIndexPriceTimestamp = currentTimestamp;
     }
 
     function validateInitialLiquidityPrice(
