@@ -3,6 +3,7 @@ pragma solidity 0.7.6;
 pragma abicoder v2;
 
 import { PerpdexMarket } from "../PerpdexMarket.sol";
+import { MarketStructs } from "../lib/MarketStructs.sol";
 
 contract TestPerpdexMarket is PerpdexMarket {
     constructor(
@@ -14,5 +15,9 @@ contract TestPerpdexMarket is PerpdexMarket {
 
     function processFunding() external {
         _processFunding();
+    }
+
+    function setPoolInfo(MarketStructs.PoolInfo memory poolInfoArg) external {
+        poolInfo = poolInfoArg;
     }
 }

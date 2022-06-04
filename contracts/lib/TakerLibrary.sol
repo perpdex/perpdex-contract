@@ -288,7 +288,7 @@ library TakerLibrary {
             quote = quote.sub(protocolFee.toInt256());
         } else {
             // exact quote
-            protocolFee = amount - amount.divRatio(1e6 + protocolFeeRatio);
+            protocolFee = amount.sub(amount.divRatio(1e6 + protocolFeeRatio));
 
             (base, ) = MarketLibrary.swap(market, isBaseToQuote, isExactInput, amount.sub(protocolInfo.protocolFee));
             quote = isBaseToQuote ? amount.toInt256() : amount.neg256();

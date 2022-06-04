@@ -14,6 +14,6 @@ library MarketStructs {
         uint256 totalLiquidity;
         uint256 cumDeleveragedBasePerLiquidityX96;
         uint256 cumDeleveragedQuotePerLiquidityX96;
-        uint256 baseBalancePerShare;
+        uint256 baseBalancePerShareX96;
     }
 }

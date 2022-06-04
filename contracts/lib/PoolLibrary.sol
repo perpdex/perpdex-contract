@@ -38,7 +38,7 @@ library PoolLibrary {
     }
 
     function initializePool(MarketStructs.PoolInfo storage poolInfo) internal {
-        poolInfo.baseBalancePerShare = 1 << 64;
+        poolInfo.baseBalancePerShareX96 = FixedPoint96.Q96;
     }
 
     function applyFunding(MarketStructs.PoolInfo storage poolInfo, int256 fundingRateX96) internal {
@@ -47,7 +47,7 @@ library PoolLibrary {
         if (fundingRateX96 > 0) {
             uint256 poolQuote = poolInfo.quote;
             uint256 deleveratedQuote = FullMath.mulDiv(poolQuote, fundingRateX96.abs(), FixedPoint96.Q96);
-            poolInfo.quote = poolQuote - deleveratedQuote;
+            poolInfo.quote = poolQuote.sub(deleveratedQuote);
             poolInfo.cumDeleveragedQuotePerLiquidityX96 = poolInfo.cumDeleveragedQuotePerLiquidityX96.add(
                 FullMath.mulDiv(deleveratedQuote, FixedPoint96.Q96, poolInfo.totalLiquidity)
             );
@@ -55,14 +55,14 @@ library PoolLibrary {
             uint256 poolBase = poolInfo.base;
             uint256 deleveratedBase =
                 poolBase.sub(FullMath.mulDiv(poolBase, FixedPoint96.Q96, FixedPoint96.Q96.add(fundingRateX96.abs())));
-            poolInfo.base = poolBase - deleveratedBase;
+            poolInfo.base = poolBase.sub(deleveratedBase);
             poolInfo.cumDeleveragedBasePerLiquidityX96 = poolInfo.cumDeleveragedBasePerLiquidityX96.add(
                 FullMath.mulDiv(deleveratedBase, FixedPoint96.Q96, poolInfo.totalLiquidity)
             );
         }
 
-        poolInfo.baseBalancePerShare = FullMath.mulDiv(
-            poolInfo.baseBalancePerShare,
+        poolInfo.baseBalancePerShareX96 = FullMath.mulDiv(
+            poolInfo.baseBalancePerShareX96,
             FixedPoint96.Q96.toInt256().sub(fundingRateX96).toUint256(),
             FixedPoint96.Q96
         );
@@ -176,13 +176,13 @@ library PoolLibrary {
     function getMarkPriceX96(
         uint256 base,
         uint256 quote,
-        uint256 baseBalancePerShare
+        uint256 baseBalancePerShareX96
     ) internal pure returns (uint256) {
-        return quote.div(base.mul(baseBalancePerShare));
+        return FullMath.mulDiv(getShareMarkPriceX96(base, quote), FixedPoint96.Q96, baseBalancePerShareX96);
     }
 
     function getShareMarkPriceX96(uint256 base, uint256 quote) internal pure returns (uint256) {
-        return quote.div(base);
+        return FullMath.mulDiv(quote, FixedPoint96.Q96, base);
     }
 
     function getLiquidityValue(MarketStructs.PoolInfo storage poolInfo, uint256 liquidity)
@@ -204,9 +204,9 @@ library PoolLibrary {
         uint256 cumDeleveragedQuotePerLiquidityX96
     ) internal pure returns (uint256, uint256) {
         uint256 deleveragedBasePerLiquidityX96 =
-            cumDeleveragedBasePerLiquidityX96 - poolCumDeleveragedBasePerLiquidityX96;
+            poolCumDeleveragedBasePerLiquidityX96.sub(cumDeleveragedBasePerLiquidityX96);
         uint256 deleveragedQuotePerLiquidityX96 =
-            cumDeleveragedQuotePerLiquidityX96 - poolCumDeleveragedQuotePerLiquidityX96;
+            poolCumDeleveragedQuotePerLiquidityX96.sub(cumDeleveragedQuotePerLiquidityX96);
 
         return (
             FullMath.mulDiv(liquidity, deleveragedBasePerLiquidityX96, FixedPoint96.Q96),
