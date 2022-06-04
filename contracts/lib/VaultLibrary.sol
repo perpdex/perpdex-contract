@@ -25,26 +25,32 @@ library VaultLibrary {
     struct WithdrawParams {
         address settlementToken;
         uint256 amount;
-        address to;
+        address payable to;
         uint24 imRatio;
     }
 
     function deposit(PerpdexStructs.AccountInfo storage accountInfo, DepositParams memory params) internal {
-        // V_ZA: Zero amount
-        require(params.amount > 0, "V_ZA");
+        require(params.amount > 0, "VL_D: zero amount");
         _transferTokenIn(params.settlementToken, params.from, params.amount);
         accountInfo.vaultInfo.collateralBalance = accountInfo.vaultInfo.collateralBalance.add(params.amount.toInt256());
     }
 
+    function depositEth(PerpdexStructs.AccountInfo storage accountInfo, uint256 amount) internal {
+        require(amount > 0, "VL_DE: zero amount");
+        accountInfo.vaultInfo.collateralBalance = accountInfo.vaultInfo.collateralBalance.add(amount.toInt256());
+    }
+
     function withdraw(PerpdexStructs.AccountInfo storage accountInfo, WithdrawParams memory params) internal {
-        // V_ZA: Zero amount
-        require(params.amount > 0, "V_ZA");
+        require(params.amount > 0, "VL_W: zero amount");
         accountInfo.vaultInfo.collateralBalance = accountInfo.vaultInfo.collateralBalance.sub(params.amount.toInt256());
 
-        // V_NEIM: does not have enough initial margin
-        require(AccountLibrary.hasEnoughInitialMargin(accountInfo, params.imRatio), "V_NEIM");
+        require(AccountLibrary.hasEnoughInitialMargin(accountInfo, params.imRatio), "VL_W: not enough initial margin");
 
-        SafeERC20.safeTransfer(IERC20(params.settlementToken), params.to, params.amount);
+        if (params.settlementToken == address(0)) {
+            params.to.transfer(params.amount);
+        } else {
+            SafeERC20.safeTransfer(IERC20(params.settlementToken), params.to, params.amount);
+        }
     }
 
     function transferInsuranceFund(

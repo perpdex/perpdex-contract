@@ -2,20 +2,37 @@ import { HardhatRuntimeEnvironment } from "hardhat/types"
 import { DeployFunction } from "hardhat-deploy/types"
 import { parseEther } from "ethers/lib/utils"
 import { ethers } from "hardhat"
+import { getPerpdexOracleContractDeployment as getOracleDeploy } from "../scripts/deployHelper"
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     const { deployments, getNamedAccounts, getChainId } = hre
     const { deploy, execute } = deployments
     const { deployer } = await getNamedAccounts()
 
-    const markets = [
-        {
-            symbol: "USD",
-            priceFeedAddress: {
-                "4": "0x8F9aC0A22e5aC2A6dda0C1d4Ce17B5c079D094F0", // WETH rinkeby
-            }[await getChainId()],
-        },
-    ]
+    const priceFeedQuoteAddress = {
+        rinkeby: getOracleDeploy("ChainlinkPriceFeedETHUSD").address,
+    }[hre.network.name]
+
+    const markets = {
+        rinkeby: [
+            {
+                symbol: "USD",
+                priceFeedBase: hre.ethers.constants.AddressZero,
+            },
+            {
+                symbol: "BTC",
+                priceFeedBase: getOracleDeploy("ChainlinkPriceFeedBTCUSD").address,
+            },
+            {
+                symbol: "LINK",
+                priceFeedBase: getOracleDeploy("ChainlinkPriceFeedLINKUSD").address,
+            },
+            {
+                symbol: "MATIC",
+                priceFeedBase: getOracleDeploy("ChainlinkPriceFeedMATICUSD").address,
+            },
+        ],
+    }[hre.network.name]
 
     const perpdexExchange = await deployments.get("PerpdexExchange")
 
@@ -23,7 +40,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
         const market = await deploy("PerpdexMarket" + markets[i].symbol, {
             from: deployer,
             contract: "PerpdexMarket",
-            args: [markets[i].symbol, perpdexExchange.address, markets[i].priceFeedAddress],
+            args: [markets[i].symbol, perpdexExchange.address, markets[i].priceFeedBase, priceFeedQuoteAddress],
             log: true,
             autoMine: true,
         })

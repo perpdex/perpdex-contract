@@ -43,23 +43,30 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
     //
 
     constructor(address settlementTokenArg) {
-        // CH_SANC: Settlement token address is not contract
-        require(settlementTokenArg.isContract(), "CH_SANC");
+        require(settlementTokenArg == address(0) || settlementTokenArg.isContract(), "PE_C: token address invalid");
 
         settlementToken = settlementTokenArg;
     }
 
-    function deposit(uint256 amount) external override nonReentrant {
+    function deposit(uint256 amount) external payable override nonReentrant {
         address trader = _msgSender();
-        VaultLibrary.deposit(
-            accountInfos[trader],
-            VaultLibrary.DepositParams({ settlementToken: settlementToken, amount: amount, from: trader })
-        );
+
+        if (settlementToken == address(0)) {
+            require(amount == 0, "PE_D: amount not zero");
+            VaultLibrary.depositEth(accountInfos[trader], msg.value);
+        } else {
+            require(msg.value == 0, "PE_D: msg.value not zero");
+            VaultLibrary.deposit(
+                accountInfos[trader],
+                VaultLibrary.DepositParams({ settlementToken: settlementToken, amount: amount, from: trader })
+            );
+        }
         emit Deposited(trader, amount);
     }
 
     function withdraw(uint256 amount) external override nonReentrant {
-        address trader = _msgSender();
+        address payable trader = _msgSender();
+
         VaultLibrary.withdraw(
             accountInfos[trader],
             VaultLibrary.WithdrawParams({
@@ -318,7 +325,10 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
     }
 
     function setIsMarketAllowed(address market, bool value) external override onlyOwner nonReentrant {
-        isMarketAllowed[market] = value;
+        if (isMarketAllowed[market] != value) {
+            isMarketAllowed[market] = value;
+            emit IsMarketAllowedChanged(market, value);
+        }
     }
 
     //

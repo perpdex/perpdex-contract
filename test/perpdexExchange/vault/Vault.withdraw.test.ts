@@ -57,11 +57,13 @@ describe("Vault withdraw test", () => {
 
         it("force error, not enough balance to withdraw", async () => {
             await perpdexExchange.connect(alice).deposit(parseUsdc("100"))
-            await expect(perpdexExchange.connect(alice).withdraw(parseUsdc("101"))).to.be.revertedWith("V_NEIM")
+            await expect(perpdexExchange.connect(alice).withdraw(parseUsdc("101"))).to.be.revertedWith(
+                "VL_W: not enough initial margin",
+            )
         })
 
         it("force error, zero amount", async () => {
-            await expect(perpdexExchange.connect(alice).withdraw("0")).to.be.revertedWith("V_ZA")
+            await expect(perpdexExchange.connect(alice).withdraw("0")).to.be.revertedWith("VL_W: zero amount")
         })
 
         // TODO: will write this after openPosition test

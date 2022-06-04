@@ -72,7 +72,7 @@ library TakerLibrary {
         PerpdexStructs.ProtocolInfo storage protocolInfo,
         OpenPositionParams memory params
     ) internal checkDeadline(params.deadline) returns (OpenPositionResponse memory) {
-        require(!AccountLibrary.hasEnoughMaintenanceMargin(accountInfo, params.mmRatio));
+        require(AccountLibrary.hasEnoughMaintenanceMargin(accountInfo, params.mmRatio));
 
         (int256 exchangedBase, int256 exchangedQuote, int256 realizedPnL) =
             _doSwap(
@@ -111,7 +111,7 @@ library TakerLibrary {
         PerpdexStructs.PriceLimitInfo storage priceLimitInfo,
         OpenPositionParams memory params
     ) internal view checkDeadline(params.deadline) returns (OpenPositionResponse memory) {
-        require(!AccountLibrary.hasEnoughMaintenanceMargin(accountInfo, params.mmRatio));
+        require(AccountLibrary.hasEnoughMaintenanceMargin(accountInfo, params.mmRatio));
 
         (int256 exchangedBase, int256 exchangedQuote) =
             _doSwapDry(
