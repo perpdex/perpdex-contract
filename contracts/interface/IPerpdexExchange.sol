@@ -76,6 +76,8 @@ interface IPerpdexExchange {
         uint256 priceAfterX96
     );
 
+    event IsMarketAllowedChanged(address indexed market, bool isMarketAllowed);
+
     function deposit(uint256 amount) external payable;
 
     function withdraw(uint256 amount) external;

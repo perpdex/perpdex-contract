@@ -325,7 +325,10 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
     }
 
     function setIsMarketAllowed(address market, bool value) external override onlyOwner nonReentrant {
-        isMarketAllowed[market] = value;
+        if (isMarketAllowed[market] != value) {
+            isMarketAllowed[market] = value;
+            emit IsMarketAllowedChanged(market, value);
+        }
     }
 
     //
