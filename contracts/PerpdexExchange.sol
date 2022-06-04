@@ -38,9 +38,10 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
     uint24 public override protocolFeeRatio = 0;
     mapping(address => bool) public override isMarketAllowed;
 
-    //
-    // EXTERNAL NON-VIEW
-    //
+    modifier checkDeadline(uint256 deadline) {
+        require(block.timestamp <= deadline, "PE_CD: too late");
+        _;
+    }
 
     constructor(address settlementTokenArg) {
         require(settlementTokenArg == address(0) || settlementTokenArg.isContract(), "PE_C: token address invalid");
@@ -95,6 +96,7 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
         external
         override
         nonReentrant
+        checkDeadline(params.deadline)
         returns (int256 base, int256 quote)
     {
         address trader = _msgSender();
@@ -110,7 +112,6 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
                     isExactInput: params.isExactInput,
                     amount: params.amount,
                     oppositeAmountBound: params.oppositeAmountBound,
-                    deadline: params.deadline,
                     priceLimitConfig: priceLimitConfig,
                     isMarketAllowed: isMarketAllowed[params.market],
                     mmRatio: mmRatio,
@@ -137,6 +138,7 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
         external
         override
         nonReentrant
+        checkDeadline(params.deadline)
         returns (int256 base, int256 quote)
     {
         address trader = params.trader;
@@ -153,7 +155,6 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
                     market: params.market,
                     amount: params.amount,
                     oppositeAmountBound: params.oppositeAmountBound,
-                    deadline: params.deadline,
                     priceLimitConfig: priceLimitConfig,
                     mmRatio: mmRatio,
                     liquidationRewardRatio: liquidationRewardRatio,
@@ -179,6 +180,7 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
         external
         override
         nonReentrant
+        checkDeadline(params.deadline)
         returns (AddLiquidityResponse memory)
     {
         address maker = _msgSender();
@@ -192,7 +194,6 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
                     quote: params.quote,
                     minBase: params.minBase,
                     minQuote: params.minQuote,
-                    deadline: params.deadline,
                     isMarketAllowed: isMarketAllowed[params.market],
                     imRatio: imRatio,
                     maxMarketsPerAccount: maxMarketsPerAccount
@@ -210,12 +211,46 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
         return AddLiquidityResponse({ base: response.base, quote: response.quote, liquidity: response.liquidity });
     }
 
-    function removeLiquidity(RemoveLiquidityParams calldata params)
+    function removeLiquidity(RemoveLiquidityParams calldata params, address maker)
         external
         override
+        nonReentrant
+        checkDeadline(params.deadline)
         returns (RemoveLiquidityResponse memory)
     {
-        return removeLiquidity(params, _msgSender());
+        MakerLibrary.RemoveLiquidityResponse memory response =
+            MakerLibrary.removeLiquidity(
+                accountInfos[maker],
+                MakerLibrary.RemoveLiquidityParams({
+                    market: params.market,
+                    liquidity: params.liquidity,
+                    minBase: params.minBase,
+                    minQuote: params.minQuote,
+                    makerIsSender: maker == _msgSender(),
+                    mmRatio: mmRatio,
+                    maxMarketsPerAccount: maxMarketsPerAccount
+                })
+            );
+
+        emit LiquidityChanged(
+            maker,
+            params.market,
+            response.base.neg256(),
+            response.quote.neg256(),
+            params.liquidity.neg256()
+        );
+
+        emit PositionChanged(
+            maker,
+            params.market,
+            response.takerBase, // exchangedPositionSize
+            response.takerQuote, // exchangedPositionNotional
+            accountInfos[maker].takerInfos[params.market].quoteBalance,
+            response.realizedPnL, // realizedPnl
+            response.priceAfterX96
+        );
+
+        return RemoveLiquidityResponse({ base: response.base, quote: response.quote });
     }
 
     function setPriceLimitConfig(PerpdexStructs.PriceLimitConfig calldata value)
@@ -297,6 +332,7 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
         external
         view
         override
+        checkDeadline(params.deadline)
         returns (int256 base, int256 quote)
     {
         TakerLibrary.OpenPositionResponse memory response =
@@ -309,7 +345,6 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
                     isExactInput: params.isExactInput,
                     amount: params.amount,
                     oppositeAmountBound: params.oppositeAmountBound,
-                    deadline: params.deadline,
                     priceLimitConfig: priceLimitConfig,
                     isMarketAllowed: isMarketAllowed[params.market],
                     mmRatio: mmRatio,
@@ -358,47 +393,5 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
 
     function hasEnoughInitialMargin(address trader) external view override returns (bool) {
         return AccountLibrary.hasEnoughInitialMargin(accountInfos[trader], imRatio);
-    }
-
-    function removeLiquidity(RemoveLiquidityParams calldata params, address maker)
-        public
-        override
-        nonReentrant
-        returns (RemoveLiquidityResponse memory)
-    {
-        MakerLibrary.RemoveLiquidityResponse memory response =
-            MakerLibrary.removeLiquidity(
-                accountInfos[maker],
-                MakerLibrary.RemoveLiquidityParams({
-                    market: params.market,
-                    liquidity: params.liquidity,
-                    minBase: params.minBase,
-                    minQuote: params.minQuote,
-                    deadline: params.deadline,
-                    makerIsSender: maker == _msgSender(),
-                    mmRatio: mmRatio,
-                    maxMarketsPerAccount: maxMarketsPerAccount
-                })
-            );
-
-        emit LiquidityChanged(
-            maker,
-            params.market,
-            response.base.neg256(),
-            response.quote.neg256(),
-            params.liquidity.neg256()
-        );
-
-        emit PositionChanged(
-            maker,
-            params.market,
-            response.takerBase, // exchangedPositionSize
-            response.takerQuote, // exchangedPositionNotional
-            accountInfos[maker].takerInfos[params.market].quoteBalance,
-            response.realizedPnL, // realizedPnl
-            response.priceAfterX96
-        );
-
-        return RemoveLiquidityResponse({ base: response.base, quote: response.quote });
     }
 }

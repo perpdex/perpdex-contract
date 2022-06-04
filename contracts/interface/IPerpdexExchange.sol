@@ -88,10 +88,6 @@ interface IPerpdexExchange {
 
     function addLiquidity(AddLiquidityParams calldata params) external returns (AddLiquidityResponse memory);
 
-    function removeLiquidity(RemoveLiquidityParams calldata params)
-        external
-        returns (RemoveLiquidityResponse memory response);
-
     function removeLiquidity(RemoveLiquidityParams calldata params, address maker)
         external
         returns (RemoveLiquidityResponse memory response);

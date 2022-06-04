@@ -4,6 +4,7 @@ import { TestFundingLibrary } from "../../typechain"
 import { createFundingLibraryFixture } from "./fixtures"
 import { BigNumber, BigNumberish, Wallet } from "ethers"
 import { MockContract } from "ethereum-waffle"
+import { getTimestamp, setNextTimestamp } from "../helper/time"
 
 describe("FundingLibrary processFunding", () => {
     let loadFixture = waffle.createFixtureLoader(waffle.provider.getWallets())
@@ -12,16 +13,6 @@ describe("FundingLibrary processFunding", () => {
     let fundingLibrary: TestFundingLibrary
     let priceFeedBase: MockContract
     let priceFeedQuote: MockContract
-
-    let getTimestamp = async () => {
-        const blockNum = await hre.ethers.provider.getBlockNumber()
-        const block = await hre.ethers.provider.getBlock(blockNum)
-        return block.timestamp
-    }
-
-    let setNextTimestamp = async value => {
-        await hre.ethers.provider.send("evm_setNextBlockTimestamp", [value])
-    }
 
     beforeEach(async () => {
         fixture = await loadFixture(createFundingLibraryFixture())

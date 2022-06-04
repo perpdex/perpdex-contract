@@ -26,7 +26,6 @@ library MakerLibrary {
         uint256 quote;
         uint256 minBase;
         uint256 minQuote;
-        uint256 deadline;
         bool isMarketAllowed;
         uint24 imRatio;
         uint8 maxMarketsPerAccount;
@@ -43,7 +42,6 @@ library MakerLibrary {
         uint256 liquidity;
         uint256 minBase;
         uint256 minQuote;
-        uint256 deadline;
         bool makerIsSender;
         uint24 mmRatio;
         uint8 maxMarketsPerAccount;
@@ -58,14 +56,8 @@ library MakerLibrary {
         uint256 priceAfterX96;
     }
 
-    modifier checkDeadline(uint256 deadline) {
-        require(block.timestamp <= deadline, "ML_CD: too late");
-        _;
-    }
-
     function addLiquidity(PerpdexStructs.AccountInfo storage accountInfo, AddLiquidityParams memory params)
         internal
-        checkDeadline(params.deadline)
         returns (AddLiquidityResponse memory)
     {
         require(params.isMarketAllowed, "ML_AL: add liquidity forbidden");
@@ -75,6 +67,9 @@ library MakerLibrary {
 
         (uint256 baseShare, uint256 quoteBalance, uint256 liquidity) =
             IPerpdexMarket(params.market).addLiquidity(params.base, params.quote);
+
+        require(baseShare >= params.minBase, "ML_AL: too small output base");
+        require(quoteBalance >= params.minQuote, "ML_AL: too small output quote");
 
         (uint256 cumDeleveragedBaseSharePerLiquidityX96, uint256 cumDeleveragedQuotePerLiquidityX96) =
             IPerpdexMarket(params.market).getCumDeleveragedPerLiquidityX96();
@@ -89,15 +84,11 @@ library MakerLibrary {
 
         require(AccountLibrary.hasEnoughInitialMargin(accountInfo, params.imRatio), "ML_AL: not enough im");
 
-        require(baseShare >= params.minBase, "ML_AL: too small output base");
-        require(quoteBalance >= params.minQuote, "ML_AL: too small output quote");
-
         return AddLiquidityResponse({ base: baseShare, quote: quoteBalance, liquidity: liquidity });
     }
 
     function removeLiquidity(PerpdexStructs.AccountInfo storage accountInfo, RemoveLiquidityParams memory params)
         internal
-        checkDeadline(params.deadline)
         returns (RemoveLiquidityResponse memory funcResponse)
     {
         if (!params.makerIsSender) {
