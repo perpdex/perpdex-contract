@@ -1,18 +1,17 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity 0.7.6;
 
-import "@openzeppelin/contracts-upgradeable/proxy/Initializable.sol";
-import "@openzeppelin/contracts-upgradeable/presets/ERC20PresetMinterPauserUpgradeable.sol";
+import "@openzeppelin/contracts/proxy/Initializable.sol";
+import "@openzeppelin/contracts/presets/ERC20PresetMinterPauser.sol";
 
-contract TestERC20 is ERC20PresetMinterPauserUpgradeable {
+contract TestERC20 is ERC20PresetMinterPauser {
     uint256 _transferFeeRatio;
 
-    function __TestERC20_init(
+    constructor(
         string memory name,
         string memory symbol,
         uint8 decimal
-    ) public initializer {
-        __ERC20PresetMinterPauser_init(name, symbol);
+    ) ERC20PresetMinterPauser(name, symbol) {
         _setupDecimals(decimal);
         _transferFeeRatio = 0;
     }
