@@ -43,7 +43,8 @@
     "flatten": "ts-node --files scripts/flatten.ts",
     "slither": "ts-node --files scripts/slither.ts",
     "getPairCodeHash": "ts-node --files scripts/getPairCodeHash.ts",
-    "coverage": "hardhat coverage"
+    "coverage": "hardhat coverage",
+    "code-lines": "npx cloc contracts"
   },
   "devDependencies": {
     "@chainlink/contracts": "0.1.7",
@@ -69,6 +70,7 @@
     "@uniswap/v3-core": "https://github.com/Uniswap/uniswap-v3-core/tarball/v1.0.0",
     "bignumber.js": "9.0.1",
     "chai": "4.3.4",
+    "cloc": "^2.9.0",
     "dotenv": "^16.0.1",
     "eslint-config-prettier": "8.3.0",
     "ethereum-waffle": "3.4.0",
