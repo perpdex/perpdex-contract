@@ -76,7 +76,7 @@ interface IPerpdexExchange {
         uint256 priceAfterX96
     );
 
-    function deposit(uint256 amount) external;
+    function deposit(uint256 amount) external payable;
 
     function withdraw(uint256 amount) external;
 

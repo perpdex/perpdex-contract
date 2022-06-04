@@ -62,7 +62,7 @@ describe("Vault deposit test", () => {
         })
 
         it("force error, zero amount", async () => {
-            await expect(perpdexExchange.connect(alice).deposit(parseUsdc("0"))).to.be.revertedWith("V_ZA")
+            await expect(perpdexExchange.connect(alice).deposit(parseUsdc("0"))).to.be.revertedWith("VL_D: zero amount")
         })
     })
 })
