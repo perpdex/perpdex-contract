@@ -46,15 +46,6 @@ library PerpMath {
         return -SafeCast.toInt256(a);
     }
 
-    function neg128(int128 a) internal pure returns (int128) {
-        require(a > -2**127, "PerpMath: inversion overflow");
-        return -a;
-    }
-
-    function neg128(uint128 a) internal pure returns (int128) {
-        return -SafeCast.toInt128(a);
-    }
-
     function divBy10_18(int256 value) internal pure returns (int256) {
         // no overflow here
         return value / (1 ether);
@@ -63,11 +54,6 @@ library PerpMath {
     function divBy10_18(uint256 value) internal pure returns (uint256) {
         // no overflow here
         return value / (1 ether);
-    }
-
-    function subRatio(uint24 a, uint24 b) internal pure returns (uint24) {
-        require(b <= a, "PerpMath: subtraction overflow");
-        return a - b;
     }
 
     function mulRatio(uint256 value, uint24 ratio) internal pure returns (uint256) {
