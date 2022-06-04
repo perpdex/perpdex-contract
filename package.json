@@ -1,5 +1,5 @@
 {
-  "name": "@perp/curie-contract",
+  "name": "@perpdex/perpdex-contract",
   "version": "1.2.0",
   "description": "Perpetual Protocol Curie (V2) core contracts",
   "license": "GPL-3.0-or-later",
@@ -44,7 +44,7 @@
     "slither": "ts-node --files scripts/slither.ts",
     "getPairCodeHash": "ts-node --files scripts/getPairCodeHash.ts",
     "coverage": "hardhat coverage",
-    "code-lines": "npx cloc contracts"
+    "code-lines": "npx cloc --exclude-dir=test contracts"
   },
   "devDependencies": {
     "@chainlink/contracts": "0.1.7",
