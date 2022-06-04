@@ -12,8 +12,7 @@ export function createPerpdexExchangeFixture(): () => Promise<PerpdexExchangeFix
     return async (): Promise<PerpdexExchangeFixture> => {
         // deploy test tokens
         const tokenFactory = await ethers.getContractFactory("TestERC20")
-        const USDC = (await tokenFactory.deploy()) as TestERC20
-        await USDC.__TestERC20_init("TestUSDC", "USDC", 6)
+        const USDC = (await tokenFactory.deploy("TestUSDC", "USDC", 6)) as TestERC20
 
         const perpdexExchangeFactory = await ethers.getContractFactory("PerpdexExchange")
         const perpdexExchange = (await perpdexExchangeFactory.deploy(USDC.address)) as PerpdexExchange
