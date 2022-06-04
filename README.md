@@ -45,3 +45,15 @@ See [CHANGELOG](https://github.com/perpdex/perpdex-contract/blob/main/CHANGELOG.
 
 - [perpdex-oracle-contract](https://github.com/perpdex/perpdex-oracle-contract)
 - [perpdex-subgraph](https://github.com/perpdex/perpdex-subgraph)
+
+## For auditors
+
+Target repositories
+
+- [perpdex-contract](https://github.com/perpdex/perpdex-contract)
+- [perpdex-oracle-contract](https://github.com/perpdex/perpdex-oracle-contract)
+- [perpdex-stablecoin](https://github.com/perpdex/perpdex-stablecoin)
+
+Target files
+
+- all *.sol files in contracts dir (except for contracts/test)
