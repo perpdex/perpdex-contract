@@ -93,8 +93,8 @@ describe("PerpdexMarket config", () => {
 
     describe("setFundingRolloverSec", async () => {
         it("ok", async () => {
-            await market.connect(owner).setFundingRolloverSec(0)
-            expect(await market.fundingRolloverSec()).to.eq(0)
+            await market.connect(owner).setFundingRolloverSec(60 * 60)
+            expect(await market.fundingRolloverSec()).to.eq(60 * 60)
             await market.connect(owner).setFundingRolloverSec(7 * 24 * 60 * 60)
             expect(await market.fundingRolloverSec()).to.eq(7 * 24 * 60 * 60)
         })
@@ -102,6 +102,12 @@ describe("PerpdexMarket config", () => {
         it("revert when not owner", async () => {
             await expect(market.connect(alice).setFundingRolloverSec(1)).to.be.revertedWith(
                 "Ownable: caller is not the owner",
+            )
+        })
+
+        it("revert when too small", async () => {
+            await expect(market.connect(owner).setFundingRolloverSec(60 * 60 - 1)).to.be.revertedWith(
+                "PM_SFRS: too small",
             )
         })
 
