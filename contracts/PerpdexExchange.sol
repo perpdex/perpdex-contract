@@ -55,14 +55,15 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
         if (settlementToken == address(0)) {
             require(amount == 0, "PE_D: amount not zero");
             VaultLibrary.depositEth(accountInfos[trader], msg.value);
+            emit Deposited(trader, msg.value);
         } else {
             require(msg.value == 0, "PE_D: msg.value not zero");
             VaultLibrary.deposit(
                 accountInfos[trader],
                 VaultLibrary.DepositParams({ settlementToken: settlementToken, amount: amount, from: trader })
             );
+            emit Deposited(trader, amount);
         }
-        emit Deposited(trader, amount);
     }
 
     function withdraw(uint256 amount) external override nonReentrant {
@@ -328,11 +329,10 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
 
     // dry run
 
-    function openPositionDry(OpenPositionParams calldata params, address trader)
+    function openPositionDry(OpenPositionDryParams calldata params, address trader)
         external
         view
         override
-        checkDeadline(params.deadline)
         returns (int256 base, int256 quote)
     {
         TakerLibrary.OpenPositionResponse memory response =
