@@ -64,15 +64,42 @@ interface IPerpdexExchange {
     event ProtocolFeeTransferred(address indexed trader, uint256 amount);
 
     event PositionLiquidated(
-        address indexed trader,
-        address indexed market,
-        uint256 positionNotional,
+        address trader,
+        address market,
+        int256 amount,
         uint256 positionSize,
+        uint256 positionNotional,
         uint256 liquidationFee,
-        address liquidator
+        address liquidator,
+        int256 oppositeAmountBound,
+        uint256 deadline,
+        uint24 priceLimitNormalOrderRatio,
+        uint24 priceLimitLiquidationRatio,
+        uint24 mmRatio,
+        uint24 liquidationRewardRatio,
+        uint8 maxMarketsPerAccount,
+        uint24 protocolFeeRatio,
+        bool isBaseToQuote,
+        bool isExactInput,
+        int256 penalty,
+        int256 intliquidatorReward,
+        int256 insuranceFundReward
     );
 
-    event LiquidityChanged(address indexed maker, address indexed market, int256 base, int256 quote, int256 liquidity);
+    event LiquidityChanged(
+        address trader,
+        address market,
+        uint256 base,
+        uint256 quote,
+        uint256 liquidity,
+        uint256 minBase,
+        uint256 minQuote,
+        uint256 deadline,
+        uint24 imRatio,
+        uint8 maxMarketsPerAccount,
+        uint256 cumDeleveragedBaseSharePerLiquidityX96,
+        uint256 cumDeleveragedQuotePerLiquidityX96
+    );
 
     event PositionChanged(
         address indexed trader,
@@ -81,7 +108,18 @@ interface IPerpdexExchange {
         int256 exchangedPositionNotional,
         int256 openNotional,
         int256 realizedPnl,
-        uint256 priceAfterX96
+        uint256 priceAfterX96,
+        int256 tradingFee,
+        bool isBaseToQuote,
+        bool isExactInput,
+        uint256 oppositeAmountBound,
+        uint256 deadline,
+        uint8 maxMarketsPerAccount,
+        uint24 protocolFeeRatio,
+        uint24 priceLimitNormalOrderRatio,
+        uint24 priceLimitLiquidationRatio,
+        uint24 mmRatio,
+        uint24 imRatio
     );
 
     event IsMarketAllowedChanged(address indexed market, bool isMarketAllowed);
