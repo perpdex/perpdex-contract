@@ -9,11 +9,13 @@ contract TestTakerLibrary {
     constructor() {}
 
     event AddToTakerBalanceResult(int256 realizedPnl);
+    event SwapWithProtocolFeeResult(uint256 oppositeAmount, uint256 protocolFee);
     event ProcessLiquidationFeeResult(uint256 liquidatorReward, uint256 insuranceFundReward);
 
     PerpdexStructs.AccountInfo public accountInfo;
     PerpdexStructs.VaultInfo public liquidatorVaultInfo;
     PerpdexStructs.InsuranceFundInfo public insuranceFundInfo;
+    PerpdexStructs.ProtocolInfo public protocolInfo;
 
     function addToTakerBalance(
         address market,
@@ -32,6 +34,35 @@ contract TestTakerLibrary {
                 maxMarketsPerAccount
             );
         emit AddToTakerBalanceResult(realizedPnl);
+    }
+
+    function swapWithProtocolFee(
+        address market,
+        bool isBaseToQuote,
+        bool isExactInput,
+        uint256 amount,
+        uint24 protocolFeeRatio
+    ) external {
+        (uint256 oppositeAmount, uint256 protocolFee) =
+            TakerLibrary.swapWithProtocolFee(
+                protocolInfo,
+                market,
+                isBaseToQuote,
+                isExactInput,
+                amount,
+                protocolFeeRatio
+            );
+        emit SwapWithProtocolFeeResult(oppositeAmount, protocolFee);
+    }
+
+    function swapWithProtocolFeeDry(
+        address market,
+        bool isBaseToQuote,
+        bool isExactInput,
+        uint256 amount,
+        uint24 protocolFeeRatio
+    ) external view returns (uint256 oppositeAmount, uint256 protocolFee) {
+        return TakerLibrary.swapWithProtocolFeeDry(market, isBaseToQuote, isExactInput, amount, protocolFeeRatio);
     }
 
     function processLiquidationFee(
@@ -79,6 +110,10 @@ contract TestTakerLibrary {
 
     function setInsuranceFundInfo(PerpdexStructs.InsuranceFundInfo memory value) external {
         insuranceFundInfo = value;
+    }
+
+    function setProtocolInfo(PerpdexStructs.ProtocolInfo memory value) external {
+        protocolInfo = value;
     }
 
     function setTakerInfo(address market, PerpdexStructs.TakerInfo memory value) external {

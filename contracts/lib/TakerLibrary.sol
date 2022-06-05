@@ -239,18 +239,24 @@ library TakerLibrary {
         uint256 amount,
         uint24 protocolFeeRatio
     ) internal returns (uint256 oppositeAmount, uint256 protocolFee) {
-        if (isBaseToQuote == isExactInput) {
-            // exact base
-            oppositeAmount = IPerpdexMarket(market).swap(isBaseToQuote, isExactInput, amount);
-
-            protocolFee = oppositeAmount.mulRatio(protocolFeeRatio);
-            oppositeAmount = isExactInput ? oppositeAmount.sub(protocolFee) : oppositeAmount.add(protocolFee);
+        if (isExactInput) {
+            if (isBaseToQuote) {
+                oppositeAmount = IPerpdexMarket(market).swap(isBaseToQuote, isExactInput, amount);
+                protocolFee = oppositeAmount.mulRatio(protocolFeeRatio);
+                oppositeAmount = oppositeAmount.sub(protocolFee);
+            } else {
+                protocolFee = amount.mulRatio(protocolFeeRatio);
+                oppositeAmount = IPerpdexMarket(market).swap(isBaseToQuote, isExactInput, amount.sub(protocolFee));
+            }
         } else {
-            // exact quote
-            protocolFee = amount.sub(amount.divRatio(1e6 + protocolFeeRatio));
-            uint256 modifiedAmount = isExactInput ? amount.sub(protocolFee) : amount.add(protocolFee);
-
-            oppositeAmount = IPerpdexMarket(market).swap(isBaseToQuote, isExactInput, modifiedAmount);
+            if (isBaseToQuote) {
+                protocolFee = amount.divRatio(PerpMath.subRatio(1e6, protocolFeeRatio)).sub(amount);
+                oppositeAmount = IPerpdexMarket(market).swap(isBaseToQuote, isExactInput, amount.add(protocolFee));
+            } else {
+                uint256 oppositeAmountWithoutFee = IPerpdexMarket(market).swap(isBaseToQuote, isExactInput, amount);
+                oppositeAmount = oppositeAmountWithoutFee.divRatio(PerpMath.subRatio(1e6, protocolFeeRatio));
+                protocolFee = oppositeAmount.sub(oppositeAmountWithoutFee);
+            }
         }
 
         protocolInfo.protocolFee = protocolInfo.protocolFee.add(protocolFee);
@@ -280,18 +286,24 @@ library TakerLibrary {
         uint256 amount,
         uint24 protocolFeeRatio
     ) internal view returns (uint256 oppositeAmount, uint256 protocolFee) {
-        if (isBaseToQuote == isExactInput) {
-            // exact base
-            oppositeAmount = IPerpdexMarket(market).swapDry(isBaseToQuote, isExactInput, amount);
-
-            protocolFee = oppositeAmount.mulRatio(protocolFeeRatio);
-            oppositeAmount = isExactInput ? oppositeAmount.sub(protocolFee) : oppositeAmount.add(protocolFee);
+        if (isExactInput) {
+            if (isBaseToQuote) {
+                oppositeAmount = IPerpdexMarket(market).swapDry(isBaseToQuote, isExactInput, amount);
+                protocolFee = oppositeAmount.mulRatio(protocolFeeRatio);
+                oppositeAmount = oppositeAmount.sub(protocolFee);
+            } else {
+                protocolFee = amount.mulRatio(protocolFeeRatio);
+                oppositeAmount = IPerpdexMarket(market).swapDry(isBaseToQuote, isExactInput, amount.sub(protocolFee));
+            }
         } else {
-            // exact quote
-            protocolFee = amount.sub(amount.divRatio(1e6 + protocolFeeRatio));
-            uint256 modifiedAmount = isExactInput ? amount.sub(protocolFee) : amount.add(protocolFee);
-
-            oppositeAmount = IPerpdexMarket(market).swapDry(isBaseToQuote, isExactInput, modifiedAmount);
+            if (isBaseToQuote) {
+                protocolFee = amount.divRatio(PerpMath.subRatio(1e6, protocolFeeRatio)).sub(amount);
+                oppositeAmount = IPerpdexMarket(market).swapDry(isBaseToQuote, isExactInput, amount.add(protocolFee));
+            } else {
+                uint256 oppositeAmountWithoutFee = IPerpdexMarket(market).swapDry(isBaseToQuote, isExactInput, amount);
+                oppositeAmount = oppositeAmountWithoutFee.divRatio(PerpMath.subRatio(1e6, protocolFeeRatio));
+                protocolFee = oppositeAmount.sub(oppositeAmountWithoutFee);
+            }
         }
     }
 
