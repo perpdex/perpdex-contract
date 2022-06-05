@@ -59,6 +59,15 @@ contract TestTakerLibrary {
         TakerLibrary.validateSlippage(isExactInput, oppositeAmount, oppositeAmountBound);
     }
 
+    function swapResponseToBaseQuote(
+        bool isBaseToQuote,
+        bool isExactInput,
+        uint256 amount,
+        uint256 oppositeAmount
+    ) external pure returns (int256, int256) {
+        return TakerLibrary.swapResponseToBaseQuote(isBaseToQuote, isExactInput, amount, oppositeAmount);
+    }
+
     function setAccountInfo(PerpdexStructs.VaultInfo memory value, address[] memory markets) external {
         accountInfo.vaultInfo = value;
         accountInfo.markets = markets;

@@ -312,7 +312,7 @@ library TakerLibrary {
         bool isExactInput,
         uint256 amount,
         uint256 oppositeAmount
-    ) private pure returns (int256, int256) {
+    ) internal pure returns (int256, int256) {
         if (isExactInput) {
             if (isBaseToQuote) {
                 return (amount.neg256(), oppositeAmount.toInt256());
