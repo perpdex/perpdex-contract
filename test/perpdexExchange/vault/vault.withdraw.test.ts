@@ -17,7 +17,11 @@ describe("Vault withdraw test", () => {
     }
 
     beforeEach(async () => {
-        fixture = await loadFixture(createPerpdexExchangeFixture())
+        fixture = await loadFixture(
+            createPerpdexExchangeFixture({
+                linear: true,
+            }),
+        )
         perpdexExchange = fixture.perpdexExchange
         usdc = fixture.USDC
         usdcDecimals = await usdc.decimals()

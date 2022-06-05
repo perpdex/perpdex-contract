@@ -26,7 +26,6 @@ library TakerLibrary {
         bool isExactInput;
         uint256 amount;
         uint256 oppositeAmountBound;
-        uint256 deadline;
         PerpdexStructs.PriceLimitConfig priceLimitConfig;
         bool isMarketAllowed;
         uint24 mmRatio;
@@ -46,7 +45,6 @@ library TakerLibrary {
         address market;
         uint256 amount;
         uint256 oppositeAmountBound;
-        uint256 deadline;
         PerpdexStructs.PriceLimitConfig priceLimitConfig;
         uint24 mmRatio;
         uint24 liquidationRewardRatio;
@@ -61,17 +59,12 @@ library TakerLibrary {
         uint256 priceAfterX96;
     }
 
-    modifier checkDeadline(uint256 deadline) {
-        require(block.timestamp <= deadline, "TL_CD: too late");
-        _;
-    }
-
     function openPosition(
         PerpdexStructs.AccountInfo storage accountInfo,
         PerpdexStructs.PriceLimitInfo storage priceLimitInfo,
         PerpdexStructs.ProtocolInfo storage protocolInfo,
         OpenPositionParams memory params
-    ) internal checkDeadline(params.deadline) returns (OpenPositionResponse memory) {
+    ) internal returns (OpenPositionResponse memory) {
         require(AccountLibrary.hasEnoughMaintenanceMargin(accountInfo, params.mmRatio), "TL_OP: not enough mm");
 
         (int256 exchangedBase, int256 exchangedQuote, int256 realizedPnL) =
@@ -119,7 +112,7 @@ library TakerLibrary {
         PerpdexStructs.ProtocolInfo storage protocolInfo,
         PerpdexStructs.InsuranceFundInfo storage insuranceFundInfo,
         LiquidateParams memory params
-    ) internal checkDeadline(params.deadline) returns (LiquidateResponse memory result) {
+    ) internal returns (LiquidateResponse memory result) {
         require(!AccountLibrary.hasEnoughMaintenanceMargin(accountInfo, params.mmRatio), "TL_L: enough mm");
 
         bool isLong;
@@ -201,7 +194,7 @@ library TakerLibrary {
         PerpdexStructs.AccountInfo storage accountInfo,
         PerpdexStructs.PriceLimitInfo storage priceLimitInfo,
         OpenPositionParams memory params
-    ) internal view checkDeadline(params.deadline) returns (OpenPositionResponse memory) {
+    ) internal view returns (OpenPositionResponse memory) {
         require(AccountLibrary.hasEnoughMaintenanceMargin(accountInfo, params.mmRatio), "TL_OPD: not enough mm");
 
         (int256 exchangedBase, int256 exchangedQuote) =
@@ -212,7 +205,8 @@ library TakerLibrary {
                 params.isBaseToQuote,
                 params.isExactInput,
                 params.amount,
-                params.oppositeAmountBound
+                params.oppositeAmountBound,
+                params.protocolFeeRatio
             );
 
         if (!params.isMarketAllowed) {
@@ -297,7 +291,7 @@ library TakerLibrary {
             // exact quote
             protocolFee = amount.sub(amount.divRatio(1e6 + protocolFeeRatio));
 
-            (base, ) = MarketLibrary.swap(market, isBaseToQuote, isExactInput, amount.sub(protocolInfo.protocolFee));
+            (base, ) = MarketLibrary.swap(market, isBaseToQuote, isExactInput, amount.sub(protocolFee));
             quote = isBaseToQuote ? amount.toInt256() : amount.neg256();
         }
 
@@ -334,11 +328,26 @@ library TakerLibrary {
         bool isBaseToQuote,
         bool isExactInput,
         uint256 amount,
-        uint256 oppositeAmountBound
+        uint256 oppositeAmountBound,
+        uint24 protocolFeeRatio
     ) private view returns (int256 base, int256 quote) {
         // disable price limit
 
-        (base, quote) = MarketLibrary.swapDry(market, isBaseToQuote, isExactInput, amount);
+        uint256 protocolFee;
+
+        if (isBaseToQuote == isExactInput) {
+            // exact base
+            (base, quote) = MarketLibrary.swapDry(market, isBaseToQuote, isExactInput, amount);
+
+            protocolFee = quote.abs().mulRatio(protocolFeeRatio);
+            quote = quote.sub(protocolFee.toInt256());
+        } else {
+            // exact quote
+            protocolFee = amount.sub(amount.divRatio(1e6 + protocolFeeRatio));
+
+            (base, ) = MarketLibrary.swapDry(market, isBaseToQuote, isExactInput, amount.sub(protocolFee));
+            quote = isBaseToQuote ? amount.toInt256() : amount.neg256();
+        }
 
         _validateSlippage(isBaseToQuote, isExactInput, base, quote, oppositeAmountBound);
     }

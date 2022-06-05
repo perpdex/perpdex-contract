@@ -42,6 +42,14 @@ interface IPerpdexExchange {
         uint256 deadline;
     }
 
+    struct OpenPositionDryParams {
+        address market;
+        bool isBaseToQuote;
+        bool isExactInput;
+        uint256 amount;
+        uint256 oppositeAmountBound;
+    }
+
     struct LiquidateParams {
         address trader;
         address market;
@@ -88,10 +96,6 @@ interface IPerpdexExchange {
 
     function addLiquidity(AddLiquidityParams calldata params) external returns (AddLiquidityResponse memory);
 
-    function removeLiquidity(RemoveLiquidityParams calldata params)
-        external
-        returns (RemoveLiquidityResponse memory response);
-
     function removeLiquidity(RemoveLiquidityParams calldata params, address maker)
         external
         returns (RemoveLiquidityResponse memory response);
@@ -118,7 +122,7 @@ interface IPerpdexExchange {
 
     // dry run getters
 
-    function openPositionDry(OpenPositionParams calldata params, address trader)
+    function openPositionDry(OpenPositionDryParams calldata params, address trader)
         external
         view
         returns (int256 base, int256 quote);

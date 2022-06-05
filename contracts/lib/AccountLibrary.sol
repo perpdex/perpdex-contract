@@ -52,20 +52,25 @@ library AccountLibrary {
             PerpdexStructs.MakerInfo storage makerInfo = accountInfo.makerInfos[market];
             int256 baseShare = accountInfo.takerInfos[market].baseBalanceShare.sub(makerInfo.baseDebtShare.toInt256());
             int256 quoteBalance = accountInfo.takerInfos[market].quoteBalance.sub(makerInfo.quoteDebt.toInt256());
-            (uint256 poolBaseShare, uint256 poolQuoteBalance) =
-                IPerpdexMarket(market).getLiquidityValue(makerInfo.liquidity);
-            (uint256 deleveragedBaseShare, uint256 deleveragedQuoteBalance) =
-                IPerpdexMarket(market).getLiquidityDeleveraged(
-                    makerInfo.liquidity,
-                    makerInfo.cumDeleveragedBaseSharePerLiquidityX96,
-                    makerInfo.cumDeleveragedQuotePerLiquidityX96
-                );
 
-            int256 positionShare = baseShare.add(poolBaseShare.add(deleveragedBaseShare).toInt256());
-            uint256 sharePriceX96 = IPerpdexMarket(market).getShareMarkPriceX96();
+            if (makerInfo.liquidity != 0) {
+                (uint256 poolBaseShare, uint256 poolQuoteBalance) =
+                    IPerpdexMarket(market).getLiquidityValue(makerInfo.liquidity);
+                (uint256 deleveragedBaseShare, uint256 deleveragedQuoteBalance) =
+                    IPerpdexMarket(market).getLiquidityDeleveraged(
+                        makerInfo.liquidity,
+                        makerInfo.cumDeleveragedBaseSharePerLiquidityX96,
+                        makerInfo.cumDeleveragedQuotePerLiquidityX96
+                    );
+                baseShare = baseShare.add(poolBaseShare.add(deleveragedBaseShare).toInt256());
+                quoteBalance = quoteBalance.add(poolQuoteBalance.add(deleveragedQuoteBalance).toInt256());
+            }
 
-            accountValue = accountValue.add(positionShare.mulDiv(sharePriceX96.toInt256(), FixedPoint96.Q96));
-            accountValue = accountValue.add(quoteBalance.add(poolQuoteBalance.add(deleveragedQuoteBalance).toInt256()));
+            if (baseShare != 0) {
+                uint256 sharePriceX96 = IPerpdexMarket(market).getShareMarkPriceX96();
+                accountValue = accountValue.add(baseShare.mulDiv(sharePriceX96.toInt256(), FixedPoint96.Q96));
+            }
+            accountValue = accountValue.add(quoteBalance);
         }
         return accountValue;
     }
@@ -73,18 +78,20 @@ library AccountLibrary {
     function getPositionShare(PerpdexStructs.AccountInfo storage accountInfo, address market)
         internal
         view
-        returns (int256)
+        returns (int256 baseShare)
     {
         PerpdexStructs.MakerInfo storage makerInfo = accountInfo.makerInfos[market];
-        int256 baseShare = accountInfo.takerInfos[market].baseBalanceShare.sub(makerInfo.baseDebtShare.toInt256());
-        (uint256 poolBaseShare, ) = IPerpdexMarket(market).getLiquidityValue(makerInfo.liquidity);
-        (uint256 deleveragedBaseShare, ) =
-            IPerpdexMarket(market).getLiquidityDeleveraged(
-                makerInfo.liquidity,
-                makerInfo.cumDeleveragedBaseSharePerLiquidityX96,
-                makerInfo.cumDeleveragedQuotePerLiquidityX96
-            );
-        return baseShare.add(poolBaseShare.add(deleveragedBaseShare).toInt256());
+        baseShare = accountInfo.takerInfos[market].baseBalanceShare.sub(makerInfo.baseDebtShare.toInt256());
+        if (makerInfo.liquidity != 0) {
+            (uint256 poolBaseShare, ) = IPerpdexMarket(market).getLiquidityValue(makerInfo.liquidity);
+            (uint256 deleveragedBaseShare, ) =
+                IPerpdexMarket(market).getLiquidityDeleveraged(
+                    makerInfo.liquidity,
+                    makerInfo.cumDeleveragedBaseSharePerLiquidityX96,
+                    makerInfo.cumDeleveragedQuotePerLiquidityX96
+                );
+            baseShare = baseShare.add(poolBaseShare.add(deleveragedBaseShare).toInt256());
+        }
     }
 
     function getPositionNotional(PerpdexStructs.AccountInfo storage accountInfo, address market)
@@ -93,6 +100,7 @@ library AccountLibrary {
         returns (int256)
     {
         int256 positionShare = getPositionShare(accountInfo, market);
+        if (positionShare == 0) return 0;
         uint256 sharePriceX96 = IPerpdexMarket(market).getShareMarkPriceX96();
         return positionShare.mulDiv(sharePriceX96.toInt256(), FixedPoint96.Q96);
     }
@@ -111,11 +119,14 @@ library AccountLibrary {
     function getOpenPositionShare(PerpdexStructs.AccountInfo storage accountInfo, address market)
         internal
         view
-        returns (uint256)
+        returns (uint256 result)
     {
         PerpdexStructs.MakerInfo storage makerInfo = accountInfo.makerInfos[market];
-        (uint256 poolBaseShare, ) = IPerpdexMarket(market).getLiquidityValue(makerInfo.liquidity);
-        return getPositionShare(accountInfo, market).abs().add(poolBaseShare);
+        result = getPositionShare(accountInfo, market).abs();
+        if (makerInfo.liquidity != 0) {
+            (uint256 poolBaseShare, ) = IPerpdexMarket(market).getLiquidityValue(makerInfo.liquidity);
+            result = result.add(poolBaseShare);
+        }
     }
 
     function getOpenPositionNotional(PerpdexStructs.AccountInfo storage accountInfo, address market)
@@ -124,6 +135,7 @@ library AccountLibrary {
         returns (uint256)
     {
         uint256 positionShare = getOpenPositionShare(accountInfo, market);
+        if (positionShare == 0) return 0;
         uint256 sharePriceX96 = IPerpdexMarket(market).getShareMarkPriceX96();
         return FullMath.mulDiv(positionShare, sharePriceX96, FixedPoint96.Q96);
     }

@@ -17,7 +17,11 @@ describe("Vault deposit test", () => {
     }
 
     beforeEach(async () => {
-        fixture = await loadFixture(createPerpdexExchangeFixture())
+        fixture = await loadFixture(
+            createPerpdexExchangeFixture({
+                linear: true,
+            }),
+        )
         perpdexExchange = fixture.perpdexExchange
         usdc = fixture.USDC
         usdcDecimals = await usdc.decimals()
@@ -65,6 +69,13 @@ describe("Vault deposit test", () => {
 
         it("force error, zero amount", async () => {
             await expect(perpdexExchange.connect(alice).deposit(parseUsdc("0"))).to.be.revertedWith("VL_D: zero amount")
+        })
+
+        it("force error, value is not zero", async () => {
+            const amount = parseUsdc("100")
+            await expect(perpdexExchange.connect(alice).deposit(amount, { value: 1 })).to.be.revertedWith(
+                "PE_D: msg.value not zero",
+            )
         })
     })
 })
