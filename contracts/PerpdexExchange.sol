@@ -287,7 +287,7 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
     }
 
     function setProtocolFeeRatio(uint24 value) external override onlyOwner nonReentrant {
-        require(value < 1e4, "PE_SPFR: too large");
+        require(value <= 1e4, "PE_SPFR: too large");
         protocolFeeRatio = value;
     }
 

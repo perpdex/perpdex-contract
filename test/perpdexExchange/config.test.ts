@@ -146,8 +146,8 @@ describe("PerpdexExchange config", () => {
         it("ok", async () => {
             await exchange.connect(owner).setProtocolFeeRatio(0)
             expect(await exchange.protocolFeeRatio()).to.eq(0)
-            await exchange.connect(owner).setProtocolFeeRatio(1e4 - 1)
-            expect(await exchange.protocolFeeRatio()).to.eq(1e4 - 1)
+            await exchange.connect(owner).setProtocolFeeRatio(1e4)
+            expect(await exchange.protocolFeeRatio()).to.eq(1e4)
         })
 
         it("revert when not owner", async () => {
@@ -157,7 +157,7 @@ describe("PerpdexExchange config", () => {
         })
 
         it("revert when too large", async () => {
-            await expect(exchange.connect(owner).setProtocolFeeRatio(1e4)).to.be.revertedWith("PE_SPFR: too large")
+            await expect(exchange.connect(owner).setProtocolFeeRatio(1e4 + 1)).to.be.revertedWith("PE_SPFR: too large")
         })
     })
 

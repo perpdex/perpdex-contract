@@ -205,7 +205,8 @@ library TakerLibrary {
                 params.isBaseToQuote,
                 params.isExactInput,
                 params.amount,
-                params.oppositeAmountBound
+                params.oppositeAmountBound,
+                params.protocolFeeRatio
             );
 
         if (!params.isMarketAllowed) {
@@ -290,7 +291,7 @@ library TakerLibrary {
             // exact quote
             protocolFee = amount.sub(amount.divRatio(1e6 + protocolFeeRatio));
 
-            (base, ) = MarketLibrary.swap(market, isBaseToQuote, isExactInput, amount.sub(protocolInfo.protocolFee));
+            (base, ) = MarketLibrary.swap(market, isBaseToQuote, isExactInput, amount.sub(protocolFee));
             quote = isBaseToQuote ? amount.toInt256() : amount.neg256();
         }
 
@@ -327,11 +328,26 @@ library TakerLibrary {
         bool isBaseToQuote,
         bool isExactInput,
         uint256 amount,
-        uint256 oppositeAmountBound
+        uint256 oppositeAmountBound,
+        uint24 protocolFeeRatio
     ) private view returns (int256 base, int256 quote) {
         // disable price limit
 
-        (base, quote) = MarketLibrary.swapDry(market, isBaseToQuote, isExactInput, amount);
+        uint256 protocolFee;
+
+        if (isBaseToQuote == isExactInput) {
+            // exact base
+            (base, quote) = MarketLibrary.swapDry(market, isBaseToQuote, isExactInput, amount);
+
+            protocolFee = quote.abs().mulRatio(protocolFeeRatio);
+            quote = quote.sub(protocolFee.toInt256());
+        } else {
+            // exact quote
+            protocolFee = amount.sub(amount.divRatio(1e6 + protocolFeeRatio));
+
+            (base, ) = MarketLibrary.swapDry(market, isBaseToQuote, isExactInput, amount.sub(protocolFee));
+            quote = isBaseToQuote ? amount.toInt256() : amount.neg256();
+        }
 
         _validateSlippage(isBaseToQuote, isExactInput, base, quote, oppositeAmountBound);
     }
