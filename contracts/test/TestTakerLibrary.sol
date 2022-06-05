@@ -77,6 +77,10 @@ contract TestTakerLibrary {
         liquidatorVaultInfo = value;
     }
 
+    function setInsuranceFundInfo(PerpdexStructs.InsuranceFundInfo memory value) external {
+        insuranceFundInfo = value;
+    }
+
     function setTakerInfo(address market, PerpdexStructs.TakerInfo memory value) external {
         accountInfo.takerInfos[market] = value;
     }
