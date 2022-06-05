@@ -15,6 +15,7 @@ interface IPerpdexExchange {
     }
 
     struct RemoveLiquidityParams {
+        address trader;
         address market;
         uint256 liquidity;
         uint256 minBase;
@@ -22,18 +23,8 @@ interface IPerpdexExchange {
         uint256 deadline;
     }
 
-    struct AddLiquidityResponse {
-        uint256 base;
-        uint256 quote;
-        uint256 liquidity;
-    }
-
-    struct RemoveLiquidityResponse {
-        uint256 base;
-        uint256 quote;
-    }
-
     struct OpenPositionParams {
+        address trader;
         address market;
         bool isBaseToQuote;
         bool isExactInput;
@@ -43,19 +34,13 @@ interface IPerpdexExchange {
     }
 
     struct OpenPositionDryParams {
+        address trader;
         address market;
+        address caller;
         bool isBaseToQuote;
         bool isExactInput;
         uint256 amount;
         uint256 oppositeAmountBound;
-    }
-
-    struct LiquidateParams {
-        address trader;
-        address market;
-        uint256 amount;
-        uint256 oppositeAmountBound;
-        uint256 deadline;
     }
 
     event Deposited(address indexed trader, uint256 amount);
@@ -63,24 +48,52 @@ interface IPerpdexExchange {
     event InsuranceFundTransferred(address indexed trader, uint256 amount);
     event ProtocolFeeTransferred(address indexed trader, uint256 amount);
 
+    event LiquidityAdded(
+        address indexed trader,
+        address indexed market,
+        uint256 base,
+        uint256 quote,
+        uint256 liquidity,
+        uint256 baseBalancePerShare,
+        uint256 priceAfterX96
+    );
+
+    event LiquidityRemoved(
+        address indexed trader,
+        address indexed market,
+        address liquidator,
+        uint256 base,
+        uint256 quote,
+        uint256 liquidity,
+        int256 takerBase,
+        int256 takerQuote,
+        int256 realizedPnl,
+        uint256 baseBalancePerShare,
+        uint256 priceAfterX96
+    );
+
     event PositionLiquidated(
         address indexed trader,
         address indexed market,
-        uint256 positionNotional,
-        uint256 positionSize,
-        uint256 liquidationFee,
-        address liquidator
+        address indexed liquidator,
+        int256 base,
+        int256 quote,
+        int256 realizedPnl,
+        uint256 protocolFee,
+        uint256 baseBalancePerShare,
+        uint256 priceAfterX96,
+        uint256 liquidationReward,
+        uint256 insuranceFundReward
     );
-
-    event LiquidityChanged(address indexed maker, address indexed market, int256 base, int256 quote, int256 liquidity);
 
     event PositionChanged(
         address indexed trader,
         address indexed market,
-        int256 exchangedPositionSize,
-        int256 exchangedPositionNotional,
-        int256 openNotional,
+        int256 base,
+        int256 quote,
         int256 realizedPnl,
+        uint256 protocolFee,
+        uint256 baseBalancePerShare,
         uint256 priceAfterX96
     );
 
@@ -94,15 +107,17 @@ interface IPerpdexExchange {
 
     function transferProtocolFee(uint256 amount) external;
 
-    function addLiquidity(AddLiquidityParams calldata params) external returns (AddLiquidityResponse memory);
-
-    function removeLiquidity(RemoveLiquidityParams calldata params, address maker)
+    function addLiquidity(AddLiquidityParams calldata params)
         external
-        returns (RemoveLiquidityResponse memory response);
+        returns (
+            uint256 base,
+            uint256 quote,
+            uint256 liquidity
+        );
+
+    function removeLiquidity(RemoveLiquidityParams calldata params) external returns (uint256 base, uint256 quote);
 
     function openPosition(OpenPositionParams calldata params) external returns (int256 base, int256 quote);
-
-    function liquidate(LiquidateParams calldata params) external returns (int256 base, int256 quote);
 
     // setters
 
@@ -122,10 +137,7 @@ interface IPerpdexExchange {
 
     // dry run getters
 
-    function openPositionDry(OpenPositionDryParams calldata params, address trader)
-        external
-        view
-        returns (int256 base, int256 quote);
+    function openPositionDry(OpenPositionDryParams calldata params) external view returns (int256 base, int256 quote);
 
     // default getters
 

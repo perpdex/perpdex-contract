@@ -68,6 +68,39 @@ describe("PerpdexExchange getters", () => {
         })
     })
 
+    // TODO:
+    // describe("AccountLibrary getters multiple market", async () => {
+    //     it('two', async () => {
+    //         await exchange.connect(owner).setImRatio(10e4)
+    //         await exchange.connect(owner).setMmRatio(5e4)
+    //
+    //         await exchange.setAccountInfo(
+    //             alice.address,
+    //             {
+    //                 collateralBalance: test.collateralBalance,
+    //             },
+    //             [market.address],
+    //         )
+    //
+    //         await exchange.setTakerInfo(alice.address, market.address, test.takerInfo)
+    //         await exchange.setMakerInfo(alice.address, market.address, test.makerInfo)
+    //
+    //         await market.setPoolInfo(test.poolInfo)
+    //
+    //         expect(await exchange.getTotalAccountValue(alice.address)).to.eq(test.totalAccountValue)
+    //         expect(await exchange.getPositionShare(alice.address, market.address)).to.eq(test.positionShare)
+    //         expect(await exchange.getPositionNotional(alice.address, market.address)).to.eq(test.positionNotional)
+    //         expect(await exchange.getTotalPositionNotional(alice.address)).to.eq(Math.abs(test.positionNotional))
+    //         expect(await exchange.getOpenPositionShare(alice.address, market.address)).to.eq(test.openPositionShare)
+    //         expect(await exchange.getOpenPositionNotional(alice.address, market.address)).to.eq(
+    //             test.openPositionNotional,
+    //         )
+    //         expect(await exchange.getTotalOpenPositionNotional(alice.address)).to.eq(test.openPositionNotional)
+    //         expect(await exchange.hasEnoughMaintenanceMargin(alice.address)).to.eq(test.hasEnoughMaintenanceMargin)
+    //         expect(await exchange.hasEnoughInitialMargin(alice.address)).to.eq(test.hasEnoughInitialMargin)
+    //     })
+    // });
+
     describe("AccountLibrary getters single market", async () => {
         ;[
             {

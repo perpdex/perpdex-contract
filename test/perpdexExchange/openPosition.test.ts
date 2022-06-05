@@ -50,7 +50,13 @@ describe("PerpdexExchange openPosition", () => {
         })
     })
 
-    describe("openPosition", async () => {
+    describe("too many market", async () => {
+        it("max markets condition", async () => {})
+
+        it("check gas fee", async () => {})
+    })
+
+    describe("various cases", async () => {
         ;[
             {
                 title: "long",
@@ -249,16 +255,15 @@ describe("PerpdexExchange openPosition", () => {
 
                 await exchange.setTakerInfo(alice.address, market.address, test.takerInfo)
 
-                const resDry = await exchange.connect(alice).openPositionDry(
-                    {
-                        market: market.address,
-                        isBaseToQuote: test.isBaseToQuote,
-                        isExactInput: test.isExactInput,
-                        amount: test.amount,
-                        oppositeAmountBound: test.oppositeAmountBound,
-                    },
-                    alice.address,
-                )
+                const resDry = await exchange.connect(alice).openPositionDry({
+                    trader: alice.address,
+                    market: market.address,
+                    caller: alice.address,
+                    isBaseToQuote: test.isBaseToQuote,
+                    isExactInput: test.isExactInput,
+                    amount: test.amount,
+                    oppositeAmountBound: test.oppositeAmountBound,
+                })
                 expect(resDry[0]).to.eq(test.afterTakerInfo.baseBalanceShare - test.takerInfo.baseBalanceShare)
                 expect(resDry[1]).to.eq(
                     test.afterTakerInfo.quoteBalance -
@@ -269,6 +274,7 @@ describe("PerpdexExchange openPosition", () => {
 
                 const res = expect(
                     exchange.connect(alice).openPosition({
+                        trader: alice.address,
                         market: market.address,
                         isBaseToQuote: test.isBaseToQuote,
                         isExactInput: test.isExactInput,
