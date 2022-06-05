@@ -53,10 +53,10 @@ contract TestTakerLibrary {
 
     function validateSlippage(
         bool isExactInput,
-        uint256 amount,
+        uint256 oppositeAmount,
         uint256 oppositeAmountBound
     ) external pure {
-        TakerLibrary.validateSlippage(isExactInput, amount, oppositeAmountBound);
+        TakerLibrary.validateSlippage(isExactInput, oppositeAmount, oppositeAmountBound);
     }
 
     function setAccountInfo(PerpdexStructs.VaultInfo memory value, address[] memory markets) external {
