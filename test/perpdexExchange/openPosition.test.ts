@@ -444,6 +444,36 @@ describe("PerpdexExchange openPosition", () => {
                 protocolFee: 0,
                 insuranceFund: 2,
             },
+            {
+                title: "long opposite amount condition",
+                isBaseToQuote: false,
+                isExactInput: true,
+                amount: 100,
+                oppositeAmountBound: 100,
+                protocolFeeRatio: 0,
+                collateralBalance: 100,
+                takerInfo: {
+                    baseBalanceShare: 0,
+                    quoteBalance: 0,
+                },
+                revertedWith: "TL_VS: too small opposite amount",
+                revertedWithDry: "TL_VS: too small opposite amount",
+            },
+            {
+                title: "long exact output opposite amount condition",
+                isBaseToQuote: false,
+                isExactInput: false,
+                amount: 100,
+                oppositeAmountBound: 101,
+                protocolFeeRatio: 0,
+                collateralBalance: 100,
+                takerInfo: {
+                    baseBalanceShare: 0,
+                    quoteBalance: 0,
+                },
+                revertedWith: "TL_VS: too large opposite amount",
+                revertedWithDry: "TL_VS: too large opposite amount",
+            },
         ].forEach(test => {
             describe(test.title, () => {
                 beforeEach(async () => {
