@@ -23,12 +23,11 @@ library AccountLibrary {
         address market,
         uint8 maxMarketsPerAccount
     ) internal {
-        require(market != address(0), "AL_UP: market address is zero");
-
         bool enabled =
             accountInfo.takerInfos[market].baseBalanceShare != 0 || accountInfo.makerInfos[market].liquidity != 0;
         address[] storage markets = accountInfo.markets;
         uint256 length = markets.length;
+
         for (uint256 i = 0; i < length; ++i) {
             if (markets[i] == market) {
                 if (!enabled) {
@@ -38,8 +37,11 @@ library AccountLibrary {
                 return;
             }
         }
+
+        if (!enabled) return;
+
+        require(length + 1 <= maxMarketsPerAccount, "AL_UP: too many markets");
         markets.push(market);
-        require(markets.length <= maxMarketsPerAccount, "AL_UP: too many markets");
     }
 
     function getTotalAccountValue(PerpdexStructs.AccountInfo storage accountInfo) internal view returns (int256) {

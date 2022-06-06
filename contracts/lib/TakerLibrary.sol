@@ -157,8 +157,16 @@ library TakerLibrary {
         }
         realizedPnl = realizedPnl.add(quoteFee);
 
-        takerInfo.baseBalanceShare = takerInfo.baseBalanceShare.add(baseShare);
-        takerInfo.quoteBalance = takerInfo.quoteBalance.add(quoteBalance).add(quoteFee).sub(realizedPnl);
+        int256 newBaseBalanceShare = takerInfo.baseBalanceShare.add(baseShare);
+        int256 newQuoteBalance = takerInfo.quoteBalance.add(quoteBalance).add(quoteFee).sub(realizedPnl);
+        require(
+            (newBaseBalanceShare == 0 && newQuoteBalance == 0) ||
+                newBaseBalanceShare.sign() * newQuoteBalance.sign() == -1,
+            "TL_ATTB: never occur"
+        );
+
+        takerInfo.baseBalanceShare = newBaseBalanceShare;
+        takerInfo.quoteBalance = newQuoteBalance;
         accountInfo.vaultInfo.collateralBalance = accountInfo.vaultInfo.collateralBalance.add(realizedPnl);
 
         AccountLibrary.updateMarkets(accountInfo, market, maxMarketsPerAccount);

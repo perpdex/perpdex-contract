@@ -50,7 +50,7 @@ describe("PerpdexExchange addLiquidity", () => {
         })
     })
 
-    describe("various cases", async () => {
+    describe("various cases", () => {
         ;[
             {
                 title: "add",
