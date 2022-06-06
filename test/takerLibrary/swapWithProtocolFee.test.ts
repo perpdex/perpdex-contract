@@ -18,7 +18,7 @@ describe("TakerLibrary", () => {
         market = fixture.market
     })
 
-    describe("swapWithProtocolFee", async () => {
+    describe("swapWithProtocolFee", () => {
         ;[
             {
                 title: "exact input long",

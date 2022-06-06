@@ -21,7 +21,7 @@ describe("PerpdexMarket config", () => {
         exchange = fixture.exchange
     })
 
-    describe("initial values", async () => {
+    describe("initial values", () => {
         it("ok", async () => {
             expect(await market.poolFeeRatio()).to.eq(3e3)
             expect(await market.fundingMaxPremiumRatio()).to.eq(1e4)
@@ -30,7 +30,7 @@ describe("PerpdexMarket config", () => {
         })
     })
 
-    describe("setPoolFeeRatio", async () => {
+    describe("setPoolFeeRatio", () => {
         it("ok", async () => {
             await market.connect(owner).setPoolFeeRatio(0)
             expect(await market.poolFeeRatio()).to.eq(0)
@@ -49,7 +49,7 @@ describe("PerpdexMarket config", () => {
         })
     })
 
-    describe("setFundingMaxPremiumRatio", async () => {
+    describe("setFundingMaxPremiumRatio", () => {
         it("ok", async () => {
             await market.connect(owner).setFundingMaxPremiumRatio(0)
             expect(await market.fundingMaxPremiumRatio()).to.eq(0)
@@ -70,7 +70,7 @@ describe("PerpdexMarket config", () => {
         })
     })
 
-    describe("setFundingMaxElapsedSec", async () => {
+    describe("setFundingMaxElapsedSec", () => {
         it("ok", async () => {
             await market.connect(owner).setFundingMaxElapsedSec(0)
             expect(await market.fundingMaxElapsedSec()).to.eq(0)
@@ -91,7 +91,7 @@ describe("PerpdexMarket config", () => {
         })
     })
 
-    describe("setFundingRolloverSec", async () => {
+    describe("setFundingRolloverSec", () => {
         it("ok", async () => {
             await market.connect(owner).setFundingRolloverSec(60 * 60)
             expect(await market.fundingRolloverSec()).to.eq(60 * 60)

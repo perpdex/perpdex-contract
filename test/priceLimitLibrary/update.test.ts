@@ -14,7 +14,7 @@ describe("PriceLimitLibrary update", () => {
         library = fixture.priceLimitLibrary
     })
 
-    describe("update", async () => {
+    describe("update", () => {
         ;[
             {
                 title: "initial",

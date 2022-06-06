@@ -14,7 +14,7 @@ describe("TakerLibrary", () => {
         library = fixture.takerLibrary
     })
 
-    describe("swapResponseToBaseQuote", async () => {
+    describe("swapResponseToBaseQuote", () => {
         ;[
             {
                 title: "exact input long",

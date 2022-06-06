@@ -20,7 +20,7 @@ describe("Vault withdraw eth", () => {
         market = fixture.perpdexMarket
     })
 
-    describe("withdraw", async () => {
+    describe("withdraw", () => {
         it("ok", async () => {
             await exchange.connect(alice).deposit(0, { value: 100 })
 

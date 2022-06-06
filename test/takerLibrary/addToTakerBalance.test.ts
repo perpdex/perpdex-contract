@@ -18,7 +18,7 @@ describe("TakerLibrary addToTakerBalance", () => {
         market = fixture.market
     })
 
-    describe("empty markets", async () => {
+    describe("empty markets", () => {
         it("registered", async () => {
             await expect(library.addToTakerBalance(market.address, 1, -1, 0, 1))
                 .to.emit(library, "AddToTakerBalanceResult")
@@ -35,7 +35,7 @@ describe("TakerLibrary addToTakerBalance", () => {
         })
     })
 
-    describe("addToTakerBalance", async () => {
+    describe("addToTakerBalance", () => {
         ;[
             {
                 title: "long",

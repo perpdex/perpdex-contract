@@ -15,7 +15,7 @@ describe("TakerLibrary", () => {
         library = fixture.takerLibrary
     })
 
-    describe("processLiquidationFee", async () => {
+    describe("processLiquidationFee", () => {
         ;[
             {
                 title: "normal",

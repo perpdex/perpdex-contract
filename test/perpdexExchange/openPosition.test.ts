@@ -58,13 +58,13 @@ describe("PerpdexExchange openPosition", () => {
         })
     })
 
-    describe("too many market", async () => {
+    describe("too many market", () => {
         it("max markets condition", async () => {})
 
         it("check gas fee", async () => {})
     })
 
-    describe("various cases", async () => {
+    describe("various cases", () => {
         ;[
             {
                 title: "long",

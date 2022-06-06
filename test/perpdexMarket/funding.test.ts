@@ -29,7 +29,7 @@ describe("PerpdexMarket funding", () => {
         await priceFeed.mock.decimals.returns(18)
     })
 
-    describe("called with other functions", async () => {
+    describe("called with other functions", () => {
         beforeEach(async () => {
             await market.connect(exchange).addLiquidity(10000, 10000)
             await market.connect(owner).setFundingMaxPremiumRatio(1e4)

@@ -15,7 +15,7 @@ describe("Vault deposit eth", () => {
         exchange = fixture.perpdexExchange
     })
 
-    describe("deposit", async () => {
+    describe("deposit", () => {
         it("ok", async () => {
             const res = await exchange.connect(alice).deposit(0, { value: 100 })
             await expect(res).to.changeEtherBalance(alice, -100)

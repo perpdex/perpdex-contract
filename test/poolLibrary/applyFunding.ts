@@ -16,7 +16,7 @@ describe("PoolLibrary", () => {
         poolLibrary = fixture.poolLibrary
     })
 
-    describe("applyFunding", async () => {
+    describe("applyFunding", () => {
         ;[
             {
                 title: "zero",

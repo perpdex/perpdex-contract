@@ -14,7 +14,7 @@ describe("PriceLimitLibrary isWithinPriceLimit", () => {
         library = fixture.priceLimitLibrary
     })
 
-    describe("isWithinPriceLimit", async () => {
+    describe("isWithinPriceLimit", () => {
         ;[
             {
                 title: "within small",

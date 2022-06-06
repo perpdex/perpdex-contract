@@ -17,7 +17,7 @@ describe("PerpdexExchange transfer", () => {
         owner = fixture.owner
     })
 
-    describe("transferInsuranceFund", async () => {
+    describe("transferInsuranceFund", () => {
         it("ok", async () => {
             await exchange.setInsuranceFundInfo({
                 balance: 100,
@@ -38,7 +38,7 @@ describe("PerpdexExchange transfer", () => {
         })
     })
 
-    describe("transferProtocolFee", async () => {
+    describe("transferProtocolFee", () => {
         it("ok", async () => {
             await exchange.setProtocolInfo({
                 protocolFee: 100,

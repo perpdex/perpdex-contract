@@ -21,7 +21,7 @@ describe("FundingLibrary processFunding", () => {
         priceFeedQuote = fixture.priceFeedQuote
     })
 
-    describe("update condition", async () => {
+    describe("update condition", () => {
         ;[
             {
                 title: "initial",
@@ -163,7 +163,7 @@ describe("FundingLibrary processFunding", () => {
         })
     })
 
-    describe("funding rate calculation", async () => {
+    describe("funding rate calculation", () => {
         ;[
             {
                 title: "neutral both",

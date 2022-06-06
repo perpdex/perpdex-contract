@@ -23,7 +23,7 @@ describe("PerpdexExchange getters", () => {
         alice = fixture.alice
     })
 
-    describe("getTakerInfo", async () => {
+    describe("getTakerInfo", () => {
         it("ok", async () => {
             await exchange.setTakerInfo(alice.address, market.address, {
                 baseBalanceShare: 1,
@@ -35,7 +35,7 @@ describe("PerpdexExchange getters", () => {
         })
     })
 
-    describe("getMakerInfo", async () => {
+    describe("getMakerInfo", () => {
         it("ok", async () => {
             await exchange.setMakerInfo(alice.address, market.address, {
                 baseDebtShare: 1,
@@ -53,7 +53,7 @@ describe("PerpdexExchange getters", () => {
         })
     })
 
-    describe("getAccountMarkets", async () => {
+    describe("getAccountMarkets", () => {
         it("ok", async () => {
             await exchange.setAccountInfo(
                 alice.address,
@@ -69,7 +69,7 @@ describe("PerpdexExchange getters", () => {
     })
 
     // TODO:
-    // describe("AccountLibrary getters multiple market", async () => {
+    // describe("AccountLibrary getters multiple market", () => {
     //     it('two', async () => {
     //         await exchange.connect(owner).setImRatio(10e4)
     //         await exchange.connect(owner).setMmRatio(5e4)
@@ -101,7 +101,7 @@ describe("PerpdexExchange getters", () => {
     //     })
     // });
 
-    describe("AccountLibrary getters single market", async () => {
+    describe("AccountLibrary getters single market", () => {
         ;[
             {
                 title: "empty pool, zero",

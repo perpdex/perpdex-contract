@@ -2,7 +2,7 @@ import { expect } from "chai"
 import { BigNumber } from "ethers"
 import { ethers } from "hardhat"
 
-describe("PerpMath test", async () => {
+describe("PerpMath test", () => {
     const x96 = BigNumber.from(2).pow(96)
     const x10_18 = BigNumber.from(10).pow(18)
     const x10_6 = BigNumber.from(10).pow(6)

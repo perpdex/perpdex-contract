@@ -20,7 +20,7 @@ describe("FundingLibrary", () => {
         priceFeedQuote = fixture.priceFeedQuote
     })
 
-    describe("validateInitialLiquidityPrice", async () => {
+    describe("validateInitialLiquidityPrice", () => {
         ;[
             {
                 title: "normal",

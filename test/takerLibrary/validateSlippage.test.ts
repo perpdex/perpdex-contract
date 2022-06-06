@@ -14,7 +14,7 @@ describe("TakerLibrary", () => {
         library = fixture.takerLibrary
     })
 
-    describe("validateSlippage", async () => {
+    describe("validateSlippage", () => {
         ;[
             {
                 title: "exact input same",

@@ -45,7 +45,7 @@ describe("PerpdexExchange deadline", () => {
         await setNextTimestamp(nextBlockTimestamp)
     })
 
-    describe("openPosition", async () => {
+    describe("openPosition", () => {
         it("before", async () => {
             await expect(
                 exchange.connect(alice).openPosition({
@@ -89,7 +89,7 @@ describe("PerpdexExchange deadline", () => {
         })
     })
 
-    describe("addLiquidity", async () => {
+    describe("addLiquidity", () => {
         it("before", async () => {
             await expect(
                 exchange.connect(alice).addLiquidity({
@@ -130,7 +130,7 @@ describe("PerpdexExchange deadline", () => {
         })
     })
 
-    describe("removeLiquidity", async () => {
+    describe("removeLiquidity", () => {
         it("before", async () => {
             await expect(
                 exchange.connect(alice).removeLiquidity({
