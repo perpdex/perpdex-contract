@@ -10,7 +10,7 @@ contract TestTakerLibrary {
 
     event AddToTakerBalanceResult(int256 realizedPnl);
     event SwapWithProtocolFeeResult(uint256 oppositeAmount, uint256 protocolFee);
-    event ProcessLiquidationFeeResult(uint256 liquidatorReward, uint256 insuranceFundReward);
+    event ProcessLiquidationFeeResult(uint256 liquidationReward, uint256 insuranceFundReward);
 
     PerpdexStructs.AccountInfo public accountInfo;
     PerpdexStructs.VaultInfo public liquidatorVaultInfo;
@@ -67,19 +67,19 @@ contract TestTakerLibrary {
 
     function processLiquidationFee(
         uint24 mmRatio,
-        uint24 liquidatorRewardRatio,
+        uint24 liquidationRewardRatio,
         uint256 exchangedQuote
     ) external {
-        (uint256 liquidatorReward, uint256 insuranceFundReward) =
+        (uint256 liquidationReward, uint256 insuranceFundReward) =
             TakerLibrary.processLiquidationFee(
                 accountInfo.vaultInfo,
                 liquidatorVaultInfo,
                 insuranceFundInfo,
                 mmRatio,
-                liquidatorRewardRatio,
+                liquidationRewardRatio,
                 exchangedQuote
             );
-        emit ProcessLiquidationFeeResult(liquidatorReward, insuranceFundReward);
+        emit ProcessLiquidationFeeResult(liquidationReward, insuranceFundReward);
     }
 
     function validateSlippage(

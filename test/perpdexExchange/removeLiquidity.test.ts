@@ -69,6 +69,10 @@ describe("PerpdexExchange removeLiquidity", () => {
                     cumDeleveragedBaseSharePerLiquidityX96: 0,
                     cumDeleveragedQuotePerLiquidityX96: 0,
                 },
+                outputBase: 50,
+                outputQuote: 50,
+                outputTakerBase: 25,
+                outputTakerQuote: 25,
                 afterCollateralBalance: 60,
                 afterTakerInfo: {
                     baseBalanceShare: 25,
@@ -107,6 +111,10 @@ describe("PerpdexExchange removeLiquidity", () => {
                     cumDeleveragedQuotePerLiquidityX96: Q96.mul(20),
                     baseBalancePerShareX96: Q96,
                 },
+                outputBase: 1,
+                outputQuote: 1,
+                outputTakerBase: 11,
+                outputTakerQuote: 21,
                 afterCollateralBalance: 132,
                 afterTakerInfo: {
                     baseBalanceShare: 11,
@@ -196,6 +204,47 @@ describe("PerpdexExchange removeLiquidity", () => {
                     cumDeleveragedBaseSharePerLiquidityX96: 0,
                     cumDeleveragedQuotePerLiquidityX96: 0,
                 },
+                outputBase: 50,
+                outputQuote: 50,
+                outputTakerBase: 50,
+                outputTakerQuote: -50,
+                isLiquidation: true,
+                afterCollateralBalance: 4,
+                afterTakerInfo: {
+                    baseBalanceShare: 50,
+                    quoteBalance: -50,
+                },
+                afterMakerInfo: {
+                    baseDebtShare: 0,
+                    quoteDebt: 100,
+                    liquidity: 50,
+                    cumDeleveragedBaseSharePerLiquidityX96: 0,
+                    cumDeleveragedQuotePerLiquidityX96: 0,
+                },
+            },
+            {
+                title: "liquidation self",
+                notSelf: false,
+                liquidity: 50,
+                minBase: 50,
+                minQuote: 50,
+                collateralBalance: 4,
+                takerInfo: {
+                    baseBalanceShare: 0,
+                    quoteBalance: 0,
+                },
+                makerInfo: {
+                    baseDebtShare: 0,
+                    quoteDebt: 200,
+                    liquidity: 100,
+                    cumDeleveragedBaseSharePerLiquidityX96: 0,
+                    cumDeleveragedQuotePerLiquidityX96: 0,
+                },
+                outputBase: 50,
+                outputQuote: 50,
+                outputTakerBase: 50,
+                outputTakerQuote: -50,
+                isLiquidation: true,
                 afterCollateralBalance: 4,
                 afterTakerInfo: {
                     baseBalanceShare: 50,
@@ -261,7 +310,25 @@ describe("PerpdexExchange removeLiquidity", () => {
                 )
 
                 if (test.revertedWith === void 0) {
-                    await res.to.emit(exchange, "LiquidityRemoved")
+                    const sharePrice = test.poolInfo ? Q96.mul(test.poolInfo.quote).div(test.poolInfo.base) : Q96
+
+                    await res.to
+                        .emit(exchange, "LiquidityRemoved")
+                        .withArgs(
+                            alice.address,
+                            market.address,
+                            test.isLiquidation
+                                ? (test.notSelf ? bob : alice).address
+                                : hre.ethers.constants.AddressZero,
+                            test.outputBase,
+                            test.outputQuote,
+                            test.liquidity,
+                            test.outputTakerBase,
+                            test.outputTakerQuote,
+                            test.afterCollateralBalance - test.collateralBalance,
+                            test.poolInfo ? test.poolInfo.baseBalancePerShareX96 : Q96,
+                            sharePrice,
+                        )
 
                     const accountInfo = await exchange.accountInfos(alice.address)
                     expect(accountInfo.collateralBalance).to.eq(test.afterCollateralBalance)

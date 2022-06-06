@@ -54,8 +54,8 @@ interface IPerpdexExchange {
         uint256 base,
         uint256 quote,
         uint256 liquidity,
-        uint256 baseBalancePerShare,
-        uint256 priceAfterX96
+        uint256 baseBalancePerShareX96,
+        uint256 sharePriceAfterX96
     );
 
     event LiquidityRemoved(
@@ -68,8 +68,8 @@ interface IPerpdexExchange {
         int256 takerBase,
         int256 takerQuote,
         int256 realizedPnl,
-        uint256 baseBalancePerShare,
-        uint256 priceAfterX96
+        uint256 baseBalancePerShareX96,
+        uint256 sharePriceAfterX96
     );
 
     event PositionLiquidated(
@@ -80,8 +80,8 @@ interface IPerpdexExchange {
         int256 quote,
         int256 realizedPnl,
         uint256 protocolFee,
-        uint256 baseBalancePerShare,
-        uint256 priceAfterX96,
+        uint256 baseBalancePerShareX96,
+        uint256 sharePriceAfterX96,
         uint256 liquidationReward,
         uint256 insuranceFundReward
     );
@@ -93,8 +93,8 @@ interface IPerpdexExchange {
         int256 quote,
         int256 realizedPnl,
         uint256 protocolFee,
-        uint256 baseBalancePerShare,
-        uint256 priceAfterX96
+        uint256 baseBalancePerShareX96,
+        uint256 sharePriceAfterX96
     );
 
     event PriceLimitConfigChanged(uint24 normalOrderRatio, uint24 liquidationRatio);
