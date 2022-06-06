@@ -17,7 +17,11 @@ contract TestPerpdexMarket is PerpdexMarket {
         _processFunding();
     }
 
-    function setPoolInfo(MarketStructs.PoolInfo memory poolInfoArg) external {
-        poolInfo = poolInfoArg;
+    function setFundingInfo(MarketStructs.FundingInfo memory value) external {
+        fundingInfo = value;
+    }
+
+    function setPoolInfo(MarketStructs.PoolInfo memory value) external {
+        poolInfo = value;
     }
 }

@@ -26,7 +26,6 @@ library TakerLibrary {
         uint256 amount;
         uint256 oppositeAmountBound;
         PerpdexStructs.PriceLimitConfig priceLimitConfig;
-        bool isMarketAllowed;
         uint24 mmRatio;
         uint24 imRatio;
         uint8 maxMarketsPerAccount;
@@ -51,7 +50,6 @@ library TakerLibrary {
         int256 quote;
         int256 realizedPnl;
         uint256 protocolFee;
-        uint256 priceAfterX96;
         uint256 liquidationReward;
         uint256 insuranceFundReward;
         bool isLiquidation;
@@ -92,14 +90,10 @@ library TakerLibrary {
 
         bool isOpen = (takerBaseBefore.add(response.base)).sign() * response.base.sign() > 0;
 
-        if (!params.isMarketAllowed) {
-            require(!isOpen, "TL_OP: no open when closed");
-        }
-
         if (response.isLiquidation) {
             require(!isOpen, "TL_OP: no open when liquidation");
 
-            processLiquidationFee(
+            (response.liquidationReward, response.insuranceFundReward) = processLiquidationFee(
                 accountInfo.vaultInfo,
                 liquidatorVaultInfo,
                 insuranceFundInfo,
@@ -109,15 +103,15 @@ library TakerLibrary {
             );
         }
 
-        response.priceAfterX96 = IPerpdexMarket(params.market).getMarkPriceX96();
+        uint256 priceAfterX96 = IPerpdexMarket(params.market).getMarkPriceX96();
         if (response.isLiquidation) {
             require(
-                PriceLimitLibrary.isLiquidationAllowed(priceLimitInfo, params.priceLimitConfig, response.priceAfterX96),
+                PriceLimitLibrary.isLiquidationAllowed(priceLimitInfo, params.priceLimitConfig, priceAfterX96),
                 "TL_OP: liquidation price limit"
             );
         } else {
             require(
-                PriceLimitLibrary.isNormalOrderAllowed(priceLimitInfo, params.priceLimitConfig, response.priceAfterX96),
+                PriceLimitLibrary.isNormalOrderAllowed(priceLimitInfo, params.priceLimitConfig, priceAfterX96),
                 "TL_OP: normal order price limit"
             );
         }
@@ -277,15 +271,15 @@ library TakerLibrary {
         PerpdexStructs.VaultInfo storage liquidatorVaultInfo,
         PerpdexStructs.InsuranceFundInfo storage insuranceFundInfo,
         uint24 mmRatio,
-        uint24 liquidatorRewardRatio,
+        uint24 liquidationRewardRatio,
         uint256 exchangedQuote
-    ) internal returns (uint256 liquidatorReward, uint256 insuranceFundReward) {
+    ) internal returns (uint256 liquidationReward, uint256 insuranceFundReward) {
         uint256 penalty = exchangedQuote.mulRatio(mmRatio);
-        liquidatorReward = penalty.mulRatio(liquidatorRewardRatio);
-        insuranceFundReward = penalty.sub(liquidatorReward);
+        liquidationReward = penalty.mulRatio(liquidationRewardRatio);
+        insuranceFundReward = penalty.sub(liquidationReward);
 
         vaultInfo.collateralBalance = vaultInfo.collateralBalance.sub(penalty.toInt256());
-        liquidatorVaultInfo.collateralBalance = liquidatorVaultInfo.collateralBalance.add(liquidatorReward.toInt256());
+        liquidatorVaultInfo.collateralBalance = liquidatorVaultInfo.collateralBalance.add(liquidationReward.toInt256());
         insuranceFundInfo.balance = insuranceFundInfo.balance.add(insuranceFundReward.toInt256());
     }
 

@@ -14,6 +14,11 @@ contract PerpdexMarket is IPerpdexMarket, ReentrancyGuard, Ownable {
     using Address for address;
     using SafeMath for uint256;
 
+    event PoolFeeRatioChanged(uint24 value);
+    event FundingMaxPremiumRatioChanged(uint24 value);
+    event FundingMaxElapsedSecChanged(uint32 value);
+    event FundingRolloverSecChanged(uint32 value);
+
     string public override symbol;
     address public immutable override exchange;
     address public immutable priceFeedBase;
@@ -112,22 +117,26 @@ contract PerpdexMarket is IPerpdexMarket, ReentrancyGuard, Ownable {
     function setPoolFeeRatio(uint24 value) external onlyOwner nonReentrant {
         require(value <= 5e4, "PM_SPFR: too large");
         poolFeeRatio = value;
+        emit PoolFeeRatioChanged(value);
     }
 
     function setFundingMaxPremiumRatio(uint24 value) external onlyOwner nonReentrant {
         require(value <= 1e5, "PM_SFMPR: too large");
         fundingMaxPremiumRatio = value;
+        emit FundingMaxPremiumRatioChanged(value);
     }
 
     function setFundingMaxElapsedSec(uint32 value) external onlyOwner nonReentrant {
         require(value <= 7 days, "PM_SFMES: too large");
         fundingMaxElapsedSec = value;
+        emit FundingMaxElapsedSecChanged(value);
     }
 
     function setFundingRolloverSec(uint32 value) external onlyOwner nonReentrant {
         require(value <= 7 days, "PM_SFRS: too large");
         require(value >= 1 hours, "PM_SFRS: too small");
         fundingRolloverSec = value;
+        emit FundingRolloverSecChanged(value);
     }
 
     function swapDry(

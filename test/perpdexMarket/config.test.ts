@@ -32,9 +32,11 @@ describe("PerpdexMarket config", () => {
 
     describe("setPoolFeeRatio", () => {
         it("ok", async () => {
-            await market.connect(owner).setPoolFeeRatio(0)
+            await expect(market.connect(owner).setPoolFeeRatio(0)).to.emit(market, "PoolFeeRatioChanged").withArgs(0)
             expect(await market.poolFeeRatio()).to.eq(0)
-            await market.connect(owner).setPoolFeeRatio(5e4)
+            await expect(market.connect(owner).setPoolFeeRatio(5e4))
+                .to.emit(market, "PoolFeeRatioChanged")
+                .withArgs(5e4)
             expect(await market.poolFeeRatio()).to.eq(5e4)
         })
 
@@ -51,9 +53,13 @@ describe("PerpdexMarket config", () => {
 
     describe("setFundingMaxPremiumRatio", () => {
         it("ok", async () => {
-            await market.connect(owner).setFundingMaxPremiumRatio(0)
+            await expect(market.connect(owner).setFundingMaxPremiumRatio(0))
+                .to.emit(market, "FundingMaxPremiumRatioChanged")
+                .withArgs(0)
             expect(await market.fundingMaxPremiumRatio()).to.eq(0)
-            await market.connect(owner).setFundingMaxPremiumRatio(1e5)
+            await expect(market.connect(owner).setFundingMaxPremiumRatio(1e5))
+                .to.emit(market, "FundingMaxPremiumRatioChanged")
+                .withArgs(1e5)
             expect(await market.fundingMaxPremiumRatio()).to.eq(1e5)
         })
 
@@ -72,9 +78,13 @@ describe("PerpdexMarket config", () => {
 
     describe("setFundingMaxElapsedSec", () => {
         it("ok", async () => {
-            await market.connect(owner).setFundingMaxElapsedSec(0)
+            await expect(market.connect(owner).setFundingMaxElapsedSec(0))
+                .to.emit(market, "FundingMaxElapsedSecChanged")
+                .withArgs(0)
             expect(await market.fundingMaxElapsedSec()).to.eq(0)
-            await market.connect(owner).setFundingMaxElapsedSec(7 * 24 * 60 * 60)
+            await expect(market.connect(owner).setFundingMaxElapsedSec(7 * 24 * 60 * 60))
+                .to.emit(market, "FundingMaxElapsedSecChanged")
+                .withArgs(7 * 24 * 60 * 60)
             expect(await market.fundingMaxElapsedSec()).to.eq(7 * 24 * 60 * 60)
         })
 
@@ -93,9 +103,13 @@ describe("PerpdexMarket config", () => {
 
     describe("setFundingRolloverSec", () => {
         it("ok", async () => {
-            await market.connect(owner).setFundingRolloverSec(60 * 60)
+            await expect(market.connect(owner).setFundingRolloverSec(60 * 60))
+                .to.emit(market, "FundingRolloverSecChanged")
+                .withArgs(60 * 60)
             expect(await market.fundingRolloverSec()).to.eq(60 * 60)
-            await market.connect(owner).setFundingRolloverSec(7 * 24 * 60 * 60)
+            await expect(market.connect(owner).setFundingRolloverSec(7 * 24 * 60 * 60))
+                .to.emit(market, "FundingRolloverSecChanged")
+                .withArgs(7 * 24 * 60 * 60)
             expect(await market.fundingRolloverSec()).to.eq(7 * 24 * 60 * 60)
         })
 

@@ -23,9 +23,9 @@ describe("TakerLibrary", () => {
                 liquidatorCollateralBalance: 200,
                 insuranceFundBalance: 300,
                 mmRatio: 20e4,
-                liquidatorRewardRatio: 25e4,
+                liquidationRewardRatio: 25e4,
                 exchangedQuote: 100,
-                liquidatorReward: 5,
+                liquidationReward: 5,
                 insuranceFundReward: 15,
                 revertedWith: void 0,
             },
@@ -35,9 +35,9 @@ describe("TakerLibrary", () => {
                 liquidatorCollateralBalance: 200,
                 insuranceFundBalance: 300,
                 mmRatio: 20e4,
-                liquidatorRewardRatio: 25e4,
+                liquidationRewardRatio: 25e4,
                 exchangedQuote: 99,
-                liquidatorReward: 4,
+                liquidationReward: 4,
                 insuranceFundReward: 15,
                 revertedWith: void 0,
             },
@@ -47,9 +47,9 @@ describe("TakerLibrary", () => {
                 liquidatorCollateralBalance: 0,
                 insuranceFundBalance: 0,
                 mmRatio: 20e4,
-                liquidatorRewardRatio: 25e4,
+                liquidationRewardRatio: 25e4,
                 exchangedQuote: 100,
-                liquidatorReward: 5,
+                liquidationReward: 5,
                 insuranceFundReward: 15,
                 revertedWith: void 0,
             },
@@ -60,20 +60,20 @@ describe("TakerLibrary", () => {
                 await library.setInsuranceFundInfo({ balance: test.insuranceFundBalance })
 
                 const res = expect(
-                    library.processLiquidationFee(test.mmRatio, test.liquidatorRewardRatio, test.exchangedQuote),
+                    library.processLiquidationFee(test.mmRatio, test.liquidationRewardRatio, test.exchangedQuote),
                 )
 
                 if (test.revertedWith === void 0) {
                     await res.to
                         .emit(library, "ProcessLiquidationFeeResult")
-                        .withArgs(test.liquidatorReward, test.insuranceFundReward)
+                        .withArgs(test.liquidationReward, test.insuranceFundReward)
 
                     const vault = await library.accountInfo()
                     expect(vault.collateralBalance).to.eq(
-                        test.collateralBalance - test.liquidatorReward - test.insuranceFundReward,
+                        test.collateralBalance - test.liquidationReward - test.insuranceFundReward,
                     )
                     const liquidatorBalance = await library.liquidatorVaultInfo()
-                    expect(liquidatorBalance).to.eq(test.liquidatorCollateralBalance + test.liquidatorReward)
+                    expect(liquidatorBalance).to.eq(test.liquidatorCollateralBalance + test.liquidationReward)
                     const insuranceFundBalance = await library.insuranceFundInfo()
                     expect(insuranceFundBalance).to.eq(test.insuranceFundBalance + test.insuranceFundReward)
                 } else {

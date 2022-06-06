@@ -5,6 +5,7 @@ pragma abicoder v2;
 import { Address } from "@openzeppelin/contracts/utils/Address.sol";
 import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
+import { SafeCast } from "@openzeppelin/contracts/utils/SafeCast.sol";
 import { IPerpdexExchange } from "./interface/IPerpdexExchange.sol";
 import { IPerpdexMarket } from "./interface/IPerpdexMarket.sol";
 import { PerpdexStructs } from "./lib/PerpdexStructs.sol";
@@ -13,7 +14,6 @@ import { MakerLibrary } from "./lib/MakerLibrary.sol";
 import { TakerLibrary } from "./lib/TakerLibrary.sol";
 import { VaultLibrary } from "./lib/VaultLibrary.sol";
 import { PerpMath } from "./lib/PerpMath.sol";
-import { SafeCast } from "@openzeppelin/contracts/utils/SafeCast.sol";
 
 contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
     using Address for address;
@@ -31,7 +31,7 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
     // config
     address public immutable override settlementToken;
     PerpdexStructs.PriceLimitConfig public override priceLimitConfig =
-        PerpdexStructs.PriceLimitConfig({ priceLimitNormalOrderRatio: 5e4, priceLimitLiquidationRatio: 10e4 });
+        PerpdexStructs.PriceLimitConfig({ normalOrderRatio: 5e4, liquidationRatio: 10e4 });
     uint8 public override maxMarketsPerAccount = 16;
     uint24 public override imRatio = 10e4;
     uint24 public override mmRatio = 5e4;
@@ -41,6 +41,11 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
 
     modifier checkDeadline(uint256 deadline) {
         require(block.timestamp <= deadline, "PE_CD: too late");
+        _;
+    }
+
+    modifier checkMarketAllowed(address market) {
+        require(isMarketAllowed[market], "PE_CMA: market not allowed");
         _;
     }
 
@@ -99,31 +104,13 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
         override
         nonReentrant
         checkDeadline(params.deadline)
+        checkMarketAllowed(params.market)
         returns (int256 base, int256 quote)
     {
-        TakerLibrary.OpenPositionResponse memory response =
-            TakerLibrary.openPosition(
-                accountInfos[params.trader],
-                accountInfos[_msgSender()].vaultInfo,
-                insuranceFundInfo,
-                priceLimitInfos[params.market],
-                protocolInfo,
-                TakerLibrary.OpenPositionParams({
-                    market: params.market,
-                    isBaseToQuote: params.isBaseToQuote,
-                    isExactInput: params.isExactInput,
-                    amount: params.amount,
-                    oppositeAmountBound: params.oppositeAmountBound,
-                    priceLimitConfig: priceLimitConfig,
-                    isMarketAllowed: isMarketAllowed[params.market],
-                    mmRatio: mmRatio,
-                    imRatio: imRatio,
-                    maxMarketsPerAccount: maxMarketsPerAccount,
-                    protocolFeeRatio: protocolFeeRatio,
-                    liquidationRewardRatio: liquidationRewardRatio,
-                    isSelf: params.trader == _msgSender()
-                })
-            );
+        TakerLibrary.OpenPositionResponse memory response = _doOpenPosition(params);
+
+        uint256 baseBalancePerShareX96 = IPerpdexMarket(params.market).baseBalancePerShareX96();
+        uint256 shareMarkPriceAfterX96 = IPerpdexMarket(params.market).getShareMarkPriceX96();
 
         if (response.isLiquidation) {
             emit PositionLiquidated(
@@ -134,8 +121,8 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
                 response.quote,
                 response.realizedPnl,
                 response.protocolFee,
-                IPerpdexMarket(params.market).baseBalancePerShareX96(),
-                response.priceAfterX96,
+                baseBalancePerShareX96,
+                shareMarkPriceAfterX96,
                 response.liquidationReward,
                 response.insuranceFundReward
             );
@@ -147,8 +134,8 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
                 response.quote,
                 response.realizedPnl,
                 response.protocolFee,
-                IPerpdexMarket(params.market).baseBalancePerShareX96(),
-                response.priceAfterX96
+                baseBalancePerShareX96,
+                shareMarkPriceAfterX96
             );
         }
 
@@ -160,6 +147,7 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
         override
         nonReentrant
         checkDeadline(params.deadline)
+        checkMarketAllowed(params.market)
         returns (
             uint256 base,
             uint256 quote,
@@ -177,11 +165,13 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
                     quote: params.quote,
                     minBase: params.minBase,
                     minQuote: params.minQuote,
-                    isMarketAllowed: isMarketAllowed[params.market],
                     imRatio: imRatio,
                     maxMarketsPerAccount: maxMarketsPerAccount
                 })
             );
+
+        uint256 baseBalancePerShareX96 = IPerpdexMarket(params.market).baseBalancePerShareX96();
+        uint256 shareMarkPriceAfterX96 = IPerpdexMarket(params.market).getShareMarkPriceX96();
 
         emit LiquidityAdded(
             trader,
@@ -189,8 +179,8 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
             response.base,
             response.quote,
             response.liquidity,
-            IPerpdexMarket(params.market).baseBalancePerShareX96(),
-            IPerpdexMarket(params.market).getMarkPriceX96()
+            baseBalancePerShareX96,
+            shareMarkPriceAfterX96
         );
 
         return (response.base, response.quote, response.liquidity);
@@ -201,6 +191,7 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
         override
         nonReentrant
         checkDeadline(params.deadline)
+        checkMarketAllowed(params.market)
         returns (uint256 base, uint256 quote)
     {
         MakerLibrary.RemoveLiquidityResponse memory response =
@@ -217,6 +208,12 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
                 })
             );
 
+        uint256 baseBalancePerShareX96;
+
+        {
+            baseBalancePerShareX96 = IPerpdexMarket(params.market).baseBalancePerShareX96();
+        }
+
         emit LiquidityRemoved(
             params.trader,
             params.market,
@@ -227,8 +224,8 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
             response.takerBase,
             response.takerQuote,
             response.realizedPnl,
-            IPerpdexMarket(params.market).baseBalancePerShareX96(),
-            IPerpdexMarket(params.market).getMarkPriceX96()
+            baseBalancePerShareX96,
+            response.shareMarkPriceAfterX96
         );
 
         return (response.base, response.quote);
@@ -240,48 +237,48 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
         onlyOwner
         nonReentrant
     {
-        require(value.priceLimitLiquidationRatio <= 5e5, "PE_SPLC: too large liquidation");
-        require(value.priceLimitNormalOrderRatio <= value.priceLimitLiquidationRatio, "PE_SPLC: invalid");
+        require(value.liquidationRatio <= 5e5, "PE_SPLC: too large liquidation");
+        require(value.normalOrderRatio <= value.liquidationRatio, "PE_SPLC: invalid");
         priceLimitConfig = value;
+        emit PriceLimitConfigChanged(value.normalOrderRatio, value.liquidationRatio);
     }
 
     function setMaxMarketsPerAccount(uint8 value) external override onlyOwner nonReentrant {
         maxMarketsPerAccount = value;
+        emit MaxMarketsPerAccountChanged(value);
     }
 
     function setImRatio(uint24 value) external override onlyOwner nonReentrant {
         require(value < 1e6, "PE_SIR: too large");
         require(value >= mmRatio, "PE_SIR: smaller than mmRatio");
         imRatio = value;
+        emit ImRatioChanged(value);
     }
 
     function setMmRatio(uint24 value) external override onlyOwner nonReentrant {
         require(value <= imRatio, "PE_SMR: bigger than imRatio");
         require(value > 0, "PE_SMR: zero");
         mmRatio = value;
+        emit MmRatioChanged(value);
     }
 
     function setLiquidationRewardRatio(uint24 value) external override onlyOwner nonReentrant {
         require(value < 1e6, "PE_SLRR: too large");
         liquidationRewardRatio = value;
+        emit LiquidationRewardRatioChanged(value);
     }
 
     function setProtocolFeeRatio(uint24 value) external override onlyOwner nonReentrant {
         require(value <= 1e4, "PE_SPFR: too large");
         protocolFeeRatio = value;
+        emit ProtocolFeeRatioChanged(value);
     }
 
     function setIsMarketAllowed(address market, bool value) external override onlyOwner nonReentrant {
         require(market.isContract(), "PE_SIMA: market address invalid");
-        if (isMarketAllowed[market] != value) {
-            isMarketAllowed[market] = value;
-            emit IsMarketAllowedChanged(market, value);
-        }
+        isMarketAllowed[market] = value;
+        emit IsMarketAllowedChanged(market, value);
     }
-
-    //
-    // EXTERNAL VIEW
-    //
 
     // all raw information can be retrieved through getters (including default getters)
 
@@ -313,6 +310,7 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
         external
         view
         override
+        checkMarketAllowed(params.market)
         returns (int256 base, int256 quote)
     {
         address trader = params.trader;
@@ -370,5 +368,34 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
 
     function hasEnoughInitialMargin(address trader) external view override returns (bool) {
         return AccountLibrary.hasEnoughInitialMargin(accountInfos[trader], imRatio);
+    }
+
+    // for avoiding stack too deep error
+    function _doOpenPosition(OpenPositionParams calldata params)
+        private
+        returns (TakerLibrary.OpenPositionResponse memory)
+    {
+        return
+            TakerLibrary.openPosition(
+                accountInfos[params.trader],
+                accountInfos[_msgSender()].vaultInfo,
+                insuranceFundInfo,
+                priceLimitInfos[params.market],
+                protocolInfo,
+                TakerLibrary.OpenPositionParams({
+                    market: params.market,
+                    isBaseToQuote: params.isBaseToQuote,
+                    isExactInput: params.isExactInput,
+                    amount: params.amount,
+                    oppositeAmountBound: params.oppositeAmountBound,
+                    priceLimitConfig: priceLimitConfig,
+                    mmRatio: mmRatio,
+                    imRatio: imRatio,
+                    maxMarketsPerAccount: maxMarketsPerAccount,
+                    protocolFeeRatio: protocolFeeRatio,
+                    liquidationRewardRatio: liquidationRewardRatio,
+                    isSelf: params.trader == _msgSender()
+                })
+            );
     }
 }

@@ -54,8 +54,8 @@ interface IPerpdexExchange {
         uint256 base,
         uint256 quote,
         uint256 liquidity,
-        uint256 baseBalancePerShare,
-        uint256 priceAfterX96
+        uint256 baseBalancePerShareX96,
+        uint256 sharePriceAfterX96
     );
 
     event LiquidityRemoved(
@@ -68,8 +68,8 @@ interface IPerpdexExchange {
         int256 takerBase,
         int256 takerQuote,
         int256 realizedPnl,
-        uint256 baseBalancePerShare,
-        uint256 priceAfterX96
+        uint256 baseBalancePerShareX96,
+        uint256 sharePriceAfterX96
     );
 
     event PositionLiquidated(
@@ -80,8 +80,8 @@ interface IPerpdexExchange {
         int256 quote,
         int256 realizedPnl,
         uint256 protocolFee,
-        uint256 baseBalancePerShare,
-        uint256 priceAfterX96,
+        uint256 baseBalancePerShareX96,
+        uint256 sharePriceAfterX96,
         uint256 liquidationReward,
         uint256 insuranceFundReward
     );
@@ -93,10 +93,16 @@ interface IPerpdexExchange {
         int256 quote,
         int256 realizedPnl,
         uint256 protocolFee,
-        uint256 baseBalancePerShare,
-        uint256 priceAfterX96
+        uint256 baseBalancePerShareX96,
+        uint256 sharePriceAfterX96
     );
 
+    event PriceLimitConfigChanged(uint24 normalOrderRatio, uint24 liquidationRatio);
+    event MaxMarketsPerAccountChanged(uint8 value);
+    event ImRatioChanged(uint24 value);
+    event MmRatioChanged(uint24 value);
+    event LiquidationRewardRatioChanged(uint24 value);
+    event ProtocolFeeRatioChanged(uint24 value);
     event IsMarketAllowedChanged(address indexed market, bool isMarketAllowed);
 
     function deposit(uint256 amount) external payable;
@@ -154,10 +160,7 @@ interface IPerpdexExchange {
 
     function settlementToken() external view returns (address);
 
-    function priceLimitConfig()
-        external
-        view
-        returns (uint24 priceLimitNormalOrderRatio, uint24 priceLimitLiquidationRatio);
+    function priceLimitConfig() external view returns (uint24 normalOrderRatio, uint24 liquidationRatio);
 
     function maxMarketsPerAccount() external view returns (uint8);
 

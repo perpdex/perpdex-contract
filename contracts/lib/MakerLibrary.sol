@@ -25,7 +25,6 @@ library MakerLibrary {
         uint256 quote;
         uint256 minBase;
         uint256 minQuote;
-        bool isMarketAllowed;
         uint24 imRatio;
         uint8 maxMarketsPerAccount;
     }
@@ -52,6 +51,7 @@ library MakerLibrary {
         int256 takerBase;
         int256 takerQuote;
         int256 realizedPnl;
+        uint256 shareMarkPriceAfterX96;
         bool isLiquidation;
     }
 
@@ -59,8 +59,6 @@ library MakerLibrary {
         internal
         returns (AddLiquidityResponse memory)
     {
-        require(params.isMarketAllowed, "ML_AL: add liquidity forbidden");
-
         PerpdexStructs.MakerInfo storage makerInfo = accountInfo.makerInfos[params.market];
         _applyDeleveraged(makerInfo, params.market);
 
@@ -126,9 +124,9 @@ library MakerLibrary {
         }
 
         {
-            uint256 shareMarkPriceX96 = IPerpdexMarket(params.market).getMarkPriceX96();
+            response.shareMarkPriceAfterX96 = IPerpdexMarket(params.market).getMarkPriceX96();
             int256 takerQuoteCalculatedAtCurrentPrice =
-                -response.takerBase.mulDiv(shareMarkPriceX96.toInt256(), FixedPoint96.Q96);
+                -response.takerBase.mulDiv(response.shareMarkPriceAfterX96.toInt256(), FixedPoint96.Q96);
             response.realizedPnl = TakerLibrary.addToTakerBalance(
                 accountInfo,
                 params.market,

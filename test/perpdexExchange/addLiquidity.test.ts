@@ -70,6 +70,8 @@ describe("PerpdexExchange addLiquidity", () => {
                     cumDeleveragedBaseSharePerLiquidityX96: 0,
                     cumDeleveragedQuotePerLiquidityX96: 0,
                 },
+                outputBase: 100,
+                outputQuote: 100,
                 afterCollateralBalance: 10,
                 afterTakerInfo: {
                     baseBalanceShare: 0,
@@ -109,6 +111,8 @@ describe("PerpdexExchange addLiquidity", () => {
                     cumDeleveragedQuotePerLiquidityX96: Q96.mul(3),
                     baseBalancePerShareX96: Q96,
                 },
+                outputBase: 100,
+                outputQuote: 100,
                 afterCollateralBalance: 100,
                 afterTakerInfo: {
                     baseBalanceShare: 0,
@@ -181,7 +185,7 @@ describe("PerpdexExchange addLiquidity", () => {
                     cumDeleveragedQuotePerLiquidityX96: 0,
                 },
                 isMarketAllowed: false,
-                revertedWith: "ML_AL: add liquidity forbidden",
+                revertedWith: "PE_CMA: market not allowed",
             },
             {
                 title: "not enough im",
@@ -202,6 +206,47 @@ describe("PerpdexExchange addLiquidity", () => {
                     cumDeleveragedQuotePerLiquidityX96: 0,
                 },
                 revertedWith: "ML_AL: not enough im",
+            },
+            {
+                title: "event",
+                base: 100,
+                quote: 400,
+                minBase: 0,
+                minQuote: 0,
+                collateralBalance: 100,
+                takerInfo: {
+                    baseBalanceShare: 0,
+                    quoteBalance: 0,
+                },
+                makerInfo: {
+                    baseDebtShare: 0,
+                    quoteDebt: 0,
+                    liquidity: 0,
+                    cumDeleveragedBaseSharePerLiquidityX96: 0,
+                    cumDeleveragedQuotePerLiquidityX96: 0,
+                },
+                poolInfo: {
+                    base: 10000,
+                    quote: 40000,
+                    totalLiquidity: 20000,
+                    cumDeleveragedBasePerLiquidityX96: 0,
+                    cumDeleveragedQuotePerLiquidityX96: 0,
+                    baseBalancePerShareX96: Q96.mul(2),
+                },
+                outputBase: 100,
+                outputQuote: 400,
+                afterCollateralBalance: 100,
+                afterTakerInfo: {
+                    baseBalanceShare: 0,
+                    quoteBalance: 0,
+                },
+                afterMakerInfo: {
+                    baseDebtShare: 100,
+                    quoteDebt: 400,
+                    liquidity: 200,
+                    cumDeleveragedBaseSharePerLiquidityX96: 0,
+                    cumDeleveragedQuotePerLiquidityX96: 0,
+                },
             },
         ].forEach(test => {
             it(test.title, async () => {
@@ -235,7 +280,19 @@ describe("PerpdexExchange addLiquidity", () => {
                 )
 
                 if (test.revertedWith === void 0) {
-                    await res.to.emit(exchange, "LiquidityAdded")
+                    const sharePrice = test.poolInfo ? Q96.mul(test.poolInfo.quote).div(test.poolInfo.base) : Q96
+
+                    await res.to
+                        .emit(exchange, "LiquidityAdded")
+                        .withArgs(
+                            alice.address,
+                            market.address,
+                            test.outputBase,
+                            test.outputQuote,
+                            test.afterMakerInfo.liquidity - test.makerInfo.liquidity,
+                            test.poolInfo ? test.poolInfo.baseBalancePerShareX96 : Q96,
+                            sharePrice,
+                        )
 
                     const accountInfo = await exchange.accountInfos(alice.address)
                     expect(accountInfo.collateralBalance).to.eq(test.afterCollateralBalance)

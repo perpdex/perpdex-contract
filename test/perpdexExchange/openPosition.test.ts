@@ -27,14 +27,14 @@ describe("PerpdexExchange openPosition", () => {
 
         await exchange.connect(owner).setImRatio(10e4)
         await exchange.connect(owner).setMmRatio(5e4)
-        await exchange.connect(owner).setLiquidationRewardRatio(50e4)
+        await exchange.connect(owner).setLiquidationRewardRatio(25e4)
 
         await market.connect(owner).setPoolFeeRatio(0)
         await market.connect(owner).setFundingMaxPremiumRatio(0)
         await exchange.connect(owner).setIsMarketAllowed(market.address, true)
         await exchange.connect(owner).setPriceLimitConfig({
-            priceLimitNormalOrderRatio: 5e4,
-            priceLimitLiquidationRatio: 10e4,
+            normalOrderRatio: 5e4,
+            liquidationRatio: 10e4,
         })
 
         await exchange.setInsuranceFundInfo({ balance: 10000 })
@@ -78,6 +78,8 @@ describe("PerpdexExchange openPosition", () => {
                     baseBalanceShare: 0,
                     quoteBalance: 0,
                 },
+                outputBase: 99,
+                outputQuote: -100,
                 afterCollateralBalance: 100,
                 afterTakerInfo: {
                     baseBalanceShare: 99,
@@ -98,6 +100,8 @@ describe("PerpdexExchange openPosition", () => {
                     baseBalanceShare: 0,
                     quoteBalance: 0,
                 },
+                outputBase: -100,
+                outputQuote: 99,
                 afterCollateralBalance: 100,
                 afterTakerInfo: {
                     baseBalanceShare: -100,
@@ -118,6 +122,8 @@ describe("PerpdexExchange openPosition", () => {
                     baseBalanceShare: 0,
                     quoteBalance: 0,
                 },
+                outputBase: 100,
+                outputQuote: -102,
                 afterCollateralBalance: 100,
                 afterTakerInfo: {
                     baseBalanceShare: 100,
@@ -138,6 +144,8 @@ describe("PerpdexExchange openPosition", () => {
                     baseBalanceShare: 0,
                     quoteBalance: 0,
                 },
+                outputBase: -102,
+                outputQuote: 100,
                 afterCollateralBalance: 100,
                 afterTakerInfo: {
                     baseBalanceShare: -102,
@@ -158,6 +166,8 @@ describe("PerpdexExchange openPosition", () => {
                     baseBalanceShare: 0,
                     quoteBalance: 0,
                 },
+                outputBase: 98,
+                outputQuote: -100,
                 afterCollateralBalance: 100,
                 afterTakerInfo: {
                     baseBalanceShare: 98,
@@ -178,6 +188,8 @@ describe("PerpdexExchange openPosition", () => {
                     baseBalanceShare: 0,
                     quoteBalance: 0,
                 },
+                outputBase: -200,
+                outputQuote: 195,
                 afterCollateralBalance: 100,
                 afterTakerInfo: {
                     baseBalanceShare: -200,
@@ -198,6 +210,8 @@ describe("PerpdexExchange openPosition", () => {
                     baseBalanceShare: 100,
                     quoteBalance: -50,
                 },
+                outputBase: -100,
+                outputQuote: 99,
                 afterCollateralBalance: 149,
                 afterTakerInfo: {
                     baseBalanceShare: 0,
@@ -218,6 +232,8 @@ describe("PerpdexExchange openPosition", () => {
                     baseBalanceShare: 100,
                     quoteBalance: -50,
                 },
+                outputBase: -40,
+                outputQuote: 39,
                 afterCollateralBalance: 119,
                 afterTakerInfo: {
                     baseBalanceShare: 60,
@@ -238,6 +254,8 @@ describe("PerpdexExchange openPosition", () => {
                     baseBalanceShare: 100,
                     quoteBalance: -50,
                 },
+                outputBase: -200,
+                outputQuote: 196,
                 afterCollateralBalance: 148,
                 afterTakerInfo: {
                     baseBalanceShare: -100,
@@ -295,12 +313,8 @@ describe("PerpdexExchange openPosition", () => {
                     baseBalanceShare: 0,
                     quoteBalance: 0,
                 },
-                revertedWith: "TL_OP: no open when closed",
-                afterCollateralBalance: 100,
-                afterTakerInfo: {
-                    baseBalanceShare: 99,
-                    quoteBalance: -100,
-                },
+                revertedWith: "PE_CMA: market not allowed",
+                revertedWithDry: "PE_CMA: market not allowed",
             },
             {
                 title: "flip is not allowed when market closed",
@@ -315,15 +329,11 @@ describe("PerpdexExchange openPosition", () => {
                     baseBalanceShare: 100,
                     quoteBalance: -50,
                 },
-                revertedWith: "TL_OP: no open when closed",
-                afterCollateralBalance: 148,
-                afterTakerInfo: {
-                    baseBalanceShare: -100,
-                    quoteBalance: 98,
-                },
+                revertedWith: "PE_CMA: market not allowed",
+                revertedWithDry: "PE_CMA: market not allowed",
             },
             {
-                title: "close all is allowed when market closed",
+                title: "close all is not allowed when market closed",
                 isMarketAllowed: false,
                 isBaseToQuote: true,
                 isExactInput: true,
@@ -335,16 +345,11 @@ describe("PerpdexExchange openPosition", () => {
                     baseBalanceShare: 100,
                     quoteBalance: -50,
                 },
-                afterCollateralBalance: 149,
-                afterTakerInfo: {
-                    baseBalanceShare: 0,
-                    quoteBalance: 0,
-                },
-                protocolFee: 0,
-                insuranceFund: 0,
+                revertedWith: "PE_CMA: market not allowed",
+                revertedWithDry: "PE_CMA: market not allowed",
             },
             {
-                title: "close partial is allowed when market closed",
+                title: "close partial is not allowed when market closed",
                 isMarketAllowed: false,
                 isBaseToQuote: true,
                 isExactInput: true,
@@ -356,13 +361,8 @@ describe("PerpdexExchange openPosition", () => {
                     baseBalanceShare: 100,
                     quoteBalance: -50,
                 },
-                afterCollateralBalance: 119,
-                afterTakerInfo: {
-                    baseBalanceShare: 60,
-                    quoteBalance: -30,
-                },
-                protocolFee: 0,
-                insuranceFund: 0,
+                revertedWith: "PE_CMA: market not allowed",
+                revertedWithDry: "PE_CMA: market not allowed",
             },
             {
                 title: "not enough im",
@@ -435,14 +435,42 @@ describe("PerpdexExchange openPosition", () => {
                     baseBalanceShare: 100,
                     quoteBalance: -50,
                 },
+                outputBase: -100,
+                outputQuote: 99,
                 liquidation: true,
+                liquidationReward: 1,
                 afterCollateralBalance: 0 - 4,
                 afterTakerInfo: {
                     baseBalanceShare: 0,
                     quoteBalance: 0,
                 },
                 protocolFee: 0,
-                insuranceFund: 2,
+                insuranceFund: 3,
+            },
+            {
+                title: "liquidation self",
+                notSelf: false,
+                isBaseToQuote: true,
+                isExactInput: true,
+                amount: 100,
+                oppositeAmountBound: 0,
+                protocolFeeRatio: 0,
+                collateralBalance: -49,
+                takerInfo: {
+                    baseBalanceShare: 100,
+                    quoteBalance: -50,
+                },
+                outputBase: -100,
+                outputQuote: 99,
+                liquidation: true,
+                liquidationReward: 1,
+                afterCollateralBalance: 0 - 4 + 1,
+                afterTakerInfo: {
+                    baseBalanceShare: 0,
+                    quoteBalance: 0,
+                },
+                protocolFee: 0,
+                insuranceFund: 3,
             },
             {
                 title: "long opposite amount condition",
@@ -508,14 +536,51 @@ describe("PerpdexExchange openPosition", () => {
                     )
 
                     if (test.revertedWith === void 0) {
+                        const sharePrice = Q96.mul(10000 - test.outputQuote - test.protocolFee).div(
+                            10000 - test.outputBase,
+                        )
+
                         if (test.liquidation) {
-                            await res.to.emit(exchange, "PositionLiquidated")
+                            await res.to
+                                .emit(exchange, "PositionLiquidated")
+                                .withArgs(
+                                    alice.address,
+                                    market.address,
+                                    (test.notSelf ? bob : alice).address,
+                                    test.outputBase,
+                                    test.outputQuote,
+                                    test.afterCollateralBalance -
+                                        test.collateralBalance +
+                                        test.insuranceFund +
+                                        (test.notSelf ? test.liquidationReward : 0),
+                                    test.protocolFee,
+                                    Q96,
+                                    sharePrice,
+                                    test.liquidationReward,
+                                    test.insuranceFund,
+                                )
                         } else {
-                            await res.to.emit(exchange, "PositionChanged")
+                            await res.to
+                                .emit(exchange, "PositionChanged")
+                                .withArgs(
+                                    alice.address,
+                                    market.address,
+                                    test.outputBase,
+                                    test.outputQuote,
+                                    test.afterCollateralBalance - test.collateralBalance,
+                                    test.protocolFee,
+                                    Q96,
+                                    sharePrice,
+                                )
                         }
 
                         const accountInfo = await exchange.accountInfos(alice.address)
                         expect(accountInfo.collateralBalance).to.eq(test.afterCollateralBalance)
+
+                        if (test.notSelf) {
+                            const accountInfoBob = await exchange.accountInfos(bob.address)
+                            expect(accountInfoBob.collateralBalance).to.eq(test.liquidationReward)
+                        }
 
                         const takerInfo = await exchange.getTakerInfo(alice.address, market.address)
                         expect(takerInfo.baseBalanceShare).to.eq(test.afterTakerInfo.baseBalanceShare)
