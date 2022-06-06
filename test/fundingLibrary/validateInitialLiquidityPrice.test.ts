@@ -73,6 +73,22 @@ describe("FundingLibrary", () => {
                 revertedWith: "FL_VILP: invalid quote price",
             },
             {
+                title: "decimals overflow base",
+                base: 1,
+                quote: 1,
+                priceBase: 1,
+                decimalsBase: 78,
+                revertedWith: "FL_VILP: invalid base decimals",
+            },
+            {
+                title: "decimals overflow quote",
+                base: 1,
+                quote: 1,
+                priceQuote: 1,
+                decimalsQuote: 78,
+                revertedWith: "FL_VILP: invalid quote decimals",
+            },
+            {
                 title: "decimals revert base",
                 base: 1,
                 quote: 1,
@@ -148,9 +164,13 @@ describe("FundingLibrary", () => {
 
                 if (test.decimalsBase === "revert") {
                     await priceFeedBase.mock.decimals.revertsWithReason("TEST: invalid base decimals")
+                } else if (test.decimalsBase !== void 0) {
+                    await priceFeedBase.mock.decimals.returns(test.decimalsBase)
                 }
                 if (test.decimalsQuote === "revert") {
                     await priceFeedQuote.mock.decimals.revertsWithReason("TEST: invalid quote decimals")
+                } else if (test.decimalsQuote !== void 0) {
+                    await priceFeedQuote.mock.decimals.returns(test.decimalsQuote)
                 }
 
                 const res = expect(fundingLibrary.validateInitialLiquidityPrice(pfBase, pfQuote, test.base, test.quote))

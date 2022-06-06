@@ -152,6 +152,24 @@ describe("FundingLibrary processFunding", () => {
                 decimalsQuote: "revert",
                 updated: false,
             },
+            {
+                title: "decimals overflow base",
+                prevIndexPriceBase: 1,
+                prevIndexPriceQuote: 1,
+                prevIndexPriceTimestamp: -1,
+                priceBase: 2,
+                decimalsBase: 78,
+                updated: false,
+            },
+            {
+                title: "decimals overflow quote",
+                prevIndexPriceBase: 1,
+                prevIndexPriceQuote: 1,
+                prevIndexPriceTimestamp: -1,
+                priceQuote: 2,
+                decimalsQuote: 78,
+                updated: false,
+            },
         ].forEach(test => {
             it(test.title, async () => {
                 const currentTimestamp = await getTimestamp()
@@ -175,9 +193,13 @@ describe("FundingLibrary processFunding", () => {
 
                 if (test.decimalsBase === "revert") {
                     await priceFeedBase.mock.decimals.revertsWithReason("TEST: invalid base decimals")
+                } else if (test.decimalsBase !== void 0) {
+                    await priceFeedBase.mock.decimals.returns(test.decimalsBase)
                 }
                 if (test.decimalsQuote === "revert") {
                     await priceFeedQuote.mock.decimals.revertsWithReason("TEST: invalid quote decimals")
+                } else if (test.decimalsQuote !== void 0) {
+                    await priceFeedQuote.mock.decimals.returns(test.decimalsQuote)
                 }
 
                 await setNextTimestamp(currentTimestamp + 1000)

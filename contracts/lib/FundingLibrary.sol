@@ -29,6 +29,8 @@ library FundingLibrary {
         uint32 rolloverSec;
     }
 
+    uint8 public constant MAX_DECIMALS = 77; // 10^MAX_DECIMALS < 2^256
+
     function initializeFunding(MarketStructs.FundingInfo storage fundingInfo) internal {
         fundingInfo.prevIndexPriceTimestamp = block.timestamp;
     }
@@ -50,8 +52,8 @@ library FundingLibrary {
             (fundingInfo.prevIndexPriceBase == indexPriceBase && fundingInfo.prevIndexPriceQuote == indexPriceQuote) ||
             indexPriceBase == 0 ||
             indexPriceQuote == 0 ||
-            decimalsBase == 255 ||
-            decimalsQuote == 255
+            decimalsBase > MAX_DECIMALS ||
+            decimalsQuote > MAX_DECIMALS
         ) {
             return 0;
         }
@@ -82,8 +84,8 @@ library FundingLibrary {
         require(indexPriceQuote > 0, "FL_VILP: invalid quote price");
         uint8 decimalsBase = _getDecimalsSafe(priceFeedBase);
         uint8 decimalsQuote = _getDecimalsSafe(priceFeedQuote);
-        require(decimalsBase != 255, "FL_VILP: invalid base decimals");
-        require(decimalsQuote != 255, "FL_VILP: invalid quote decimals");
+        require(decimalsBase <= MAX_DECIMALS, "FL_VILP: invalid base decimals");
+        require(decimalsQuote <= MAX_DECIMALS, "FL_VILP: invalid quote decimals");
 
         uint256 markPriceX96 = FullMath.mulDiv(quote, FixedPoint96.Q96, base);
         int256 premiumX96 = _calcPremiumX96(decimalsBase, decimalsQuote, indexPriceBase, indexPriceQuote, markPriceX96);
