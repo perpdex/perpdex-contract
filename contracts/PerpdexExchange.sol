@@ -6,6 +6,7 @@ import { Address } from "@openzeppelin/contracts/utils/Address.sol";
 import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { IPerpdexExchange } from "./interface/IPerpdexExchange.sol";
+import { IPerpdexMarket } from "./interface/IPerpdexMarket.sol";
 import { PerpdexStructs } from "./lib/PerpdexStructs.sol";
 import { AccountLibrary } from "./lib/AccountLibrary.sol";
 import { MakerLibrary } from "./lib/MakerLibrary.sol";
@@ -100,11 +101,11 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
         checkDeadline(params.deadline)
         returns (int256 base, int256 quote)
     {
-        address trader = _msgSender();
-
         TakerLibrary.OpenPositionResponse memory response =
             TakerLibrary.openPosition(
-                accountInfos[trader],
+                accountInfos[params.trader],
+                accountInfos[_msgSender()].vaultInfo,
+                insuranceFundInfo,
                 priceLimitInfos[params.market],
                 protocolInfo,
                 TakerLibrary.OpenPositionParams({
@@ -118,63 +119,40 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
                     mmRatio: mmRatio,
                     imRatio: imRatio,
                     maxMarketsPerAccount: maxMarketsPerAccount,
-                    protocolFeeRatio: protocolFeeRatio
-                })
-            );
-
-        emit PositionChanged(
-            trader,
-            params.market,
-            response.exchangedBase,
-            response.exchangedQuote,
-            accountInfos[trader].takerInfos[params.market].quoteBalance,
-            response.realizedPnL,
-            response.priceAfterX96
-        );
-
-        return (response.exchangedBase, response.exchangedQuote);
-    }
-
-    function liquidate(LiquidateParams calldata params)
-        external
-        override
-        nonReentrant
-        checkDeadline(params.deadline)
-        returns (int256 base, int256 quote)
-    {
-        address trader = params.trader;
-        address liquidator = _msgSender();
-
-        TakerLibrary.LiquidateResponse memory response =
-            TakerLibrary.liquidate(
-                accountInfos[trader],
-                accountInfos[liquidator],
-                priceLimitInfos[params.market],
-                protocolInfo,
-                insuranceFundInfo,
-                TakerLibrary.LiquidateParams({
-                    market: params.market,
-                    amount: params.amount,
-                    oppositeAmountBound: params.oppositeAmountBound,
-                    priceLimitConfig: priceLimitConfig,
-                    mmRatio: mmRatio,
+                    protocolFeeRatio: protocolFeeRatio,
                     liquidationRewardRatio: liquidationRewardRatio,
-                    maxMarketsPerAccount: maxMarketsPerAccount,
-                    protocolFeeRatio: protocolFeeRatio
+                    isSelf: params.trader == _msgSender()
                 })
             );
 
-        emit PositionChanged(
-            trader,
-            params.market,
-            response.exchangedBase,
-            response.exchangedQuote,
-            accountInfos[trader].takerInfos[params.market].quoteBalance,
-            response.realizedPnL,
-            response.priceAfterX96
-        );
+        if (response.isLiquidation) {
+            emit PositionLiquidated(
+                params.trader,
+                params.market,
+                _msgSender(),
+                response.base,
+                response.quote,
+                response.realizedPnl,
+                response.protocolFee,
+                IPerpdexMarket(params.market).baseBalancePerShareX96(),
+                response.priceAfterX96,
+                response.liquidationReward,
+                response.insuranceFundReward
+            );
+        } else {
+            emit PositionChanged(
+                params.trader,
+                params.market,
+                response.base,
+                response.quote,
+                response.realizedPnl,
+                response.protocolFee,
+                IPerpdexMarket(params.market).baseBalancePerShareX96(),
+                response.priceAfterX96
+            );
+        }
 
-        return (response.exchangedBase, response.exchangedQuote);
+        return (response.base, response.quote);
     }
 
     function addLiquidity(AddLiquidityParams calldata params)
@@ -182,13 +160,17 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
         override
         nonReentrant
         checkDeadline(params.deadline)
-        returns (AddLiquidityResponse memory)
+        returns (
+            uint256 base,
+            uint256 quote,
+            uint256 liquidity
+        )
     {
-        address maker = _msgSender();
+        address trader = _msgSender();
 
         MakerLibrary.AddLiquidityResponse memory response =
             MakerLibrary.addLiquidity(
-                accountInfos[maker],
+                accountInfos[trader],
                 MakerLibrary.AddLiquidityParams({
                     market: params.market,
                     base: params.base,
@@ -201,57 +183,55 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
                 })
             );
 
-        emit LiquidityChanged(
-            maker,
+        emit LiquidityAdded(
+            trader,
             params.market,
-            response.base.toInt256(),
-            response.quote.toInt256(),
-            response.liquidity.toInt256()
+            response.base,
+            response.quote,
+            response.liquidity,
+            IPerpdexMarket(params.market).baseBalancePerShareX96(),
+            IPerpdexMarket(params.market).getMarkPriceX96()
         );
 
-        return AddLiquidityResponse({ base: response.base, quote: response.quote, liquidity: response.liquidity });
+        return (response.base, response.quote, response.liquidity);
     }
 
-    function removeLiquidity(RemoveLiquidityParams calldata params, address maker)
+    function removeLiquidity(RemoveLiquidityParams calldata params)
         external
         override
         nonReentrant
         checkDeadline(params.deadline)
-        returns (RemoveLiquidityResponse memory)
+        returns (uint256 base, uint256 quote)
     {
         MakerLibrary.RemoveLiquidityResponse memory response =
             MakerLibrary.removeLiquidity(
-                accountInfos[maker],
+                accountInfos[params.trader],
                 MakerLibrary.RemoveLiquidityParams({
                     market: params.market,
                     liquidity: params.liquidity,
                     minBase: params.minBase,
                     minQuote: params.minQuote,
-                    makerIsSender: maker == _msgSender(),
+                    isSelf: params.trader == _msgSender(),
                     mmRatio: mmRatio,
                     maxMarketsPerAccount: maxMarketsPerAccount
                 })
             );
 
-        emit LiquidityChanged(
-            maker,
+        emit LiquidityRemoved(
+            params.trader,
             params.market,
-            response.base.neg256(),
-            response.quote.neg256(),
-            params.liquidity.neg256()
+            response.isLiquidation ? _msgSender() : address(0),
+            response.base,
+            response.quote,
+            params.liquidity,
+            response.takerBase,
+            response.takerQuote,
+            response.realizedPnl,
+            IPerpdexMarket(params.market).baseBalancePerShareX96(),
+            IPerpdexMarket(params.market).getMarkPriceX96()
         );
 
-        emit PositionChanged(
-            maker,
-            params.market,
-            response.takerBase, // exchangedPositionSize
-            response.takerQuote, // exchangedPositionNotional
-            accountInfos[maker].takerInfos[params.market].quoteBalance,
-            response.realizedPnL, // realizedPnl
-            response.priceAfterX96
-        );
-
-        return RemoveLiquidityResponse({ base: response.base, quote: response.quote });
+        return (response.base, response.quote);
     }
 
     function setPriceLimitConfig(PerpdexStructs.PriceLimitConfig calldata value)
@@ -329,32 +309,29 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
 
     // dry run
 
-    function openPositionDry(OpenPositionDryParams calldata params, address trader)
+    function openPositionDry(OpenPositionDryParams calldata params)
         external
         view
         override
         returns (int256 base, int256 quote)
     {
-        TakerLibrary.OpenPositionResponse memory response =
+        address trader = params.trader;
+        address caller = params.caller;
+
+        return
             TakerLibrary.openPositionDry(
                 accountInfos[trader],
-                priceLimitInfos[params.market],
-                TakerLibrary.OpenPositionParams({
+                TakerLibrary.OpenPositionDryParams({
                     market: params.market,
                     isBaseToQuote: params.isBaseToQuote,
                     isExactInput: params.isExactInput,
                     amount: params.amount,
                     oppositeAmountBound: params.oppositeAmountBound,
-                    priceLimitConfig: priceLimitConfig,
-                    isMarketAllowed: isMarketAllowed[params.market],
                     mmRatio: mmRatio,
-                    imRatio: imRatio,
-                    maxMarketsPerAccount: maxMarketsPerAccount,
-                    protocolFeeRatio: protocolFeeRatio
+                    protocolFeeRatio: protocolFeeRatio,
+                    isSelf: trader == caller
                 })
             );
-
-        return (response.exchangedBase, response.exchangedQuote);
     }
 
     // convenient getters

@@ -2,7 +2,7 @@ import { expect } from "chai"
 import { BigNumber } from "ethers"
 import { ethers } from "hardhat"
 
-describe("PerpMath test", async () => {
+describe("PerpMath test", () => {
     const x96 = BigNumber.from(2).pow(96)
     const x10_18 = BigNumber.from(10).pow(18)
     const x10_6 = BigNumber.from(10).pow(6)
@@ -65,5 +65,11 @@ describe("PerpMath test", async () => {
         const value = BigNumber.from(2).pow(256).sub(1).div(2)
         const ratio = x10_6.mul(2)
         expect(await perpMath.testMulRatio(value, ratio)).to.be.deep.eq(value.mul(ratio).div(x10_6))
+    })
+
+    it("subRatio", async () => {
+        expect(await perpMath.testSubRatio(1e6 + 3, 1e6)).to.eq(3)
+        expect(await perpMath.testSubRatio(1e6, 1e6)).to.eq(0)
+        await expect(perpMath.testSubRatio(1e6, 1e6 + 1)).to.revertedWith("PerpMath: subtraction overflow")
     })
 })

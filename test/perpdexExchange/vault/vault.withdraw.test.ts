@@ -34,7 +34,7 @@ describe("Vault withdraw test", () => {
         await usdc.connect(bob).approve(perpdexExchange.address, ethers.constants.MaxUint256)
     })
 
-    describe("settlement token", async () => {
+    describe("settlement token", () => {
         it("withdraw settlement token", async () => {
             // alice deposits 300 usdc
             await perpdexExchange.connect(alice).deposit(parseUsdc("300"))

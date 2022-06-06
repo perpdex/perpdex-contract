@@ -45,10 +45,11 @@ describe("PerpdexExchange deadline", () => {
         await setNextTimestamp(nextBlockTimestamp)
     })
 
-    describe("openPosition", async () => {
+    describe("openPosition", () => {
         it("before", async () => {
             await expect(
                 exchange.connect(alice).openPosition({
+                    trader: alice.address,
                     market: market.address,
                     isBaseToQuote: false,
                     isExactInput: true,
@@ -62,6 +63,7 @@ describe("PerpdexExchange deadline", () => {
         it("just", async () => {
             await expect(
                 exchange.connect(alice).openPosition({
+                    trader: alice.address,
                     market: market.address,
                     isBaseToQuote: false,
                     isExactInput: true,
@@ -75,6 +77,7 @@ describe("PerpdexExchange deadline", () => {
         it("after", async () => {
             await expect(
                 exchange.connect(alice).openPosition({
+                    trader: alice.address,
                     market: market.address,
                     isBaseToQuote: false,
                     isExactInput: true,
@@ -86,7 +89,7 @@ describe("PerpdexExchange deadline", () => {
         })
     })
 
-    describe("addLiquidity", async () => {
+    describe("addLiquidity", () => {
         it("before", async () => {
             await expect(
                 exchange.connect(alice).addLiquidity({
@@ -127,49 +130,43 @@ describe("PerpdexExchange deadline", () => {
         })
     })
 
-    describe("removeLiquidity", async () => {
+    describe("removeLiquidity", () => {
         it("before", async () => {
             await expect(
-                exchange.connect(alice).removeLiquidity(
-                    {
-                        market: market.address,
-                        liquidity: 100,
-                        minBase: 0,
-                        minQuote: 0,
-                        deadline: nextBlockTimestamp + 1,
-                    },
-                    alice.address,
-                ),
+                exchange.connect(alice).removeLiquidity({
+                    trader: alice.address,
+                    market: market.address,
+                    liquidity: 100,
+                    minBase: 0,
+                    minQuote: 0,
+                    deadline: nextBlockTimestamp + 1,
+                }),
             ).not.to.revertedWith("PE_CD: too late")
         })
 
         it("just", async () => {
             await expect(
-                exchange.connect(alice).removeLiquidity(
-                    {
-                        market: market.address,
-                        liquidity: 100,
-                        minBase: 0,
-                        minQuote: 0,
-                        deadline: nextBlockTimestamp,
-                    },
-                    alice.address,
-                ),
+                exchange.connect(alice).removeLiquidity({
+                    trader: alice.address,
+                    market: market.address,
+                    liquidity: 100,
+                    minBase: 0,
+                    minQuote: 0,
+                    deadline: nextBlockTimestamp,
+                }),
             ).not.to.revertedWith("PE_CD: too late")
         })
 
         it("after", async () => {
             await expect(
-                exchange.connect(alice).removeLiquidity(
-                    {
-                        market: market.address,
-                        liquidity: 100,
-                        minBase: 0,
-                        minQuote: 0,
-                        deadline: nextBlockTimestamp - 1,
-                    },
-                    alice.address,
-                ),
+                exchange.connect(alice).removeLiquidity({
+                    trader: alice.address,
+                    market: market.address,
+                    liquidity: 100,
+                    minBase: 0,
+                    minQuote: 0,
+                    deadline: nextBlockTimestamp - 1,
+                }),
             ).to.revertedWith("PE_CD: too late")
         })
     })

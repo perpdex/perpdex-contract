@@ -21,7 +21,7 @@ describe("PerpdexExchange config", () => {
         alice = fixture.alice
     })
 
-    describe("initial values", async () => {
+    describe("initial values", () => {
         it("ok", async () => {
             const priceLimitConfig = await exchange.priceLimitConfig()
             expect(priceLimitConfig.priceLimitNormalOrderRatio).to.eq(5e4)
@@ -34,7 +34,7 @@ describe("PerpdexExchange config", () => {
         })
     })
 
-    describe("setPriceLimitConfig", async () => {
+    describe("setPriceLimitConfig", () => {
         it("ok", async () => {
             await exchange.connect(owner).setPriceLimitConfig({
                 priceLimitNormalOrderRatio: 0,
@@ -70,9 +70,18 @@ describe("PerpdexExchange config", () => {
                 }),
             ).to.be.revertedWith("PE_SPLC: too large liquidation")
         })
+
+        it("revert when normal order > liquidation", async () => {
+            await expect(
+                exchange.connect(owner).setPriceLimitConfig({
+                    priceLimitNormalOrderRatio: 2,
+                    priceLimitLiquidationRatio: 1,
+                }),
+            ).to.be.revertedWith("PE_SPLC: invalid")
+        })
     })
 
-    describe("setMaxMarketsPerAccount", async () => {
+    describe("setMaxMarketsPerAccount", () => {
         it("ok", async () => {
             await exchange.connect(owner).setMaxMarketsPerAccount(0)
             expect(await exchange.maxMarketsPerAccount()).to.eq(0)
@@ -87,7 +96,7 @@ describe("PerpdexExchange config", () => {
         })
     })
 
-    describe("setImRatio", async () => {
+    describe("setImRatio", () => {
         it("ok", async () => {
             await exchange.connect(owner).setImRatio(5e4)
             expect(await exchange.imRatio()).to.eq(5e4)
@@ -102,9 +111,13 @@ describe("PerpdexExchange config", () => {
         it("revert when too large", async () => {
             await expect(exchange.connect(owner).setImRatio(1e6)).to.be.revertedWith("PE_SIR: too large")
         })
+
+        it("revert when smaller than mm", async () => {
+            await expect(exchange.connect(owner).setImRatio(5e4 - 1)).to.be.revertedWith("PE_SIR: smaller than mmRatio")
+        })
     })
 
-    describe("setMmRatio", async () => {
+    describe("setMmRatio", () => {
         it("ok", async () => {
             await exchange.connect(owner).setMmRatio(1)
             expect(await exchange.mmRatio()).to.eq(1)
@@ -119,9 +132,13 @@ describe("PerpdexExchange config", () => {
         it("revert when too large", async () => {
             await expect(exchange.connect(owner).setMmRatio(10e4 + 1)).to.be.revertedWith("PE_SMR: bigger than imRatio")
         })
+
+        it("revert when zero", async () => {
+            await expect(exchange.connect(owner).setMmRatio(0)).to.be.revertedWith("PE_SMR: zero")
+        })
     })
 
-    describe("setLiquidationRewardRatio", async () => {
+    describe("setLiquidationRewardRatio", () => {
         it("ok", async () => {
             await exchange.connect(owner).setLiquidationRewardRatio(0)
             expect(await exchange.liquidationRewardRatio()).to.eq(0)
@@ -142,7 +159,7 @@ describe("PerpdexExchange config", () => {
         })
     })
 
-    describe("setProtocolFeeRatio", async () => {
+    describe("setProtocolFeeRatio", () => {
         it("ok", async () => {
             await exchange.connect(owner).setProtocolFeeRatio(0)
             expect(await exchange.protocolFeeRatio()).to.eq(0)
@@ -161,7 +178,7 @@ describe("PerpdexExchange config", () => {
         })
     })
 
-    describe("setIsMarketAllowed", async () => {
+    describe("setIsMarketAllowed", () => {
         it("enable", async () => {
             await expect(exchange.connect(owner).setIsMarketAllowed(market.address, true))
                 .to.emit(exchange, "IsMarketAllowedChanged")

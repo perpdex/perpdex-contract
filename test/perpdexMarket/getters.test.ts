@@ -15,7 +15,7 @@ describe("PerpdexMarket getters", () => {
         market = fixture.perpdexMarket
     })
 
-    describe("getMarkPriceX96 and getShareMarkPriceX96", async () => {
+    describe("getMarkPriceX96 and getShareMarkPriceX96", () => {
         ;[
             {
                 title: "normal",
@@ -57,7 +57,7 @@ describe("PerpdexMarket getters", () => {
         })
     })
 
-    describe("getLiquidityValue", async () => {
+    describe("getLiquidityValue", () => {
         ;[
             {
                 title: "normal",
@@ -115,7 +115,7 @@ describe("PerpdexMarket getters", () => {
         })
     })
 
-    describe("getLiquidityDeleveraged", async () => {
+    describe("getLiquidityDeleveraged", () => {
         ;[
             {
                 title: "normal",
@@ -196,7 +196,7 @@ describe("PerpdexMarket getters", () => {
         })
     })
 
-    describe("simple getters", async () => {
+    describe("simple getters", () => {
         it("ok", async () => {
             await market.setPoolInfo({
                 base: 0,

@@ -27,19 +27,19 @@ describe("PerpdexMarket swap", () => {
         await market.connect(owner).setFundingMaxPremiumRatio(0)
     })
 
-    describe("caller is not exchange", async () => {
+    describe("caller is not exchange", () => {
         it("revert", async () => {
             await expect(market.connect(alice).swap(false, true, 1)).to.be.revertedWith("PM_OE: caller is not exchange")
         })
     })
 
-    describe("empty pool", async () => {
+    describe("empty pool", () => {
         it("revert", async () => {
             await expect(market.connect(exchange).swap(false, true, 1)).to.be.reverted
         })
     })
 
-    describe("without fee, without funding", async () => {
+    describe("without fee, without funding", () => {
         beforeEach(async () => {
             await market.connect(exchange).addLiquidity(10000, 10000)
         })
@@ -246,7 +246,7 @@ describe("PerpdexMarket swap", () => {
         })
     })
 
-    describe("with fee, without funding", async () => {
+    describe("with fee, without funding", () => {
         beforeEach(async () => {
             await market.connect(owner).setPoolFeeRatio(1e4)
             await market.connect(exchange).addLiquidity(10000, 10000)
@@ -305,7 +305,7 @@ describe("PerpdexMarket swap", () => {
         })
     })
 
-    describe("without fee, with funding", async () => {
+    describe("without fee, with funding", () => {
         beforeEach(async () => {
             await priceFeed.mock.getPrice.returns(BigNumber.from(10).pow(18))
             await market.connect(exchange).addLiquidity(10000, 10000)

@@ -29,13 +29,13 @@ describe("PerpdexMarket addLiquidity", () => {
         await priceFeed.mock.decimals.returns(18)
     })
 
-    describe("caller is not exchange", async () => {
+    describe("caller is not exchange", () => {
         it("revert", async () => {
             await expect(market.connect(alice).addLiquidity(1, 1)).to.be.revertedWith("PM_OE: caller is not exchange")
         })
     })
 
-    describe("empty pool", async () => {
+    describe("empty pool", () => {
         ;[
             {
                 title: "minimum",
@@ -111,7 +111,7 @@ describe("PerpdexMarket addLiquidity", () => {
         })
     })
 
-    describe("non empty pool", async () => {
+    describe("non empty pool", () => {
         beforeEach(async () => {
             await market.connect(exchange).addLiquidity(10000, 10000)
         })
@@ -176,7 +176,7 @@ describe("PerpdexMarket addLiquidity", () => {
         })
     })
 
-    describe("rounding (benefit to others)", async () => {
+    describe("rounding (benefit to others)", () => {
         ;[
             {
                 title: "base and liquidity rounded",

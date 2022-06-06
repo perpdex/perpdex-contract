@@ -56,6 +56,11 @@ library PerpMath {
         return value / (1 ether);
     }
 
+    function subRatio(uint24 a, uint24 b) internal pure returns (uint24) {
+        require(b <= a, "PerpMath: subtraction overflow");
+        return a - b;
+    }
+
     function mulRatio(uint256 value, uint24 ratio) internal pure returns (uint256) {
         return FullMath.mulDiv(value, ratio, 1e6);
     }

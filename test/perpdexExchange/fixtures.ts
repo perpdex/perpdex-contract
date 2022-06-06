@@ -10,6 +10,7 @@ export interface PerpdexExchangeFixture {
     USDC: TestERC20
     owner: Wallet
     alice: Wallet
+    bob: Wallet
 }
 
 interface Params {
@@ -19,7 +20,7 @@ interface Params {
 export function createPerpdexExchangeFixture(
     params: Params = { linear: false },
 ): (wallets, provider) => Promise<PerpdexExchangeFixture> {
-    return async ([owner, alice], provider): Promise<PerpdexExchangeFixture> => {
+    return async ([owner, alice, bob], provider): Promise<PerpdexExchangeFixture> => {
         let settlementToken = hre.ethers.constants.AddressZero
         let USDC
 
@@ -53,6 +54,7 @@ export function createPerpdexExchangeFixture(
             USDC,
             owner,
             alice,
+            bob,
         }
     }
 }

@@ -32,7 +32,7 @@ describe("Vault deposit test", () => {
         await usdc.connect(alice).approve(perpdexExchange.address, ethers.constants.MaxUint256)
     })
 
-    describe("settlement token", async () => {
+    describe("settlement token", () => {
         it("deposit settlement token", async () => {
             const amount = parseUsdc("100")
 

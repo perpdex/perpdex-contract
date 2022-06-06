@@ -23,12 +23,11 @@ library AccountLibrary {
         address market,
         uint8 maxMarketsPerAccount
     ) internal {
-        require(market != address(0), "AL_UP: market address is zero");
-
         bool enabled =
             accountInfo.takerInfos[market].baseBalanceShare != 0 || accountInfo.makerInfos[market].liquidity != 0;
         address[] storage markets = accountInfo.markets;
         uint256 length = markets.length;
+
         for (uint256 i = 0; i < length; ++i) {
             if (markets[i] == market) {
                 if (!enabled) {
@@ -38,8 +37,11 @@ library AccountLibrary {
                 return;
             }
         }
+
+        if (!enabled) return;
+
+        require(length + 1 <= maxMarketsPerAccount, "AL_UP: too many markets");
         markets.push(market);
-        require(markets.length <= maxMarketsPerAccount, "AL_UP: too many markets");
     }
 
     function getTotalAccountValue(PerpdexStructs.AccountInfo storage accountInfo) internal view returns (int256) {
@@ -50,8 +52,8 @@ library AccountLibrary {
             address market = markets[i];
 
             PerpdexStructs.MakerInfo storage makerInfo = accountInfo.makerInfos[market];
-            int256 baseShare = accountInfo.takerInfos[market].baseBalanceShare.sub(makerInfo.baseDebtShare.toInt256());
-            int256 quoteBalance = accountInfo.takerInfos[market].quoteBalance.sub(makerInfo.quoteDebt.toInt256());
+            int256 baseShare = accountInfo.takerInfos[market].baseBalanceShare.sub(makerInfo.baseDebtShare);
+            int256 quoteBalance = accountInfo.takerInfos[market].quoteBalance.sub(makerInfo.quoteDebt);
 
             if (makerInfo.liquidity != 0) {
                 (uint256 poolBaseShare, uint256 poolQuoteBalance) =
@@ -81,7 +83,7 @@ library AccountLibrary {
         returns (int256 baseShare)
     {
         PerpdexStructs.MakerInfo storage makerInfo = accountInfo.makerInfos[market];
-        baseShare = accountInfo.takerInfos[market].baseBalanceShare.sub(makerInfo.baseDebtShare.toInt256());
+        baseShare = accountInfo.takerInfos[market].baseBalanceShare.sub(makerInfo.baseDebtShare);
         if (makerInfo.liquidity != 0) {
             (uint256 poolBaseShare, ) = IPerpdexMarket(market).getLiquidityValue(makerInfo.liquidity);
             (uint256 deleveragedBaseShare, ) =

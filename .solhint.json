@@ -5,10 +5,10 @@
     "prettier/prettier": "error",
     "max-line-length": "error",
     "compiler-version": "off",
-    "ordering": "error",
+    "ordering": "warn",
     "reason-string": ["error", { "maxLength": 32 }],
     "func-name-mixedcase": "off",
-    "private-vars-leading-underscore": "error",
+    "private-vars-leading-underscore": "warn",
     "func-visibility": ["warn", { "ignoreConstructors": true }]
   }
 }

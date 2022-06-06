@@ -23,7 +23,7 @@ describe("PerpdexExchange getters", () => {
         alice = fixture.alice
     })
 
-    describe("getTakerInfo", async () => {
+    describe("getTakerInfo", () => {
         it("ok", async () => {
             await exchange.setTakerInfo(alice.address, market.address, {
                 baseBalanceShare: 1,
@@ -35,7 +35,7 @@ describe("PerpdexExchange getters", () => {
         })
     })
 
-    describe("getMakerInfo", async () => {
+    describe("getMakerInfo", () => {
         it("ok", async () => {
             await exchange.setMakerInfo(alice.address, market.address, {
                 baseDebtShare: 1,
@@ -53,7 +53,7 @@ describe("PerpdexExchange getters", () => {
         })
     })
 
-    describe("getAccountMarkets", async () => {
+    describe("getAccountMarkets", () => {
         it("ok", async () => {
             await exchange.setAccountInfo(
                 alice.address,
@@ -68,7 +68,40 @@ describe("PerpdexExchange getters", () => {
         })
     })
 
-    describe("AccountLibrary getters single market", async () => {
+    // TODO:
+    // describe("AccountLibrary getters multiple market", () => {
+    //     it('two', async () => {
+    //         await exchange.connect(owner).setImRatio(10e4)
+    //         await exchange.connect(owner).setMmRatio(5e4)
+    //
+    //         await exchange.setAccountInfo(
+    //             alice.address,
+    //             {
+    //                 collateralBalance: test.collateralBalance,
+    //             },
+    //             [market.address],
+    //         )
+    //
+    //         await exchange.setTakerInfo(alice.address, market.address, test.takerInfo)
+    //         await exchange.setMakerInfo(alice.address, market.address, test.makerInfo)
+    //
+    //         await market.setPoolInfo(test.poolInfo)
+    //
+    //         expect(await exchange.getTotalAccountValue(alice.address)).to.eq(test.totalAccountValue)
+    //         expect(await exchange.getPositionShare(alice.address, market.address)).to.eq(test.positionShare)
+    //         expect(await exchange.getPositionNotional(alice.address, market.address)).to.eq(test.positionNotional)
+    //         expect(await exchange.getTotalPositionNotional(alice.address)).to.eq(Math.abs(test.positionNotional))
+    //         expect(await exchange.getOpenPositionShare(alice.address, market.address)).to.eq(test.openPositionShare)
+    //         expect(await exchange.getOpenPositionNotional(alice.address, market.address)).to.eq(
+    //             test.openPositionNotional,
+    //         )
+    //         expect(await exchange.getTotalOpenPositionNotional(alice.address)).to.eq(test.openPositionNotional)
+    //         expect(await exchange.hasEnoughMaintenanceMargin(alice.address)).to.eq(test.hasEnoughMaintenanceMargin)
+    //         expect(await exchange.hasEnoughInitialMargin(alice.address)).to.eq(test.hasEnoughInitialMargin)
+    //     })
+    // });
+
+    describe("AccountLibrary getters single market", () => {
         ;[
             {
                 title: "empty pool, zero",
@@ -729,6 +762,156 @@ describe("PerpdexExchange getters", () => {
                 openPositionNotional: 100,
                 hasEnoughMaintenanceMargin: true,
                 hasEnoughInitialMargin: false,
+            },
+            {
+                title: "rounding",
+                collateralBalance: 100,
+                takerInfo: {
+                    baseBalanceShare: 100,
+                    quoteBalance: 0,
+                },
+                makerInfo: {
+                    baseDebtShare: 0,
+                    quoteDebt: 0,
+                    liquidity: 0,
+                    cumDeleveragedBaseSharePerLiquidityX96: 0,
+                    cumDeleveragedQuotePerLiquidityX96: 0,
+                },
+                poolInfo: {
+                    base: 3,
+                    quote: 1,
+                    totalLiquidity: 10000,
+                    cumDeleveragedBasePerLiquidityX96: 0,
+                    cumDeleveragedQuotePerLiquidityX96: 0,
+                    baseBalancePerShareX96: Q96,
+                },
+                totalAccountValue: 133,
+                positionShare: 100,
+                positionNotional: 33,
+                openPositionShare: 100,
+                openPositionNotional: 33,
+                hasEnoughMaintenanceMargin: true,
+                hasEnoughInitialMargin: true,
+            },
+            {
+                title: "rounding 2",
+                collateralBalance: 100,
+                takerInfo: {
+                    baseBalanceShare: -100,
+                    quoteBalance: 0,
+                },
+                makerInfo: {
+                    baseDebtShare: 0,
+                    quoteDebt: 0,
+                    liquidity: 0,
+                    cumDeleveragedBaseSharePerLiquidityX96: 0,
+                    cumDeleveragedQuotePerLiquidityX96: 0,
+                },
+                poolInfo: {
+                    base: 3,
+                    quote: 1,
+                    totalLiquidity: 10000,
+                    cumDeleveragedBasePerLiquidityX96: 0,
+                    cumDeleveragedQuotePerLiquidityX96: 0,
+                    baseBalancePerShareX96: Q96,
+                },
+                totalAccountValue: 67,
+                positionShare: -100,
+                positionNotional: -33,
+                openPositionShare: 100,
+                openPositionNotional: 33,
+                hasEnoughMaintenanceMargin: true,
+                hasEnoughInitialMargin: true,
+            },
+            {
+                title: "liquidation free",
+                collateralBalance: 100,
+                takerInfo: {
+                    baseBalanceShare: 1,
+                    quoteBalance: -100,
+                },
+                makerInfo: {
+                    baseDebtShare: 0,
+                    quoteDebt: 0,
+                    liquidity: 0,
+                    cumDeleveragedBaseSharePerLiquidityX96: 0,
+                    cumDeleveragedQuotePerLiquidityX96: 0,
+                },
+                poolInfo: {
+                    base: Q96,
+                    quote: 1,
+                    totalLiquidity: 10000,
+                    cumDeleveragedBasePerLiquidityX96: 0,
+                    cumDeleveragedQuotePerLiquidityX96: 0,
+                    baseBalancePerShareX96: Q96,
+                },
+                totalAccountValue: 0,
+                positionShare: 1,
+                positionNotional: 0,
+                openPositionShare: 1,
+                openPositionNotional: 0,
+                hasEnoughMaintenanceMargin: true,
+                hasEnoughInitialMargin: true,
+            },
+            {
+                title: "liquidation free 2",
+                collateralBalance: Q96,
+                takerInfo: {
+                    baseBalanceShare: Q96,
+                    quoteBalance: Q96.mul(-1),
+                },
+                makerInfo: {
+                    baseDebtShare: 0,
+                    quoteDebt: 0,
+                    liquidity: 0,
+                    cumDeleveragedBaseSharePerLiquidityX96: 0,
+                    cumDeleveragedQuotePerLiquidityX96: 0,
+                },
+                poolInfo: {
+                    base: Q96,
+                    quote: 1,
+                    totalLiquidity: 10000,
+                    cumDeleveragedBasePerLiquidityX96: 0,
+                    cumDeleveragedQuotePerLiquidityX96: 0,
+                    baseBalancePerShareX96: Q96,
+                },
+                totalAccountValue: 1,
+                positionShare: Q96,
+                positionNotional: 1,
+                openPositionShare: Q96,
+                openPositionNotional: 1,
+                hasEnoughMaintenanceMargin: true,
+                hasEnoughInitialMargin: true,
+            },
+            {
+                title: "liquidation free maker",
+                collateralBalance: 100,
+                takerInfo: {
+                    baseBalanceShare: 50,
+                    quoteBalance: -50,
+                },
+                makerInfo: {
+                    baseDebtShare: 50,
+                    quoteDebt: 50,
+                    liquidity: 1,
+                    cumDeleveragedBaseSharePerLiquidityX96: 0,
+                    cumDeleveragedQuotePerLiquidityX96: 0,
+                },
+                poolInfo: {
+                    base: Q96,
+                    quote: 1,
+                    totalLiquidity: Q96,
+                    cumDeleveragedBasePerLiquidityX96: 0,
+                    cumDeleveragedQuotePerLiquidityX96: 0,
+                    baseBalancePerShareX96: Q96,
+                },
+                totalAccountValue: 0,
+                positionShare: 1,
+                positionNotional: 0,
+                openPositionShare: 2,
+                openPositionNotional: 0,
+                hasEnoughMaintenanceMargin: true,
+                hasEnoughInitialMargin: true,
             },
         ].forEach(test => {
             it(test.title, async () => {
