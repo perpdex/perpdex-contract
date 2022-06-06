@@ -50,8 +50,8 @@ library AccountLibrary {
             address market = markets[i];
 
             PerpdexStructs.MakerInfo storage makerInfo = accountInfo.makerInfos[market];
-            int256 baseShare = accountInfo.takerInfos[market].baseBalanceShare.sub(makerInfo.baseDebtShare.toInt256());
-            int256 quoteBalance = accountInfo.takerInfos[market].quoteBalance.sub(makerInfo.quoteDebt.toInt256());
+            int256 baseShare = accountInfo.takerInfos[market].baseBalanceShare.sub(makerInfo.baseDebtShare);
+            int256 quoteBalance = accountInfo.takerInfos[market].quoteBalance.sub(makerInfo.quoteDebt);
 
             if (makerInfo.liquidity != 0) {
                 (uint256 poolBaseShare, uint256 poolQuoteBalance) =
@@ -81,7 +81,7 @@ library AccountLibrary {
         returns (int256 baseShare)
     {
         PerpdexStructs.MakerInfo storage makerInfo = accountInfo.makerInfos[market];
-        baseShare = accountInfo.takerInfos[market].baseBalanceShare.sub(makerInfo.baseDebtShare.toInt256());
+        baseShare = accountInfo.takerInfos[market].baseBalanceShare.sub(makerInfo.baseDebtShare);
         if (makerInfo.liquidity != 0) {
             (uint256 poolBaseShare, ) = IPerpdexMarket(market).getLiquidityValue(makerInfo.liquidity);
             (uint256 deleveragedBaseShare, ) =

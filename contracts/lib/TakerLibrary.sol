@@ -146,14 +146,13 @@ library TakerLibrary {
 
             if (closedRatio <= FULLY_CLOSED_RATIO) {
                 int256 reducedOpenNotional = takerInfo.quoteBalance.mulDiv(closedRatio.toInt256(), FULLY_CLOSED_RATIO);
-                realizedPnl = quoteBalance.add(reducedOpenNotional).add(quoteFee);
+                realizedPnl = quoteBalance.add(reducedOpenNotional);
             } else {
                 int256 closedPositionNotional = quoteBalance.mulDiv(int256(FULLY_CLOSED_RATIO), closedRatio);
-                realizedPnl = takerInfo.quoteBalance.add(closedPositionNotional).add(quoteFee);
+                realizedPnl = takerInfo.quoteBalance.add(closedPositionNotional);
             }
-        } else {
-            realizedPnl = quoteFee;
         }
+        realizedPnl = realizedPnl.add(quoteFee);
 
         takerInfo.baseBalanceShare = takerInfo.baseBalanceShare.add(baseShare);
         takerInfo.quoteBalance = takerInfo.quoteBalance.add(quoteBalance).add(quoteFee).sub(realizedPnl);

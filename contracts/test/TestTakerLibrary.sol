@@ -123,4 +123,8 @@ contract TestTakerLibrary {
     function getTakerInfo(address market) external view returns (PerpdexStructs.TakerInfo memory) {
         return accountInfo.takerInfos[market];
     }
+
+    function getAccountMarkets() external view returns (address[] memory) {
+        return accountInfo.markets;
+    }
 }

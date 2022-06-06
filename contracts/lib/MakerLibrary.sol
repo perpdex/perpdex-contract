@@ -73,8 +73,8 @@ library MakerLibrary {
         (uint256 cumDeleveragedBaseSharePerLiquidityX96, uint256 cumDeleveragedQuotePerLiquidityX96) =
             IPerpdexMarket(params.market).getCumDeleveragedPerLiquidityX96();
 
-        makerInfo.baseDebtShare = makerInfo.baseDebtShare.add(baseShare);
-        makerInfo.quoteDebt = makerInfo.quoteDebt.add(quoteBalance);
+        makerInfo.baseDebtShare = makerInfo.baseDebtShare.add(baseShare.toInt256());
+        makerInfo.quoteDebt = makerInfo.quoteDebt.add(quoteBalance.toInt256());
         makerInfo.liquidity = makerInfo.liquidity.add(liquidity);
         makerInfo.cumDeleveragedBaseSharePerLiquidityX96 = cumDeleveragedBaseSharePerLiquidityX96;
         makerInfo.cumDeleveragedQuotePerLiquidityX96 = cumDeleveragedQuotePerLiquidityX96;
@@ -117,12 +117,12 @@ library MakerLibrary {
         }
 
         {
-            (uint256 baseDebtShare, uint256 quoteDebt) =
+            (int256 baseDebtShare, int256 quoteDebt) =
                 _removeLiquidityFromOrder(accountInfo.makerInfos[params.market], params.liquidity);
             AccountLibrary.updateMarkets(accountInfo, params.market, params.maxMarketsPerAccount);
 
-            response.takerBase = response.base.toInt256().sub(baseDebtShare.toInt256());
-            response.takerQuote = response.quote.toInt256().sub(quoteDebt.toInt256());
+            response.takerBase = response.base.toInt256().sub(baseDebtShare);
+            response.takerQuote = response.quote.toInt256().sub(quoteDebt);
         }
 
         {
@@ -147,21 +147,21 @@ library MakerLibrary {
                 makerInfo.cumDeleveragedBaseSharePerLiquidityX96,
                 makerInfo.cumDeleveragedQuotePerLiquidityX96
             );
-        makerInfo.baseDebtShare = makerInfo.baseDebtShare.sub(deleveragedBaseShare);
-        makerInfo.quoteDebt = makerInfo.quoteDebt.sub(deleveragedQuoteBalance);
+        makerInfo.baseDebtShare = makerInfo.baseDebtShare.sub(deleveragedBaseShare.toInt256());
+        makerInfo.quoteDebt = makerInfo.quoteDebt.sub(deleveragedQuoteBalance.toInt256());
     }
 
     function _removeLiquidityFromOrder(PerpdexStructs.MakerInfo storage makerInfo, uint256 liquidity)
         private
-        returns (uint256 baseDebtShare, uint256 quoteDebt)
+        returns (int256 baseDebtShare, int256 quoteDebt)
     {
         if (liquidity != 0) {
             if (makerInfo.baseDebtShare != 0) {
-                baseDebtShare = FullMath.mulDiv(makerInfo.baseDebtShare, liquidity, makerInfo.liquidity);
+                baseDebtShare = makerInfo.baseDebtShare.mulDiv(liquidity.toInt256(), makerInfo.liquidity);
                 makerInfo.baseDebtShare = makerInfo.baseDebtShare.sub(baseDebtShare);
             }
             if (makerInfo.quoteDebt != 0) {
-                quoteDebt = FullMath.mulDiv(makerInfo.quoteDebt, liquidity, makerInfo.liquidity);
+                quoteDebt = makerInfo.quoteDebt.mulDiv(liquidity.toInt256(), makerInfo.liquidity);
                 makerInfo.quoteDebt = makerInfo.quoteDebt.sub(quoteDebt);
             }
             makerInfo.liquidity = makerInfo.liquidity.sub(liquidity);
