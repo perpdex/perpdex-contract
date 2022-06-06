@@ -36,18 +36,26 @@ describe("PerpdexExchange config", () => {
 
     describe("setPriceLimitConfig", () => {
         it("ok", async () => {
-            await exchange.connect(owner).setPriceLimitConfig({
-                normalOrderRatio: 0,
-                liquidationRatio: 0,
-            })
+            await expect(
+                exchange.connect(owner).setPriceLimitConfig({
+                    normalOrderRatio: 0,
+                    liquidationRatio: 0,
+                }),
+            )
+                .to.emit(exchange, "PriceLimitConfigChanged")
+                .withArgs(0, 0)
             let priceLimitConfig = await exchange.priceLimitConfig()
             expect(priceLimitConfig.normalOrderRatio).to.eq(0)
             expect(priceLimitConfig.liquidationRatio).to.eq(0)
 
-            await exchange.connect(owner).setPriceLimitConfig({
-                normalOrderRatio: 1,
-                liquidationRatio: 5e5,
-            })
+            await expect(
+                exchange.connect(owner).setPriceLimitConfig({
+                    normalOrderRatio: 1,
+                    liquidationRatio: 5e5,
+                }),
+            )
+                .to.emit(exchange, "PriceLimitConfigChanged")
+                .withArgs(1, 5e5)
             priceLimitConfig = await exchange.priceLimitConfig()
             expect(priceLimitConfig.normalOrderRatio).to.eq(1)
             expect(priceLimitConfig.liquidationRatio).to.eq(5e5)
@@ -83,9 +91,13 @@ describe("PerpdexExchange config", () => {
 
     describe("setMaxMarketsPerAccount", () => {
         it("ok", async () => {
-            await exchange.connect(owner).setMaxMarketsPerAccount(0)
+            await expect(exchange.connect(owner).setMaxMarketsPerAccount(0))
+                .to.emit(exchange, "MaxMarketsPerAccountChanged")
+                .withArgs(0)
             expect(await exchange.maxMarketsPerAccount()).to.eq(0)
-            await exchange.connect(owner).setMaxMarketsPerAccount(255)
+            await expect(exchange.connect(owner).setMaxMarketsPerAccount(255))
+                .to.emit(exchange, "MaxMarketsPerAccountChanged")
+                .withArgs(255)
             expect(await exchange.maxMarketsPerAccount()).to.eq(255)
         })
 
@@ -98,9 +110,11 @@ describe("PerpdexExchange config", () => {
 
     describe("setImRatio", () => {
         it("ok", async () => {
-            await exchange.connect(owner).setImRatio(5e4)
+            await expect(exchange.connect(owner).setImRatio(5e4)).to.emit(exchange, "ImRatioChanged").withArgs(5e4)
             expect(await exchange.imRatio()).to.eq(5e4)
-            await exchange.connect(owner).setImRatio(1e6 - 1)
+            await expect(exchange.connect(owner).setImRatio(1e6 - 1))
+                .to.emit(exchange, "ImRatioChanged")
+                .withArgs(1e6 - 1)
             expect(await exchange.imRatio()).to.eq(1e6 - 1)
         })
 
@@ -119,9 +133,9 @@ describe("PerpdexExchange config", () => {
 
     describe("setMmRatio", () => {
         it("ok", async () => {
-            await exchange.connect(owner).setMmRatio(1)
+            await expect(exchange.connect(owner).setMmRatio(1)).to.emit(exchange, "MmRatioChanged").withArgs(1)
             expect(await exchange.mmRatio()).to.eq(1)
-            await exchange.connect(owner).setMmRatio(10e4)
+            await expect(exchange.connect(owner).setMmRatio(10e4)).to.emit(exchange, "MmRatioChanged").withArgs(10e4)
             expect(await exchange.mmRatio()).to.eq(10e4)
         })
 
@@ -140,9 +154,13 @@ describe("PerpdexExchange config", () => {
 
     describe("setLiquidationRewardRatio", () => {
         it("ok", async () => {
-            await exchange.connect(owner).setLiquidationRewardRatio(0)
+            await expect(exchange.connect(owner).setLiquidationRewardRatio(0))
+                .to.emit(exchange, "LiquidationRewardRatioChanged")
+                .withArgs(0)
             expect(await exchange.liquidationRewardRatio()).to.eq(0)
-            await exchange.connect(owner).setLiquidationRewardRatio(1e6 - 1)
+            await expect(exchange.connect(owner).setLiquidationRewardRatio(1e6 - 1))
+                .to.emit(exchange, "LiquidationRewardRatioChanged")
+                .withArgs(1e6 - 1)
             expect(await exchange.liquidationRewardRatio()).to.eq(1e6 - 1)
         })
 
@@ -161,9 +179,13 @@ describe("PerpdexExchange config", () => {
 
     describe("setProtocolFeeRatio", () => {
         it("ok", async () => {
-            await exchange.connect(owner).setProtocolFeeRatio(0)
+            await expect(exchange.connect(owner).setProtocolFeeRatio(0))
+                .to.emit(exchange, "ProtocolFeeRatioChanged")
+                .withArgs(0)
             expect(await exchange.protocolFeeRatio()).to.eq(0)
-            await exchange.connect(owner).setProtocolFeeRatio(1e4)
+            await expect(exchange.connect(owner).setProtocolFeeRatio(1e4))
+                .to.emit(exchange, "ProtocolFeeRatioChanged")
+                .withArgs(1e4)
             expect(await exchange.protocolFeeRatio()).to.eq(1e4)
         })
 
@@ -184,10 +206,6 @@ describe("PerpdexExchange config", () => {
                 .to.emit(exchange, "IsMarketAllowedChanged")
                 .withArgs(market.address, true)
             expect(await exchange.isMarketAllowed(market.address)).to.eq(true)
-            await expect(exchange.connect(owner).setIsMarketAllowed(market.address, true)).not.to.emit(
-                exchange,
-                "IsMarketAllowedChanged",
-            )
         })
 
         it("disable", async () => {
@@ -197,10 +215,6 @@ describe("PerpdexExchange config", () => {
                 .to.emit(exchange, "IsMarketAllowedChanged")
                 .withArgs(market.address, false)
             expect(await exchange.isMarketAllowed(market.address)).to.eq(false)
-            await expect(exchange.connect(owner).setIsMarketAllowed(market.address, false)).not.to.emit(
-                exchange,
-                "IsMarketAllowedChanged",
-            )
         })
 
         it("revert when not owner", async () => {
