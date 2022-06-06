@@ -97,6 +97,12 @@ interface IPerpdexExchange {
         uint256 priceAfterX96
     );
 
+    event PriceLimitConfigChanged(uint24 normalOrderRatio, uint24 liquidationRatio);
+    event MaxMarketsPerAccountChanged(uint8 value);
+    event ImRatioChanged(uint24 value);
+    event MmRatioChanged(uint24 value);
+    event LiquidationRewardRatioChanged(uint24 value);
+    event ProtocolFeeRatioChanged(uint24 value);
     event IsMarketAllowedChanged(address indexed market, bool isMarketAllowed);
 
     function deposit(uint256 amount) external payable;
@@ -154,10 +160,7 @@ interface IPerpdexExchange {
 
     function settlementToken() external view returns (address);
 
-    function priceLimitConfig()
-        external
-        view
-        returns (uint24 priceLimitNormalOrderRatio, uint24 priceLimitLiquidationRatio);
+    function priceLimitConfig() external view returns (uint24 normalOrderRatio, uint24 liquidationRatio);
 
     function maxMarketsPerAccount() external view returns (uint8);
 

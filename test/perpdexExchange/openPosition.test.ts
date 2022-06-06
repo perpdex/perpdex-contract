@@ -33,8 +33,8 @@ describe("PerpdexExchange openPosition", () => {
         await market.connect(owner).setFundingMaxPremiumRatio(0)
         await exchange.connect(owner).setIsMarketAllowed(market.address, true)
         await exchange.connect(owner).setPriceLimitConfig({
-            priceLimitNormalOrderRatio: 5e4,
-            priceLimitLiquidationRatio: 10e4,
+            normalOrderRatio: 5e4,
+            liquidationRatio: 10e4,
         })
 
         await exchange.setInsuranceFundInfo({ balance: 10000 })

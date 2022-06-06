@@ -23,7 +23,7 @@ library PriceLimitLibrary {
         PerpdexStructs.PriceLimitConfig memory config,
         uint256 price
     ) internal view returns (bool) {
-        return isWithinPriceLimit(priceLimitInfo.referencePrice, price, config.priceLimitNormalOrderRatio);
+        return isWithinPriceLimit(priceLimitInfo.referencePrice, price, config.normalOrderRatio);
     }
 
     function isLiquidationAllowed(
@@ -31,7 +31,7 @@ library PriceLimitLibrary {
         PerpdexStructs.PriceLimitConfig memory config,
         uint256 price
     ) internal view returns (bool) {
-        return isWithinPriceLimit(priceLimitInfo.referencePrice, price, config.priceLimitLiquidationRatio);
+        return isWithinPriceLimit(priceLimitInfo.referencePrice, price, config.liquidationRatio);
     }
 
     function isWithinPriceLimit(

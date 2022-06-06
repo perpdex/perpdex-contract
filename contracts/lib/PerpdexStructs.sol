@@ -42,7 +42,7 @@ library PerpdexStructs {
     }
 
     struct PriceLimitConfig {
-        uint24 priceLimitNormalOrderRatio;
-        uint24 priceLimitLiquidationRatio;
+        uint24 normalOrderRatio;
+        uint24 liquidationRatio;
     }
 }

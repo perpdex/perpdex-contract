@@ -24,8 +24,8 @@ describe("PerpdexExchange config", () => {
     describe("initial values", () => {
         it("ok", async () => {
             const priceLimitConfig = await exchange.priceLimitConfig()
-            expect(priceLimitConfig.priceLimitNormalOrderRatio).to.eq(5e4)
-            expect(priceLimitConfig.priceLimitLiquidationRatio).to.eq(10e4)
+            expect(priceLimitConfig.normalOrderRatio).to.eq(5e4)
+            expect(priceLimitConfig.liquidationRatio).to.eq(10e4)
             expect(await exchange.maxMarketsPerAccount()).to.eq(16)
             expect(await exchange.imRatio()).to.eq(10e4)
             expect(await exchange.mmRatio()).to.eq(5e4)
@@ -37,27 +37,27 @@ describe("PerpdexExchange config", () => {
     describe("setPriceLimitConfig", () => {
         it("ok", async () => {
             await exchange.connect(owner).setPriceLimitConfig({
-                priceLimitNormalOrderRatio: 0,
-                priceLimitLiquidationRatio: 0,
+                normalOrderRatio: 0,
+                liquidationRatio: 0,
             })
             let priceLimitConfig = await exchange.priceLimitConfig()
-            expect(priceLimitConfig.priceLimitNormalOrderRatio).to.eq(0)
-            expect(priceLimitConfig.priceLimitLiquidationRatio).to.eq(0)
+            expect(priceLimitConfig.normalOrderRatio).to.eq(0)
+            expect(priceLimitConfig.liquidationRatio).to.eq(0)
 
             await exchange.connect(owner).setPriceLimitConfig({
-                priceLimitNormalOrderRatio: 1,
-                priceLimitLiquidationRatio: 5e5,
+                normalOrderRatio: 1,
+                liquidationRatio: 5e5,
             })
             priceLimitConfig = await exchange.priceLimitConfig()
-            expect(priceLimitConfig.priceLimitNormalOrderRatio).to.eq(1)
-            expect(priceLimitConfig.priceLimitLiquidationRatio).to.eq(5e5)
+            expect(priceLimitConfig.normalOrderRatio).to.eq(1)
+            expect(priceLimitConfig.liquidationRatio).to.eq(5e5)
         })
 
         it("revert when not owner", async () => {
             await expect(
                 exchange.connect(alice).setPriceLimitConfig({
-                    priceLimitNormalOrderRatio: 0,
-                    priceLimitLiquidationRatio: 0,
+                    normalOrderRatio: 0,
+                    liquidationRatio: 0,
                 }),
             ).to.be.revertedWith("Ownable: caller is not the owner")
         })
@@ -65,8 +65,8 @@ describe("PerpdexExchange config", () => {
         it("revert when too large", async () => {
             await expect(
                 exchange.connect(owner).setPriceLimitConfig({
-                    priceLimitNormalOrderRatio: 0,
-                    priceLimitLiquidationRatio: 5e5 + 1,
+                    normalOrderRatio: 0,
+                    liquidationRatio: 5e5 + 1,
                 }),
             ).to.be.revertedWith("PE_SPLC: too large liquidation")
         })
@@ -74,8 +74,8 @@ describe("PerpdexExchange config", () => {
         it("revert when normal order > liquidation", async () => {
             await expect(
                 exchange.connect(owner).setPriceLimitConfig({
-                    priceLimitNormalOrderRatio: 2,
-                    priceLimitLiquidationRatio: 1,
+                    normalOrderRatio: 2,
+                    liquidationRatio: 1,
                 }),
             ).to.be.revertedWith("PE_SPLC: invalid")
         })

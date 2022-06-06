@@ -31,7 +31,7 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
     // config
     address public immutable override settlementToken;
     PerpdexStructs.PriceLimitConfig public override priceLimitConfig =
-        PerpdexStructs.PriceLimitConfig({ priceLimitNormalOrderRatio: 5e4, priceLimitLiquidationRatio: 10e4 });
+        PerpdexStructs.PriceLimitConfig({ normalOrderRatio: 5e4, liquidationRatio: 10e4 });
     uint8 public override maxMarketsPerAccount = 16;
     uint24 public override imRatio = 10e4;
     uint24 public override mmRatio = 5e4;
@@ -240,43 +240,47 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
         onlyOwner
         nonReentrant
     {
-        require(value.priceLimitLiquidationRatio <= 5e5, "PE_SPLC: too large liquidation");
-        require(value.priceLimitNormalOrderRatio <= value.priceLimitLiquidationRatio, "PE_SPLC: invalid");
+        require(value.liquidationRatio <= 5e5, "PE_SPLC: too large liquidation");
+        require(value.normalOrderRatio <= value.liquidationRatio, "PE_SPLC: invalid");
         priceLimitConfig = value;
+        emit PriceLimitConfigChanged(value.normalOrderRatio, value.liquidationRatio);
     }
 
     function setMaxMarketsPerAccount(uint8 value) external override onlyOwner nonReentrant {
         maxMarketsPerAccount = value;
+        emit MaxMarketsPerAccountChanged(value);
     }
 
     function setImRatio(uint24 value) external override onlyOwner nonReentrant {
         require(value < 1e6, "PE_SIR: too large");
         require(value >= mmRatio, "PE_SIR: smaller than mmRatio");
         imRatio = value;
+        emit ImRatioChanged(value);
     }
 
     function setMmRatio(uint24 value) external override onlyOwner nonReentrant {
         require(value <= imRatio, "PE_SMR: bigger than imRatio");
         require(value > 0, "PE_SMR: zero");
         mmRatio = value;
+        emit MmRatioChanged(value);
     }
 
     function setLiquidationRewardRatio(uint24 value) external override onlyOwner nonReentrant {
         require(value < 1e6, "PE_SLRR: too large");
         liquidationRewardRatio = value;
+        emit LiquidationRewardRatioChanged(value);
     }
 
     function setProtocolFeeRatio(uint24 value) external override onlyOwner nonReentrant {
         require(value <= 1e4, "PE_SPFR: too large");
         protocolFeeRatio = value;
+        emit ProtocolFeeRatioChanged(value);
     }
 
     function setIsMarketAllowed(address market, bool value) external override onlyOwner nonReentrant {
         require(market.isContract(), "PE_SIMA: market address invalid");
-        if (isMarketAllowed[market] != value) {
-            isMarketAllowed[market] = value;
-            emit IsMarketAllowedChanged(market, value);
-        }
+        isMarketAllowed[market] = value;
+        emit IsMarketAllowedChanged(market, value);
     }
 
     //
