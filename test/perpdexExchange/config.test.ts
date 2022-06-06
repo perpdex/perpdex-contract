@@ -70,6 +70,15 @@ describe("PerpdexExchange config", () => {
                 }),
             ).to.be.revertedWith("PE_SPLC: too large liquidation")
         })
+
+        it("revert when normal order > liquidation", async () => {
+            await expect(
+                exchange.connect(owner).setPriceLimitConfig({
+                    priceLimitNormalOrderRatio: 2,
+                    priceLimitLiquidationRatio: 1,
+                }),
+            ).to.be.revertedWith("PE_SPLC: invalid")
+        })
     })
 
     describe("setMaxMarketsPerAccount", () => {
@@ -102,6 +111,10 @@ describe("PerpdexExchange config", () => {
         it("revert when too large", async () => {
             await expect(exchange.connect(owner).setImRatio(1e6)).to.be.revertedWith("PE_SIR: too large")
         })
+
+        it("revert when smaller than mm", async () => {
+            await expect(exchange.connect(owner).setImRatio(5e4 - 1)).to.be.revertedWith("PE_SIR: smaller than mmRatio")
+        })
     })
 
     describe("setMmRatio", () => {
@@ -118,6 +131,10 @@ describe("PerpdexExchange config", () => {
 
         it("revert when too large", async () => {
             await expect(exchange.connect(owner).setMmRatio(10e4 + 1)).to.be.revertedWith("PE_SMR: bigger than imRatio")
+        })
+
+        it("revert when zero", async () => {
+            await expect(exchange.connect(owner).setMmRatio(0)).to.be.revertedWith("PE_SMR: zero")
         })
     })
 
