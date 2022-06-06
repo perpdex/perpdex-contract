@@ -93,7 +93,7 @@ library MakerLibrary {
         response.isLiquidation = !AccountLibrary.hasEnoughMaintenanceMargin(accountInfo, params.mmRatio);
 
         if (!params.isSelf) {
-            require(!response.isLiquidation, "ML_RL: enough mm");
+            require(response.isLiquidation, "ML_RL: enough mm");
         }
 
         {
@@ -155,17 +155,13 @@ library MakerLibrary {
         private
         returns (int256 baseDebtShare, int256 quoteDebt)
     {
-        if (liquidity != 0) {
-            if (makerInfo.baseDebtShare != 0) {
-                baseDebtShare = makerInfo.baseDebtShare.mulDiv(liquidity.toInt256(), makerInfo.liquidity);
-                makerInfo.baseDebtShare = makerInfo.baseDebtShare.sub(baseDebtShare);
-            }
-            if (makerInfo.quoteDebt != 0) {
-                quoteDebt = makerInfo.quoteDebt.mulDiv(liquidity.toInt256(), makerInfo.liquidity);
-                makerInfo.quoteDebt = makerInfo.quoteDebt.sub(quoteDebt);
-            }
-            makerInfo.liquidity = makerInfo.liquidity.sub(liquidity);
-        }
+        baseDebtShare = makerInfo.baseDebtShare.mulDiv(liquidity.toInt256(), makerInfo.liquidity);
+        makerInfo.baseDebtShare = makerInfo.baseDebtShare.sub(baseDebtShare);
+
+        quoteDebt = makerInfo.quoteDebt.mulDiv(liquidity.toInt256(), makerInfo.liquidity);
+        makerInfo.quoteDebt = makerInfo.quoteDebt.sub(quoteDebt);
+
+        makerInfo.liquidity = makerInfo.liquidity.sub(liquidity);
 
         return (baseDebtShare, quoteDebt);
     }

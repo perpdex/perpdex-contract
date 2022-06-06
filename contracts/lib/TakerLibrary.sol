@@ -135,21 +135,24 @@ library TakerLibrary {
         int256 quoteFee,
         uint8 maxMarketsPerAccount
     ) internal returns (int256 realizedPnl) {
-        require(baseShare.sign() * quoteBalance.sign() == -1, "TL_ATTB: invalid input");
-
         PerpdexStructs.TakerInfo storage takerInfo = accountInfo.takerInfos[market];
 
-        if (takerInfo.baseBalanceShare.sign() * baseShare.sign() == -1) {
-            uint256 FULLY_CLOSED_RATIO = 1e18;
-            uint256 closedRatio =
-                FullMath.mulDiv(baseShare.abs(), FULLY_CLOSED_RATIO, takerInfo.baseBalanceShare.abs());
+        if (baseShare != 0 || quoteBalance != 0) {
+            require(baseShare.sign() * quoteBalance.sign() == -1, "TL_ATTB: invalid input");
 
-            if (closedRatio <= FULLY_CLOSED_RATIO) {
-                int256 reducedOpenNotional = takerInfo.quoteBalance.mulDiv(closedRatio.toInt256(), FULLY_CLOSED_RATIO);
-                realizedPnl = quoteBalance.add(reducedOpenNotional);
-            } else {
-                int256 closedPositionNotional = quoteBalance.mulDiv(int256(FULLY_CLOSED_RATIO), closedRatio);
-                realizedPnl = takerInfo.quoteBalance.add(closedPositionNotional);
+            if (takerInfo.baseBalanceShare.sign() * baseShare.sign() == -1) {
+                uint256 FULLY_CLOSED_RATIO = 1e18;
+                uint256 closedRatio =
+                    FullMath.mulDiv(baseShare.abs(), FULLY_CLOSED_RATIO, takerInfo.baseBalanceShare.abs());
+
+                if (closedRatio <= FULLY_CLOSED_RATIO) {
+                    int256 reducedOpenNotional =
+                        takerInfo.quoteBalance.mulDiv(closedRatio.toInt256(), FULLY_CLOSED_RATIO);
+                    realizedPnl = quoteBalance.add(reducedOpenNotional);
+                } else {
+                    int256 closedPositionNotional = quoteBalance.mulDiv(int256(FULLY_CLOSED_RATIO), closedRatio);
+                    realizedPnl = takerInfo.quoteBalance.add(closedPositionNotional);
+                }
             }
         }
         realizedPnl = realizedPnl.add(quoteFee);
@@ -170,8 +173,8 @@ library TakerLibrary {
     {
         bool isLiquidation = !AccountLibrary.hasEnoughMaintenanceMargin(accountInfo, params.mmRatio);
 
-        if (!isLiquidation) {
-            require(params.isSelf, "TL_OPD: not self");
+        if (!params.isSelf) {
+            require(isLiquidation, "TL_OPD: enough mm");
         }
 
         (uint256 oppositeAmount, ) =

@@ -7,6 +7,7 @@ contract TestPerpMath {
     using PerpMath for uint160;
     using PerpMath for uint256;
     using PerpMath for int256;
+    using PerpMath for uint24;
 
     function testFormatSqrtPriceX96ToPriceX96(uint160 value) external pure returns (uint256) {
         return value.formatSqrtPriceX96ToPriceX96();
@@ -42,5 +43,9 @@ contract TestPerpMath {
 
     function testMulRatio(uint256 value, uint24 ratio) external pure returns (uint256) {
         return value.mulRatio(ratio);
+    }
+
+    function testSubRatio(uint24 value, uint24 ratio) external pure returns (uint256) {
+        return value.subRatio(ratio);
     }
 }

@@ -66,4 +66,10 @@ describe("PerpMath test", async () => {
         const ratio = x10_6.mul(2)
         expect(await perpMath.testMulRatio(value, ratio)).to.be.deep.eq(value.mul(ratio).div(x10_6))
     })
+
+    it("subRatio", async () => {
+        expect(await perpMath.testSubRatio(1e6 + 3, 1e6)).to.eq(3)
+        expect(await perpMath.testSubRatio(1e6, 1e6)).to.eq(0)
+        await expect(perpMath.testSubRatio(1e6, 1e6 + 1)).to.revertedWith("PerpMath: subtraction overflow")
+    })
 })

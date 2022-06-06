@@ -202,6 +202,19 @@ describe("TakerLibrary addToTakerBalance", () => {
                 quoteFee: 0,
                 revertedWith: "TL_ATTB: invalid input",
             },
+            {
+                title: "zero",
+                collateralBalance: 100,
+                takerInfo: {
+                    baseBalanceShare: 100,
+                    quoteBalance: -100,
+                },
+                baseShare: 0,
+                quoteBalance: 0,
+                quoteFee: 10,
+                realizedPnl: 10,
+                revertedWith: void 0,
+            },
         ].forEach(test => {
             it(test.title, async () => {
                 await library.setAccountInfo({ collateralBalance: test.collateralBalance }, [market.address])

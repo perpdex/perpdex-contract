@@ -4,7 +4,7 @@ import { TestPerpdexExchange, TestPerpdexMarket } from "../../typechain"
 import { createPerpdexExchangeFixture } from "./fixtures"
 import { BigNumber, Wallet } from "ethers"
 
-describe("PerpdexExchange addLiquidity", () => {
+describe("PerpdexExchange removeLiquidity", () => {
     let loadFixture = waffle.createFixtureLoader(waffle.provider.getWallets())
     let fixture
 
@@ -53,40 +53,38 @@ describe("PerpdexExchange addLiquidity", () => {
     describe("various cases", async () => {
         ;[
             {
-                title: "add",
-                base: 100,
-                quote: 200,
-                minBase: 100,
-                minQuote: 100,
+                title: "remove",
+                liquidity: 50,
+                minBase: 50,
+                minQuote: 50,
                 collateralBalance: 10,
                 takerInfo: {
                     baseBalanceShare: 0,
                     quoteBalance: 0,
                 },
                 makerInfo: {
-                    baseDebtShare: 0,
-                    quoteDebt: 0,
-                    liquidity: 0,
+                    baseDebtShare: 50,
+                    quoteDebt: 50,
+                    liquidity: 100,
                     cumDeleveragedBaseSharePerLiquidityX96: 0,
                     cumDeleveragedQuotePerLiquidityX96: 0,
                 },
-                afterCollateralBalance: 10,
+                afterCollateralBalance: 60,
                 afterTakerInfo: {
-                    baseBalanceShare: 0,
-                    quoteBalance: 0,
+                    baseBalanceShare: 25,
+                    quoteBalance: -25,
                 },
                 afterMakerInfo: {
-                    baseDebtShare: 100,
-                    quoteDebt: 100,
-                    liquidity: 100,
+                    baseDebtShare: 25,
+                    quoteDebt: 25,
+                    liquidity: 50,
                     cumDeleveragedBaseSharePerLiquidityX96: 0,
                     cumDeleveragedQuotePerLiquidityX96: 0,
                 },
             },
             {
                 title: "deleverage",
-                base: 100,
-                quote: 200,
+                liquidity: 1,
                 minBase: 0,
                 minQuote: 0,
                 collateralBalance: 100,
@@ -97,7 +95,7 @@ describe("PerpdexExchange addLiquidity", () => {
                 makerInfo: {
                     baseDebtShare: 0,
                     quoteDebt: 0,
-                    liquidity: 1,
+                    liquidity: 2,
                     cumDeleveragedBaseSharePerLiquidityX96: 0,
                     cumDeleveragedQuotePerLiquidityX96: 0,
                 },
@@ -105,27 +103,26 @@ describe("PerpdexExchange addLiquidity", () => {
                     base: 10000,
                     quote: 10000,
                     totalLiquidity: 10000,
-                    cumDeleveragedBasePerLiquidityX96: Q96.mul(2),
-                    cumDeleveragedQuotePerLiquidityX96: Q96.mul(3),
+                    cumDeleveragedBasePerLiquidityX96: Q96.mul(10),
+                    cumDeleveragedQuotePerLiquidityX96: Q96.mul(20),
                     baseBalancePerShareX96: Q96,
                 },
-                afterCollateralBalance: 100,
+                afterCollateralBalance: 132,
                 afterTakerInfo: {
-                    baseBalanceShare: 0,
-                    quoteBalance: 0,
+                    baseBalanceShare: 11,
+                    quoteBalance: -11,
                 },
                 afterMakerInfo: {
-                    baseDebtShare: 98,
-                    quoteDebt: 97,
-                    liquidity: 101,
-                    cumDeleveragedBaseSharePerLiquidityX96: Q96.mul(2),
-                    cumDeleveragedQuotePerLiquidityX96: Q96.mul(3),
+                    baseDebtShare: -10,
+                    quoteDebt: -20,
+                    liquidity: 1,
+                    cumDeleveragedBaseSharePerLiquidityX96: Q96.mul(10),
+                    cumDeleveragedQuotePerLiquidityX96: Q96.mul(20),
                 },
             },
             {
                 title: "minBase condition",
-                base: 100,
-                quote: 200,
+                liquidity: 100,
                 minBase: 101,
                 minQuote: 0,
                 collateralBalance: 100,
@@ -136,16 +133,15 @@ describe("PerpdexExchange addLiquidity", () => {
                 makerInfo: {
                     baseDebtShare: 0,
                     quoteDebt: 0,
-                    liquidity: 0,
+                    liquidity: 100,
                     cumDeleveragedBaseSharePerLiquidityX96: 0,
                     cumDeleveragedQuotePerLiquidityX96: 0,
                 },
-                revertedWith: "ML_AL: too small output base",
+                revertedWith: "ML_RL: too small output base",
             },
             {
                 title: "minQuote condition",
-                base: 100,
-                quote: 200,
+                liquidity: 100,
                 minBase: 0,
                 minQuote: 101,
                 collateralBalance: 100,
@@ -156,16 +152,15 @@ describe("PerpdexExchange addLiquidity", () => {
                 makerInfo: {
                     baseDebtShare: 0,
                     quoteDebt: 0,
-                    liquidity: 0,
+                    liquidity: 100,
                     cumDeleveragedBaseSharePerLiquidityX96: 0,
                     cumDeleveragedQuotePerLiquidityX96: 0,
                 },
-                revertedWith: "ML_AL: too small output quote",
+                revertedWith: "ML_RL: too small output base",
             },
             {
-                title: "market disallowed",
-                base: 100,
-                quote: 200,
+                title: "ok even if market disallowed",
+                liquidity: 100,
                 minBase: 0,
                 minQuote: 0,
                 collateralBalance: 100,
@@ -174,34 +169,76 @@ describe("PerpdexExchange addLiquidity", () => {
                     quoteBalance: 0,
                 },
                 makerInfo: {
+                    baseDebtShare: 100,
+                    quoteDebt: 100,
+                    liquidity: 100,
+                    cumDeleveragedBaseSharePerLiquidityX96: 0,
+                    cumDeleveragedQuotePerLiquidityX96: 0,
+                },
+                isMarketAllowed: false,
+                afterCollateralBalance: 100,
+                afterTakerInfo: {
+                    baseBalanceShare: 0,
+                    quoteBalance: 0,
+                },
+                afterMakerInfo: {
                     baseDebtShare: 0,
                     quoteDebt: 0,
                     liquidity: 0,
                     cumDeleveragedBaseSharePerLiquidityX96: 0,
                     cumDeleveragedQuotePerLiquidityX96: 0,
                 },
-                isMarketAllowed: false,
-                revertedWith: "ML_AL: add liquidity forbidden",
             },
             {
-                title: "not enough im",
-                base: 100,
-                quote: 100,
-                minBase: 0,
-                minQuote: 0,
-                collateralBalance: 9,
+                title: "liquidation",
+                notSelf: true,
+                liquidity: 50,
+                minBase: 50,
+                minQuote: 50,
+                collateralBalance: 4,
                 takerInfo: {
                     baseBalanceShare: 0,
                     quoteBalance: 0,
                 },
                 makerInfo: {
                     baseDebtShare: 0,
-                    quoteDebt: 0,
-                    liquidity: 0,
+                    quoteDebt: 200,
+                    liquidity: 100,
                     cumDeleveragedBaseSharePerLiquidityX96: 0,
                     cumDeleveragedQuotePerLiquidityX96: 0,
                 },
-                revertedWith: "ML_AL: not enough im",
+                afterCollateralBalance: 4,
+                afterTakerInfo: {
+                    baseBalanceShare: 50,
+                    quoteBalance: -50,
+                },
+                afterMakerInfo: {
+                    baseDebtShare: 0,
+                    quoteDebt: 100,
+                    liquidity: 50,
+                    cumDeleveragedBaseSharePerLiquidityX96: 0,
+                    cumDeleveragedQuotePerLiquidityX96: 0,
+                },
+            },
+            {
+                title: "not liquidatable when enough mm",
+                notSelf: true,
+                liquidity: 50,
+                minBase: 50,
+                minQuote: 50,
+                collateralBalance: 5,
+                takerInfo: {
+                    baseBalanceShare: 0,
+                    quoteBalance: 0,
+                },
+                makerInfo: {
+                    baseDebtShare: 0,
+                    quoteDebt: 200,
+                    liquidity: 100,
+                    cumDeleveragedBaseSharePerLiquidityX96: 0,
+                    cumDeleveragedQuotePerLiquidityX96: 0,
+                },
+                revertedWith: "ML_RL: enough mm",
             },
         ].forEach(test => {
             it(test.title, async () => {
@@ -224,10 +261,10 @@ describe("PerpdexExchange addLiquidity", () => {
                 }
 
                 const res = expect(
-                    exchange.connect(alice).addLiquidity({
+                    exchange.connect(test.notSelf ? bob : alice).removeLiquidity({
+                        trader: alice.address,
                         market: market.address,
-                        base: test.base,
-                        quote: test.quote,
+                        liquidity: test.liquidity,
                         minBase: test.minBase,
                         minQuote: test.minQuote,
                         deadline: deadline,
@@ -235,7 +272,7 @@ describe("PerpdexExchange addLiquidity", () => {
                 )
 
                 if (test.revertedWith === void 0) {
-                    await res.to.emit(exchange, "LiquidityAdded")
+                    await res.to.emit(exchange, "LiquidityRemoved")
 
                     const accountInfo = await exchange.accountInfos(alice.address)
                     expect(accountInfo.collateralBalance).to.eq(test.afterCollateralBalance)
