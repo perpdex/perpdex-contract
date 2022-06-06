@@ -25,7 +25,6 @@ library MakerLibrary {
         uint256 quote;
         uint256 minBase;
         uint256 minQuote;
-        bool isMarketAllowed;
         uint24 imRatio;
         uint8 maxMarketsPerAccount;
     }
@@ -59,8 +58,6 @@ library MakerLibrary {
         internal
         returns (AddLiquidityResponse memory)
     {
-        require(params.isMarketAllowed, "ML_AL: add liquidity forbidden");
-
         PerpdexStructs.MakerInfo storage makerInfo = accountInfo.makerInfos[params.market];
         _applyDeleveraged(makerInfo, params.market);
 

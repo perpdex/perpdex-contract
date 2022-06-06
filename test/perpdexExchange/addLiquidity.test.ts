@@ -181,7 +181,7 @@ describe("PerpdexExchange addLiquidity", () => {
                     cumDeleveragedQuotePerLiquidityX96: 0,
                 },
                 isMarketAllowed: false,
-                revertedWith: "ML_AL: add liquidity forbidden",
+                revertedWith: "PE_CMA: market not allowed",
             },
             {
                 title: "not enough im",

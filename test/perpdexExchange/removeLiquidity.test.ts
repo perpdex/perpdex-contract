@@ -159,7 +159,7 @@ describe("PerpdexExchange removeLiquidity", () => {
                 revertedWith: "ML_RL: too small output base",
             },
             {
-                title: "ok even if market disallowed",
+                title: "market disallowed",
                 liquidity: 100,
                 minBase: 0,
                 minQuote: 0,
@@ -176,18 +176,7 @@ describe("PerpdexExchange removeLiquidity", () => {
                     cumDeleveragedQuotePerLiquidityX96: 0,
                 },
                 isMarketAllowed: false,
-                afterCollateralBalance: 100,
-                afterTakerInfo: {
-                    baseBalanceShare: 0,
-                    quoteBalance: 0,
-                },
-                afterMakerInfo: {
-                    baseDebtShare: 0,
-                    quoteDebt: 0,
-                    liquidity: 0,
-                    cumDeleveragedBaseSharePerLiquidityX96: 0,
-                    cumDeleveragedQuotePerLiquidityX96: 0,
-                },
+                revertedWith: "PE_CMA: market not allowed",
             },
             {
                 title: "liquidation",

@@ -5,6 +5,7 @@ pragma abicoder v2;
 import { Address } from "@openzeppelin/contracts/utils/Address.sol";
 import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
+import { SafeCast } from "@openzeppelin/contracts/utils/SafeCast.sol";
 import { IPerpdexExchange } from "./interface/IPerpdexExchange.sol";
 import { IPerpdexMarket } from "./interface/IPerpdexMarket.sol";
 import { PerpdexStructs } from "./lib/PerpdexStructs.sol";
@@ -13,7 +14,6 @@ import { MakerLibrary } from "./lib/MakerLibrary.sol";
 import { TakerLibrary } from "./lib/TakerLibrary.sol";
 import { VaultLibrary } from "./lib/VaultLibrary.sol";
 import { PerpMath } from "./lib/PerpMath.sol";
-import { SafeCast } from "@openzeppelin/contracts/utils/SafeCast.sol";
 
 contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
     using Address for address;
@@ -41,6 +41,11 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
 
     modifier checkDeadline(uint256 deadline) {
         require(block.timestamp <= deadline, "PE_CD: too late");
+        _;
+    }
+
+    modifier checkMarketAllowed(address market) {
+        require(isMarketAllowed[market], "PE_CMA: market not allowed");
         _;
     }
 
@@ -99,31 +104,10 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
         override
         nonReentrant
         checkDeadline(params.deadline)
+        checkMarketAllowed(params.market)
         returns (int256 base, int256 quote)
     {
-        TakerLibrary.OpenPositionResponse memory response =
-            TakerLibrary.openPosition(
-                accountInfos[params.trader],
-                accountInfos[_msgSender()].vaultInfo,
-                insuranceFundInfo,
-                priceLimitInfos[params.market],
-                protocolInfo,
-                TakerLibrary.OpenPositionParams({
-                    market: params.market,
-                    isBaseToQuote: params.isBaseToQuote,
-                    isExactInput: params.isExactInput,
-                    amount: params.amount,
-                    oppositeAmountBound: params.oppositeAmountBound,
-                    priceLimitConfig: priceLimitConfig,
-                    isMarketAllowed: isMarketAllowed[params.market],
-                    mmRatio: mmRatio,
-                    imRatio: imRatio,
-                    maxMarketsPerAccount: maxMarketsPerAccount,
-                    protocolFeeRatio: protocolFeeRatio,
-                    liquidationRewardRatio: liquidationRewardRatio,
-                    isSelf: params.trader == _msgSender()
-                })
-            );
+        TakerLibrary.OpenPositionResponse memory response = _doOpenPosition(params);
 
         if (response.isLiquidation) {
             emit PositionLiquidated(
@@ -160,6 +144,7 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
         override
         nonReentrant
         checkDeadline(params.deadline)
+        checkMarketAllowed(params.market)
         returns (
             uint256 base,
             uint256 quote,
@@ -177,7 +162,6 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
                     quote: params.quote,
                     minBase: params.minBase,
                     minQuote: params.minQuote,
-                    isMarketAllowed: isMarketAllowed[params.market],
                     imRatio: imRatio,
                     maxMarketsPerAccount: maxMarketsPerAccount
                 })
@@ -201,6 +185,7 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
         override
         nonReentrant
         checkDeadline(params.deadline)
+        checkMarketAllowed(params.market)
         returns (uint256 base, uint256 quote)
     {
         MakerLibrary.RemoveLiquidityResponse memory response =
@@ -217,6 +202,14 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
                 })
             );
 
+        uint256 baseBalancePerShareX96;
+        uint256 marketPriceX96;
+
+        {
+            baseBalancePerShareX96 = IPerpdexMarket(params.market).baseBalancePerShareX96();
+            marketPriceX96 = IPerpdexMarket(params.market).getMarkPriceX96();
+        }
+
         emit LiquidityRemoved(
             params.trader,
             params.market,
@@ -227,8 +220,8 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
             response.takerBase,
             response.takerQuote,
             response.realizedPnl,
-            IPerpdexMarket(params.market).baseBalancePerShareX96(),
-            IPerpdexMarket(params.market).getMarkPriceX96()
+            baseBalancePerShareX96,
+            marketPriceX96
         );
 
         return (response.base, response.quote);
@@ -283,10 +276,6 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
         emit IsMarketAllowedChanged(market, value);
     }
 
-    //
-    // EXTERNAL VIEW
-    //
-
     // all raw information can be retrieved through getters (including default getters)
 
     function getTakerInfo(address trader, address market)
@@ -317,6 +306,7 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
         external
         view
         override
+        checkMarketAllowed(params.market)
         returns (int256 base, int256 quote)
     {
         address trader = params.trader;
@@ -374,5 +364,34 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
 
     function hasEnoughInitialMargin(address trader) external view override returns (bool) {
         return AccountLibrary.hasEnoughInitialMargin(accountInfos[trader], imRatio);
+    }
+
+    // for avoiding stack too deep error
+    function _doOpenPosition(OpenPositionParams calldata params)
+        private
+        returns (TakerLibrary.OpenPositionResponse memory)
+    {
+        return
+            TakerLibrary.openPosition(
+                accountInfos[params.trader],
+                accountInfos[_msgSender()].vaultInfo,
+                insuranceFundInfo,
+                priceLimitInfos[params.market],
+                protocolInfo,
+                TakerLibrary.OpenPositionParams({
+                    market: params.market,
+                    isBaseToQuote: params.isBaseToQuote,
+                    isExactInput: params.isExactInput,
+                    amount: params.amount,
+                    oppositeAmountBound: params.oppositeAmountBound,
+                    priceLimitConfig: priceLimitConfig,
+                    mmRatio: mmRatio,
+                    imRatio: imRatio,
+                    maxMarketsPerAccount: maxMarketsPerAccount,
+                    protocolFeeRatio: protocolFeeRatio,
+                    liquidationRewardRatio: liquidationRewardRatio,
+                    isSelf: params.trader == _msgSender()
+                })
+            );
     }
 }

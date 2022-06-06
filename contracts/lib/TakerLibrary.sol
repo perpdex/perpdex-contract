@@ -26,7 +26,6 @@ library TakerLibrary {
         uint256 amount;
         uint256 oppositeAmountBound;
         PerpdexStructs.PriceLimitConfig priceLimitConfig;
-        bool isMarketAllowed;
         uint24 mmRatio;
         uint24 imRatio;
         uint8 maxMarketsPerAccount;
@@ -91,10 +90,6 @@ library TakerLibrary {
         );
 
         bool isOpen = (takerBaseBefore.add(response.base)).sign() * response.base.sign() > 0;
-
-        if (!params.isMarketAllowed) {
-            require(!isOpen, "TL_OP: no open when closed");
-        }
 
         if (response.isLiquidation) {
             require(!isOpen, "TL_OP: no open when liquidation");
