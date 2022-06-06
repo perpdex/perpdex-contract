@@ -118,6 +118,40 @@ describe("FundingLibrary processFunding", () => {
                 priceQuote: 0,
                 updated: false,
             },
+            {
+                title: "getPrice revert base",
+                prevIndexPriceBase: 2,
+                prevIndexPriceQuote: 1,
+                prevIndexPriceTimestamp: -1,
+                priceBase: "revert",
+                updated: false,
+            },
+            {
+                title: "getPrice revert quote",
+                prevIndexPriceBase: 1,
+                prevIndexPriceQuote: 3,
+                prevIndexPriceTimestamp: -1,
+                priceQuote: "revert",
+                updated: false,
+            },
+            {
+                title: "decimals revert base",
+                prevIndexPriceBase: 2,
+                prevIndexPriceQuote: 1,
+                prevIndexPriceTimestamp: -1,
+                priceBase: 1,
+                decimalsBase: "revert",
+                updated: false,
+            },
+            {
+                title: "decimals revert quote",
+                prevIndexPriceBase: 1,
+                prevIndexPriceQuote: 3,
+                prevIndexPriceTimestamp: -1,
+                priceQuote: 1,
+                decimalsQuote: "revert",
+                updated: false,
+            },
         ].forEach(test => {
             it(test.title, async () => {
                 const currentTimestamp = await getTimestamp()
@@ -127,11 +161,23 @@ describe("FundingLibrary processFunding", () => {
                     prevIndexPriceQuote: test.prevIndexPriceQuote,
                     prevIndexPriceTimestamp: currentTimestamp + 1000 + test.prevIndexPriceTimestamp,
                 })
-                if (test.priceBase !== void 0) {
+
+                if (test.priceBase === "revert") {
+                    await priceFeedBase.mock.getPrice.revertsWithReason("TEST: invalid base price")
+                } else if (test.priceBase !== void 0) {
                     await priceFeedBase.mock.getPrice.returns(test.priceBase)
                 }
-                if (test.priceQuote !== void 0) {
+                if (test.priceQuote === "revert") {
+                    await priceFeedQuote.mock.getPrice.revertsWithReason("TEST: invalid quote price")
+                } else if (test.priceQuote !== void 0) {
                     await priceFeedQuote.mock.getPrice.returns(test.priceQuote)
+                }
+
+                if (test.decimalsBase === "revert") {
+                    await priceFeedBase.mock.decimals.revertsWithReason("TEST: invalid base decimals")
+                }
+                if (test.decimalsQuote === "revert") {
+                    await priceFeedQuote.mock.decimals.revertsWithReason("TEST: invalid quote decimals")
                 }
 
                 await setNextTimestamp(currentTimestamp + 1000)
