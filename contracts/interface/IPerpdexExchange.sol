@@ -97,7 +97,13 @@ interface IPerpdexExchange {
         uint256 sharePriceAfterX96
     );
 
-    event PriceLimitConfigChanged(uint24 normalOrderRatio, uint24 liquidationRatio);
+    event PriceLimitConfigChanged(
+        uint24 normalOrderRatio,
+        uint24 liquidationRatio,
+        uint24 emaNormalOrderRatio,
+        uint24 emaLiquidationRatio,
+        uint32 emaSec
+    );
     event MaxMarketsPerAccountChanged(uint8 value);
     event ImRatioChanged(uint24 value);
     event MmRatioChanged(uint24 value);
