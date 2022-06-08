@@ -3,20 +3,36 @@ pragma solidity 0.7.6;
 pragma abicoder v2;
 
 import { PriceLimitLibrary } from "../lib/PriceLimitLibrary.sol";
-import { PerpdexStructs } from "../lib/PerpdexStructs.sol";
+import { MarketStructs } from "../lib/MarketStructs.sol";
 
 contract TestPriceLimitLibrary {
     constructor() {}
 
-    PerpdexStructs.PriceLimitInfo public priceLimitInfo;
+    MarketStructs.PriceLimitInfo public priceLimitInfo;
+    MarketStructs.PriceLimitConfig public priceLimitConfig;
 
-    function update(
-        PerpdexStructs.PriceLimitInfo memory priceLimitInfoArg,
-        uint32 emaSec,
-        uint256 price
-    ) external {
-        priceLimitInfo = priceLimitInfoArg;
-        PriceLimitLibrary.update(priceLimitInfo, emaSec, price);
+    function setPriceLimitInfo(address market, MarketStructs.PriceLimitInfo memory value) external {
+        priceLimitInfo = value;
+    }
+
+    function setPriceLimitConfig(address market, MarketStructs.PriceLimitConfig memory value) external {
+        priceLimitConfig = value;
+    }
+
+    function check(
+        uint256 priceBefore,
+        uint256 priceAfter,
+        bool isLiquidation
+    )
+        external
+        view
+        returns (
+            uint256 referencePrice,
+            uint256 referenceTimestamp,
+            uint256 emaPrice
+        )
+    {
+        return PriceLimitLibrary.check(priceLimitInfo, priceLimitConfig, priceBefore, priceAfter, isLiquidation);
     }
 
     function isWithinPriceLimit(

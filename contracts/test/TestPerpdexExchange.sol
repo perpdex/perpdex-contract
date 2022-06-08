@@ -33,10 +33,6 @@ contract TestPerpdexExchange is PerpdexExchange {
         accountInfos[trader].makerInfos[market] = makerInfo;
     }
 
-    function setPriceLimitInfo(address market, PerpdexStructs.PriceLimitInfo memory priceLimitInfoArg) external {
-        priceLimitInfos[market] = priceLimitInfoArg;
-    }
-
     function setInsuranceFundInfo(PerpdexStructs.InsuranceFundInfo memory insuranceFundInfoArg) external {
         insuranceFundInfo = insuranceFundInfoArg;
     }

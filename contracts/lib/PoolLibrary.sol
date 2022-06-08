@@ -68,26 +68,46 @@ library PoolLibrary {
         );
     }
 
-    function swap(MarketStructs.PoolInfo storage poolInfo, SwapParams memory params) internal returns (uint256) {
-        uint256 output = swapDry(poolInfo.base, poolInfo.quote, params);
-        if (params.isExactInput) {
-            if (params.isBaseToQuote) {
-                poolInfo.base = poolInfo.base.add(params.amount);
-                poolInfo.quote = poolInfo.quote.sub(output);
+    function swap(MarketStructs.PoolInfo storage poolInfo, SwapParams memory params)
+        internal
+        returns (uint256 oppositeAmount)
+    {
+        oppositeAmount = swapDry(poolInfo.base, poolInfo.quote, params);
+        (poolInfo.base, poolInfo.quote) = calcPoolAfter(
+            params.isBaseToQuote,
+            params.isExactInput,
+            poolInfo.base,
+            poolInfo.quote,
+            params.amount,
+            oppositeAmount
+        );
+    }
+
+    function calcPoolAfter(
+        bool isBaseToQuote,
+        bool isExactInput,
+        uint256 base,
+        uint256 quote,
+        uint256 amount,
+        uint256 oppositeAmount
+    ) internal pure returns (uint256 baseAfter, uint256 quoteAfter) {
+        if (isExactInput) {
+            if (isBaseToQuote) {
+                baseAfter = base.add(amount);
+                quoteAfter = quote.sub(oppositeAmount);
             } else {
-                poolInfo.base = poolInfo.base.sub(output);
-                poolInfo.quote = poolInfo.quote.add(params.amount);
+                baseAfter = base.sub(oppositeAmount);
+                quoteAfter = quote.add(amount);
             }
         } else {
-            if (params.isBaseToQuote) {
-                poolInfo.base = poolInfo.base.add(output);
-                poolInfo.quote = poolInfo.quote.sub(params.amount);
+            if (isBaseToQuote) {
+                baseAfter = base.add(oppositeAmount);
+                quoteAfter = quote.sub(amount);
             } else {
-                poolInfo.base = poolInfo.base.sub(params.amount);
-                poolInfo.quote = poolInfo.quote.add(output);
+                baseAfter = base.sub(amount);
+                quoteAfter = quote.add(oppositeAmount);
             }
         }
-        return output;
     }
 
     function addLiquidity(MarketStructs.PoolInfo storage poolInfo, AddLiquidityParams memory params)

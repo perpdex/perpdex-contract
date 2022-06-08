@@ -41,7 +41,8 @@ contract TestTakerLibrary {
         bool isBaseToQuote,
         bool isExactInput,
         uint256 amount,
-        uint24 protocolFeeRatio
+        uint24 protocolFeeRatio,
+        bool isLiquidation
     ) external {
         (uint256 oppositeAmount, uint256 protocolFee) =
             TakerLibrary.swapWithProtocolFee(
@@ -50,7 +51,8 @@ contract TestTakerLibrary {
                 isBaseToQuote,
                 isExactInput,
                 amount,
-                protocolFeeRatio
+                protocolFeeRatio,
+                isLiquidation
             );
         emit SwapWithProtocolFeeResult(oppositeAmount, protocolFee);
     }
@@ -60,9 +62,18 @@ contract TestTakerLibrary {
         bool isBaseToQuote,
         bool isExactInput,
         uint256 amount,
-        uint24 protocolFeeRatio
+        uint24 protocolFeeRatio,
+        bool isLiquidation
     ) external view returns (uint256 oppositeAmount, uint256 protocolFee) {
-        return TakerLibrary.swapWithProtocolFeeDry(market, isBaseToQuote, isExactInput, amount, protocolFeeRatio);
+        return
+            TakerLibrary.swapWithProtocolFeeDry(
+                market,
+                isBaseToQuote,
+                isExactInput,
+                amount,
+                protocolFeeRatio,
+                isLiquidation
+            );
     }
 
     function processLiquidationFee(

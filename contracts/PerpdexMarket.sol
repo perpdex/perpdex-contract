@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity 0.7.6;
+pragma abicoder v2;
 
 import { Address } from "@openzeppelin/contracts/utils/Address.sol";
 import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
@@ -9,6 +10,7 @@ import { IPerpdexMarket } from "./interface/IPerpdexMarket.sol";
 import { MarketStructs } from "./lib/MarketStructs.sol";
 import { FundingLibrary } from "./lib/FundingLibrary.sol";
 import { PoolLibrary } from "./lib/PoolLibrary.sol";
+import { PriceLimitLibrary } from "./lib/PriceLimitLibrary.sol";
 
 contract PerpdexMarket is IPerpdexMarket, ReentrancyGuard, Ownable {
     using Address for address;
@@ -18,6 +20,13 @@ contract PerpdexMarket is IPerpdexMarket, ReentrancyGuard, Ownable {
     event FundingMaxPremiumRatioChanged(uint24 value);
     event FundingMaxElapsedSecChanged(uint32 value);
     event FundingRolloverSecChanged(uint32 value);
+    event PriceLimitConfigChanged(
+        uint24 normalOrderRatio,
+        uint24 liquidationRatio,
+        uint24 emaNormalOrderRatio,
+        uint24 emaLiquidationRatio,
+        uint32 emaSec
+    );
 
     string public override symbol;
     address public immutable override exchange;
@@ -26,11 +35,20 @@ contract PerpdexMarket is IPerpdexMarket, ReentrancyGuard, Ownable {
 
     MarketStructs.PoolInfo public poolInfo;
     MarketStructs.FundingInfo public fundingInfo;
+    MarketStructs.PriceLimitInfo public priceLimitInfo;
 
     uint24 public poolFeeRatio = 3e3;
     uint24 public fundingMaxPremiumRatio = 1e4;
     uint32 public fundingMaxElapsedSec = 1 days;
     uint32 public fundingRolloverSec = 1 days;
+    MarketStructs.PriceLimitConfig public priceLimitConfig =
+        MarketStructs.PriceLimitConfig({
+            normalOrderRatio: 5e4,
+            liquidationRatio: 10e4,
+            emaNormalOrderRatio: 20e4,
+            emaLiquidationRatio: 25e4,
+            emaSec: 5 minutes
+        });
 
     modifier onlyExchange() {
         require(exchange == msg.sender, "PM_OE: caller is not exchange");
@@ -58,8 +76,11 @@ contract PerpdexMarket is IPerpdexMarket, ReentrancyGuard, Ownable {
     function swap(
         bool isBaseToQuote,
         bool isExactInput,
-        uint256 amount
+        uint256 amount,
+        bool isLiquidation
     ) external override onlyExchange nonReentrant returns (uint256 oppositeAmount) {
+        uint256 sharePriceBeforeX96 = getShareMarkPriceX96();
+
         oppositeAmount = PoolLibrary.swap(
             poolInfo,
             PoolLibrary.SwapParams({
@@ -69,6 +90,17 @@ contract PerpdexMarket is IPerpdexMarket, ReentrancyGuard, Ownable {
                 feeRatio: poolFeeRatio
             })
         );
+
+        uint256 sharePriceAfterX96 = getShareMarkPriceX96();
+
+        PriceLimitLibrary.checkAndUpdate(
+            priceLimitInfo,
+            priceLimitConfig,
+            sharePriceBeforeX96,
+            sharePriceAfterX96,
+            isLiquidation
+        );
+
         emit Swapped(isBaseToQuote, isExactInput, amount, oppositeAmount);
 
         _processFunding();
@@ -139,10 +171,26 @@ contract PerpdexMarket is IPerpdexMarket, ReentrancyGuard, Ownable {
         emit FundingRolloverSecChanged(value);
     }
 
+    function setPriceLimitConfig(MarketStructs.PriceLimitConfig calldata value) external onlyOwner nonReentrant {
+        require(value.liquidationRatio <= 5e5, "PE_SPLC: too large liquidation");
+        require(value.normalOrderRatio <= value.liquidationRatio, "PE_SPLC: invalid");
+        require(value.emaLiquidationRatio < 1e6, "PE_SPLC: ema too large liq");
+        require(value.emaNormalOrderRatio <= value.emaLiquidationRatio, "PE_SPLC: ema invalid");
+        priceLimitConfig = value;
+        emit PriceLimitConfigChanged(
+            value.normalOrderRatio,
+            value.liquidationRatio,
+            value.emaNormalOrderRatio,
+            value.emaLiquidationRatio,
+            value.emaSec
+        );
+    }
+
     function swapDry(
         bool isBaseToQuote,
         bool isExactInput,
-        uint256 amount
+        uint256 amount,
+        bool isLiquidation
     ) external view override returns (uint256 oppositeAmount) {
         oppositeAmount = PoolLibrary.swapDry(
             poolInfo.base,
@@ -154,9 +202,28 @@ contract PerpdexMarket is IPerpdexMarket, ReentrancyGuard, Ownable {
                 feeRatio: poolFeeRatio
             })
         );
+
+        uint256 sharePriceBeforeX96 = getShareMarkPriceX96();
+        (uint256 poolBaseAfter, uint256 poolQuoteAfter) =
+            PoolLibrary.calcPoolAfter(
+                isBaseToQuote,
+                isExactInput,
+                poolInfo.base,
+                poolInfo.quote,
+                amount,
+                oppositeAmount
+            );
+        uint256 sharePriceAfterX96 = PoolLibrary.getShareMarkPriceX96(poolBaseAfter, poolQuoteAfter);
+        PriceLimitLibrary.check(
+            priceLimitInfo,
+            priceLimitConfig,
+            sharePriceBeforeX96,
+            sharePriceAfterX96,
+            isLiquidation
+        );
     }
 
-    function getShareMarkPriceX96() external view override returns (uint256) {
+    function getShareMarkPriceX96() public view override returns (uint256) {
         return PoolLibrary.getShareMarkPriceX96(poolInfo.base, poolInfo.quote);
     }
 
