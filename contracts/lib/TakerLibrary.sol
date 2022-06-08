@@ -86,7 +86,7 @@ library TakerLibrary {
         if (response.isLiquidation) {
             require(!isOpen, "TL_OP: no open when liquidation");
 
-            (response.liquidationReward, response.insuranceFundReward) = processLiquidationFee(
+            (response.liquidationReward, response.insuranceFundReward) = processLiquidationReward(
                 accountInfo.vaultInfo,
                 liquidatorVaultInfo,
                 insuranceFundInfo,
@@ -293,10 +293,10 @@ library TakerLibrary {
         protocolInfo.protocolFee = protocolInfo.protocolFee.add(protocolFee);
     }
 
-    function processLiquidationFee(
+    function processLiquidationReward(
         PerpdexStructs.VaultInfo storage vaultInfo,
         PerpdexStructs.VaultInfo storage liquidatorVaultInfo,
-        PerpdexStructs.InsuranceFundInfo storage insuranceFundInfo,
+        PerpdexStructs.ProtocolInfo storage protocolInfo,
         uint24 mmRatio,
         uint24 liquidationRewardRatio,
         uint256 exchangedQuote

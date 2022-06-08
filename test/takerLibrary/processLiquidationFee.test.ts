@@ -15,7 +15,7 @@ describe("TakerLibrary", () => {
         library = fixture.takerLibrary
     })
 
-    describe("processLiquidationFee", () => {
+    describe("processLiquidationReward", () => {
         ;[
             {
                 title: "normal",
@@ -60,12 +60,12 @@ describe("TakerLibrary", () => {
                 await library.setInsuranceFundInfo({ balance: test.insuranceFundBalance })
 
                 const res = expect(
-                    library.processLiquidationFee(test.mmRatio, test.liquidationRewardRatio, test.exchangedQuote),
+                    library.processLiquidationReward(test.mmRatio, test.liquidationRewardRatio, test.exchangedQuote),
                 )
 
                 if (test.revertedWith === void 0) {
                     await res.to
-                        .emit(library, "ProcessLiquidationFeeResult")
+                        .emit(library, "ProcessLiquidationRewardResult")
                         .withArgs(test.liquidationReward, test.insuranceFundReward)
 
                     const vault = await library.accountInfo()
