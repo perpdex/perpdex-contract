@@ -33,7 +33,7 @@ interface IPerpdexExchange {
         uint256 deadline;
     }
 
-    struct OpenPositionDryParams {
+    struct PreviewOpenPositionParams {
         address trader;
         address market;
         address caller;
@@ -140,7 +140,7 @@ interface IPerpdexExchange {
 
     // dry run getters
 
-    function previewOpenPosition(OpenPositionDryParams calldata params)
+    function previewOpenPosition(PreviewOpenPositionParams calldata params)
         external
         view
         returns (int256 base, int256 quote);

@@ -290,7 +290,7 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
 
     // dry run
 
-    function previewOpenPosition(OpenPositionDryParams calldata params)
+    function previewOpenPosition(PreviewOpenPositionParams calldata params)
         external
         view
         override
@@ -303,7 +303,7 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
         return
             TakerLibrary.previewOpenPosition(
                 accountInfos[trader],
-                TakerLibrary.OpenPositionDryParams({
+                TakerLibrary.PreviewOpenPositionParams({
                     market: params.market,
                     isBaseToQuote: params.isBaseToQuote,
                     isExactInput: params.isExactInput,

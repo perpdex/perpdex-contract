@@ -32,7 +32,7 @@ library TakerLibrary {
         bool isSelf;
     }
 
-    struct OpenPositionDryParams {
+    struct PreviewOpenPositionParams {
         address market;
         bool isBaseToQuote;
         bool isExactInput;
@@ -148,11 +148,10 @@ library TakerLibrary {
 
     // Even if openPosition reverts, it may not revert.
     // Attempting to match reverts makes the implementation too complicated
-    function previewOpenPosition(PerpdexStructs.AccountInfo storage accountInfo, OpenPositionDryParams memory params)
-        internal
-        view
-        returns (int256 base, int256 quote)
-    {
+    function previewOpenPosition(
+        PerpdexStructs.AccountInfo storage accountInfo,
+        PreviewOpenPositionParams memory params
+    ) internal view returns (int256 base, int256 quote) {
         bool isLiquidation = !AccountLibrary.hasEnoughMaintenanceMargin(accountInfo, params.mmRatio);
 
         if (!params.isSelf) {
