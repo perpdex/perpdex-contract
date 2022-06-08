@@ -199,7 +199,7 @@ library PoolLibrary {
             } else {
                 output = FullMath.mulDivRoundingUp(base, quote, base.sub(params.amount)).sub(quote);
             }
-            output = output.mulRatio(onePlusFeeRatio);
+            output = output.mulRatioRoundingUp(onePlusFeeRatio);
         }
         require(output > 0, "PL_SD: output is zero");
     }

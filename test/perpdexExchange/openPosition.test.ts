@@ -32,7 +32,7 @@ describe("PerpdexExchange openPosition", () => {
         await market.connect(owner).setPoolFeeRatio(0)
         await market.connect(owner).setFundingMaxPremiumRatio(0)
         await exchange.connect(owner).setIsMarketAllowed(market.address, true)
-        await exchange.connect(owner).setPriceLimitConfig({
+        await market.connect(owner).setPriceLimitConfig({
             normalOrderRatio: 5e4,
             liquidationRatio: 10e4,
             emaNormalOrderRatio: 5e4,
@@ -398,12 +398,8 @@ describe("PerpdexExchange openPosition", () => {
                     baseBalanceShare: 100,
                     quoteBalance: -100,
                 },
-                revertedWith: "TL_OP: normal order price limit",
-                afterCollateralBalance: 5,
-                afterTakerInfo: {
-                    baseBalanceShare: 343,
-                    quoteBalance: -350,
-                },
+                revertedWith: "PLL_C: price limit",
+                revertedWithDry: "PLL_C: price limit",
             },
             {
                 title: "price limit liquidation",
@@ -418,12 +414,8 @@ describe("PerpdexExchange openPosition", () => {
                     baseBalanceShare: -1000,
                     quoteBalance: 1000,
                 },
-                revertedWith: "TL_OP: liquidation price limit",
-                afterCollateralBalance: 40,
-                afterTakerInfo: {
-                    baseBalanceShare: -524,
-                    quoteBalance: 500,
-                },
+                revertedWith: "PLL_C: price limit",
+                revertedWithDry: "PLL_C: price limit",
             },
             {
                 title: "liquidation",
