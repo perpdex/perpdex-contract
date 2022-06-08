@@ -2,6 +2,7 @@ import { expect } from "chai"
 import { waffle } from "hardhat"
 import { TestPriceLimitLibrary } from "../../typechain"
 import { createPriceLimitLibraryFixture } from "./fixtures"
+import { getTimestamp, setNextTimestamp } from "../helper/time"
 
 describe("PriceLimitLibrary update", () => {
     let loadFixture = waffle.createFixtureLoader(waffle.provider.getWallets())
@@ -19,50 +20,53 @@ describe("PriceLimitLibrary update", () => {
             {
                 title: "initial",
                 referencePrice: 0,
-                referenceBlockNumber: 0,
+                referenceTimestamp: 0,
                 price: 100,
                 afterReferencePrice: 100,
-                afterReferenceBlockNumber: 1,
+                afterReferenceTimestamp: 1,
             },
             {
                 title: "next",
                 referencePrice: 1,
-                referenceBlockNumber: 0,
+                referenceTimestamp: -1,
                 price: 2,
                 afterReferencePrice: 2,
-                afterReferenceBlockNumber: 1,
+                afterReferenceTimestamp: 0,
             },
             {
                 title: "same",
                 referencePrice: 1,
-                referenceBlockNumber: 1,
+                referenceTimestamp: 0,
                 price: 2,
                 afterReferencePrice: 1,
-                afterReferenceBlockNumber: 1,
+                afterReferenceTimestamp: 0,
             },
             {
                 title: "before",
                 referencePrice: 1,
-                referenceBlockNumber: 2,
+                referenceTimestamp: 1,
                 price: 2,
                 afterReferencePrice: 1,
-                afterReferenceBlockNumber: 2,
+                afterReferenceTimestamp: 1,
             },
         ].forEach(test => {
             it(test.title, async () => {
-                const blockNum = await hre.ethers.provider.getBlockNumber()
+                const nextTimestamp = (await getTimestamp()) + 1000
+                await setNextTimestamp(nextTimestamp)
 
                 await library.update(
                     {
                         referencePrice: test.referencePrice,
-                        referenceBlockNumber: blockNum + test.referenceBlockNumber,
+                        referenceTimestamp: nextTimestamp + test.referenceTimestamp,
+                        emaPrice: test.referencePrice,
                     },
+                    0,
                     test.price,
                 )
 
                 const res = await library.priceLimitInfo()
                 expect(res.referencePrice).to.eq(test.afterReferencePrice)
-                expect(res.referenceBlockNumber).to.eq(blockNum + test.afterReferenceBlockNumber)
+                expect(res.referenceTimestamp).to.eq(nextTimestamp + test.afterReferenceTimestamp)
             })
         })
     })

@@ -35,6 +35,9 @@ describe("PerpdexExchange openPosition", () => {
         await exchange.connect(owner).setPriceLimitConfig({
             normalOrderRatio: 5e4,
             liquidationRatio: 10e4,
+            emaNormalOrderRatio: 5e4,
+            emaLiquidationRatio: 10e4,
+            emaSec: 300,
         })
 
         await exchange.setInsuranceFundInfo({ balance: 10000 })

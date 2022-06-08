@@ -158,7 +158,11 @@ interface IPerpdexExchange {
     function priceLimitInfos(address market)
         external
         view
-        returns (uint256 referencePrice, uint256 referenceBlockNumber);
+        returns (
+            uint256 referencePrice,
+            uint256 referenceTimestamp,
+            uint256 emaPrice
+        );
 
     function insuranceFundInfo() external view returns (int256 balance);
 
@@ -166,7 +170,16 @@ interface IPerpdexExchange {
 
     function settlementToken() external view returns (address);
 
-    function priceLimitConfig() external view returns (uint24 normalOrderRatio, uint24 liquidationRatio);
+    function priceLimitConfig()
+        external
+        view
+        returns (
+            uint24 normalOrderRatio,
+            uint24 liquidationRatio,
+            uint24 emaNormalOrderRatio,
+            uint24 emaLiquidationRatio,
+            uint32 emaSec
+        );
 
     function maxMarketsPerAccount() external view returns (uint8);
 

@@ -10,9 +10,13 @@ contract TestPriceLimitLibrary {
 
     PerpdexStructs.PriceLimitInfo public priceLimitInfo;
 
-    function update(PerpdexStructs.PriceLimitInfo memory priceLimitInfoArg, uint256 price) external {
+    function update(
+        PerpdexStructs.PriceLimitInfo memory priceLimitInfoArg,
+        uint32 emaSec,
+        uint256 price
+    ) external {
         priceLimitInfo = priceLimitInfoArg;
-        PriceLimitLibrary.update(priceLimitInfo, price);
+        PriceLimitLibrary.update(priceLimitInfo, emaSec, price);
     }
 
     function isWithinPriceLimit(

@@ -31,7 +31,13 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
     // config
     address public immutable override settlementToken;
     PerpdexStructs.PriceLimitConfig public override priceLimitConfig =
-        PerpdexStructs.PriceLimitConfig({ normalOrderRatio: 5e4, liquidationRatio: 10e4 });
+        PerpdexStructs.PriceLimitConfig({
+            normalOrderRatio: 5e4,
+            liquidationRatio: 10e4,
+            emaNormalOrderRatio: 20e4,
+            emaLiquidationRatio: 25e4,
+            emaSec: 5 minutes
+        });
     uint8 public override maxMarketsPerAccount = 16;
     uint24 public override imRatio = 10e4;
     uint24 public override mmRatio = 5e4;
@@ -239,8 +245,16 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
     {
         require(value.liquidationRatio <= 5e5, "PE_SPLC: too large liquidation");
         require(value.normalOrderRatio <= value.liquidationRatio, "PE_SPLC: invalid");
+        require(value.emaLiquidationRatio < 1e6, "PE_SPLC: ema too large liq");
+        require(value.emaNormalOrderRatio <= value.emaLiquidationRatio, "PE_SPLC: ema invalid");
         priceLimitConfig = value;
-        emit PriceLimitConfigChanged(value.normalOrderRatio, value.liquidationRatio);
+        emit PriceLimitConfigChanged(
+            value.normalOrderRatio,
+            value.liquidationRatio,
+            value.emaNormalOrderRatio,
+            value.emaLiquidationRatio,
+            value.emaSec
+        );
     }
 
     function setMaxMarketsPerAccount(uint8 value) external override onlyOwner nonReentrant {

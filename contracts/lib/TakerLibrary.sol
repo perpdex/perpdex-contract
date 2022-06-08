@@ -71,7 +71,7 @@ library TakerLibrary {
 
         {
             uint256 priceBeforeX96 = IPerpdexMarket(params.market).getMarkPriceX96();
-            PriceLimitLibrary.update(priceLimitInfo, priceBeforeX96);
+            PriceLimitLibrary.update(priceLimitInfo, params.priceLimitConfig.emaSec, priceBeforeX96);
         }
 
         int256 takerBaseBefore = accountInfo.takerInfos[params.market].baseBalanceShare;

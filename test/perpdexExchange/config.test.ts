@@ -40,6 +40,9 @@ describe("PerpdexExchange config", () => {
                 exchange.connect(owner).setPriceLimitConfig({
                     normalOrderRatio: 0,
                     liquidationRatio: 0,
+                    emaNormalOrderRatio: 0,
+                    emaLiquidationRatio: 0,
+                    emaSec: 0,
                 }),
             )
                 .to.emit(exchange, "PriceLimitConfigChanged")
@@ -52,6 +55,9 @@ describe("PerpdexExchange config", () => {
                 exchange.connect(owner).setPriceLimitConfig({
                     normalOrderRatio: 1,
                     liquidationRatio: 5e5,
+                    emaNormalOrderRatio: 2,
+                    emaLiquidationRatio: 1e6,
+                    emaSec: 1,
                 }),
             )
                 .to.emit(exchange, "PriceLimitConfigChanged")
@@ -59,6 +65,9 @@ describe("PerpdexExchange config", () => {
             priceLimitConfig = await exchange.priceLimitConfig()
             expect(priceLimitConfig.normalOrderRatio).to.eq(1)
             expect(priceLimitConfig.liquidationRatio).to.eq(5e5)
+            expect(priceLimitConfig.emaNormalOrderRatio).to.eq(2)
+            expect(priceLimitConfig.emaLiquidationRatio).to.eq(1e6)
+            expect(priceLimitConfig.emaSec).to.eq(1)
         })
 
         it("revert when not owner", async () => {
@@ -66,6 +75,9 @@ describe("PerpdexExchange config", () => {
                 exchange.connect(alice).setPriceLimitConfig({
                     normalOrderRatio: 0,
                     liquidationRatio: 0,
+                    emaNormalOrderRatio: 0,
+                    emaLiquidationRatio: 0,
+                    emaSec: 0,
                 }),
             ).to.be.revertedWith("Ownable: caller is not the owner")
         })
@@ -75,6 +87,9 @@ describe("PerpdexExchange config", () => {
                 exchange.connect(owner).setPriceLimitConfig({
                     normalOrderRatio: 0,
                     liquidationRatio: 5e5 + 1,
+                    emaNormalOrderRatio: 0,
+                    emaLiquidationRatio: 0,
+                    emaSec: 0,
                 }),
             ).to.be.revertedWith("PE_SPLC: too large liquidation")
         })
@@ -84,6 +99,9 @@ describe("PerpdexExchange config", () => {
                 exchange.connect(owner).setPriceLimitConfig({
                     normalOrderRatio: 2,
                     liquidationRatio: 1,
+                    emaNormalOrderRatio: 0,
+                    emaLiquidationRatio: 0,
+                    emaSec: 0,
                 }),
             ).to.be.revertedWith("PE_SPLC: invalid")
         })
