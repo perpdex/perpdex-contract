@@ -140,7 +140,10 @@ interface IPerpdexExchange {
 
     // dry run getters
 
-    function openPositionDry(OpenPositionDryParams calldata params) external view returns (int256 base, int256 quote);
+    function previewOpenPosition(OpenPositionDryParams calldata params)
+        external
+        view
+        returns (int256 base, int256 quote);
 
     // default getters
 

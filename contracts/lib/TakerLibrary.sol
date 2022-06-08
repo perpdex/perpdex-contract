@@ -148,7 +148,7 @@ library TakerLibrary {
 
     // Even if openPosition reverts, it may not revert.
     // Attempting to match reverts makes the implementation too complicated
-    function openPositionDry(PerpdexStructs.AccountInfo storage accountInfo, OpenPositionDryParams memory params)
+    function previewOpenPosition(PerpdexStructs.AccountInfo storage accountInfo, OpenPositionDryParams memory params)
         internal
         view
         returns (int256 base, int256 quote)

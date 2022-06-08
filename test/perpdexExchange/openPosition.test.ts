@@ -590,7 +590,7 @@ describe("PerpdexExchange openPosition", () => {
 
                 if (!test.liquidation) {
                     it("dry", async () => {
-                        const call = exchange.openPositionDry({
+                        const call = exchange.previewOpenPosition({
                             trader: alice.address,
                             market: market.address,
                             caller: (test.notSelf ? bob : alice).address,
