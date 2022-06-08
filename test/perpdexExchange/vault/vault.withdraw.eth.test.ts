@@ -51,7 +51,32 @@ describe("Vault withdraw eth", () => {
             await expect(exchange.connect(alice).withdraw(1)).to.revertedWith("VL_W: not enough initial margin")
         })
 
-        it("profit but no collateral", async () => {
+        it("profit and no collateral but liquidation free", async () => {
+            await exchange.setAccountInfo(alice.address, { collateralBalance: 1 }, [market.address])
+            await exchange.setTakerInfo(alice.address, market.address, {
+                baseBalanceShare: 100,
+                quoteBalance: 0,
+            })
+            await market.setPoolInfo({
+                base: 10000,
+                quote: 10000,
+                totalLiquidity: 10000,
+                cumDeleveragedBasePerLiquidityX96: 0,
+                cumDeleveragedQuotePerLiquidityX96: 0,
+                baseBalancePerShareX96: Q96,
+            })
+
+            await exchange.connect(bob).deposit(0, { value: 100 })
+
+            const res = await exchange.connect(alice).withdraw(1)
+            await expect(res).to.changeEtherBalance(alice, 1)
+            await expect(res).to.emit(exchange, "Withdrawn").withArgs(alice.address, 1)
+
+            const result = await exchange.accountInfos(alice.address)
+            expect(result.collateralBalance).to.eq(0)
+        })
+
+        it("profit and no collateral and not liquidation free", async () => {
             await exchange.setAccountInfo(alice.address, { collateralBalance: 0 }, [market.address])
             await exchange.setTakerInfo(alice.address, market.address, {
                 baseBalanceShare: 100,

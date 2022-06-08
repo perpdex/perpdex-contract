@@ -177,6 +177,34 @@ library AccountLibrary {
         uint256 totalOpenPositionNotional = getTotalOpenPositionNotional(accountInfo);
         return
             accountValue.min(accountInfo.vaultInfo.collateralBalance) >=
-            totalOpenPositionNotional.mulRatio(imRatio).toInt256();
+            totalOpenPositionNotional.mulRatio(imRatio).toInt256() ||
+            isLiquidationFree(accountInfo);
+    }
+
+    function isLiquidationFree(PerpdexStructs.AccountInfo storage accountInfo) internal view returns (bool) {
+        address[] storage markets = accountInfo.markets;
+        int256 quoteBalance = accountInfo.vaultInfo.collateralBalance;
+        uint256 length = markets.length;
+        for (uint256 i = 0; i < length; ++i) {
+            address market = markets[i];
+
+            PerpdexStructs.MakerInfo storage makerInfo = accountInfo.makerInfos[market];
+            int256 baseShare = accountInfo.takerInfos[market].baseBalanceShare.sub(makerInfo.baseDebtShare);
+            quoteBalance = quoteBalance.add(accountInfo.takerInfos[market].quoteBalance.sub(makerInfo.quoteDebt));
+
+            if (makerInfo.liquidity != 0) {
+                (uint256 deleveragedBaseShare, uint256 deleveragedQuoteBalance) =
+                    IPerpdexMarket(market).getLiquidityDeleveraged(
+                        makerInfo.liquidity,
+                        makerInfo.cumDeleveragedBaseSharePerLiquidityX96,
+                        makerInfo.cumDeleveragedQuotePerLiquidityX96
+                    );
+                baseShare = baseShare.add(deleveragedBaseShare.toInt256());
+                quoteBalance = quoteBalance.add(deleveragedQuoteBalance.toInt256());
+            }
+
+            if (baseShare < 0) return false;
+        }
+        return quoteBalance >= 0;
     }
 }
