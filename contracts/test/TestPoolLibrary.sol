@@ -21,12 +21,12 @@ contract TestPoolLibrary {
         emit SwapResult(oppositeAmount);
     }
 
-    function swapDry(
+    function previewSwap(
         uint256 base,
         uint256 quote,
         PoolLibrary.SwapParams memory params
     ) external pure returns (uint256) {
-        return PoolLibrary.swapDry(base, quote, params);
+        return PoolLibrary.previewSwap(base, quote, params);
     }
 
     function setPoolInfo(MarketStructs.PoolInfo memory value) external {

@@ -244,7 +244,7 @@ describe("PoolLibrary swap", () => {
             it(test.title + " dry", async () => {
                 if (test.revertedWith !== void 0) {
                     await expect(
-                        library.swapDry(10000, 10000, {
+                        library.previewSwap(10000, 10000, {
                             isBaseToQuote: test.isBaseToQuote,
                             isExactInput: test.isExactInput,
                             amount: test.amount,
@@ -252,7 +252,7 @@ describe("PoolLibrary swap", () => {
                         }),
                     ).to.revertedWith(test.revertedWith)
                 } else {
-                    const res = await library.swapDry(10000, 10000, {
+                    const res = await library.previewSwap(10000, 10000, {
                         isBaseToQuote: test.isBaseToQuote,
                         isExactInput: test.isExactInput,
                         amount: test.amount,
@@ -336,7 +336,7 @@ describe("PoolLibrary swap", () => {
             })
 
             it(test.title + " dry", async () => {
-                const res = await library.swapDry(10000, 10000, {
+                const res = await library.previewSwap(10000, 10000, {
                     isBaseToQuote: test.isBaseToQuote,
                     isExactInput: test.isExactInput,
                     amount: test.amount,

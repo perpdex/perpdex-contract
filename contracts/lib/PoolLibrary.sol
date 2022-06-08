@@ -72,7 +72,7 @@ library PoolLibrary {
         internal
         returns (uint256 oppositeAmount)
     {
-        oppositeAmount = swapDry(poolInfo.base, poolInfo.quote, params);
+        oppositeAmount = previewSwap(poolInfo.base, poolInfo.quote, params);
         (poolInfo.base, poolInfo.quote) = calcPoolAfter(
             params.isBaseToQuote,
             params.isExactInput,
@@ -179,7 +179,7 @@ library PoolLibrary {
         );
     }
 
-    function swapDry(
+    function previewSwap(
         uint256 base,
         uint256 quote,
         SwapParams memory params

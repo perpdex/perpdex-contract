@@ -31,7 +31,7 @@ interface IPerpdexMarket {
 
     function exchange() external view returns (address);
 
-    function swapDry(
+    function previewSwap(
         bool isBaseToQuote,
         bool isExactInput,
         uint256 amount,

@@ -186,13 +186,13 @@ contract PerpdexMarket is IPerpdexMarket, ReentrancyGuard, Ownable {
         );
     }
 
-    function swapDry(
+    function previewSwap(
         bool isBaseToQuote,
         bool isExactInput,
         uint256 amount,
         bool isLiquidation
     ) external view override returns (uint256 oppositeAmount) {
-        oppositeAmount = PoolLibrary.swapDry(
+        oppositeAmount = PoolLibrary.previewSwap(
             poolInfo.base,
             poolInfo.quote,
             PoolLibrary.SwapParams({

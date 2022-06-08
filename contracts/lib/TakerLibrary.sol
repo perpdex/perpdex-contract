@@ -161,7 +161,7 @@ library TakerLibrary {
 
         uint256 oppositeAmount;
         if (params.protocolFeeRatio == 0) {
-            oppositeAmount = IPerpdexMarket(params.market).swapDry(
+            oppositeAmount = IPerpdexMarket(params.market).previewSwap(
                 params.isBaseToQuote,
                 params.isExactInput,
                 params.amount,
@@ -297,12 +297,12 @@ library TakerLibrary {
     ) internal view returns (uint256 oppositeAmount, uint256 protocolFee) {
         if (isExactInput) {
             if (isBaseToQuote) {
-                oppositeAmount = IPerpdexMarket(market).swapDry(isBaseToQuote, isExactInput, amount, isLiquidation);
+                oppositeAmount = IPerpdexMarket(market).previewSwap(isBaseToQuote, isExactInput, amount, isLiquidation);
                 protocolFee = oppositeAmount.mulRatio(protocolFeeRatio);
                 oppositeAmount = oppositeAmount.sub(protocolFee);
             } else {
                 protocolFee = amount.mulRatio(protocolFeeRatio);
-                oppositeAmount = IPerpdexMarket(market).swapDry(
+                oppositeAmount = IPerpdexMarket(market).previewSwap(
                     isBaseToQuote,
                     isExactInput,
                     amount.sub(protocolFee),
@@ -312,7 +312,7 @@ library TakerLibrary {
         } else {
             if (isBaseToQuote) {
                 protocolFee = amount.divRatio(PerpMath.subRatio(1e6, protocolFeeRatio)).sub(amount);
-                oppositeAmount = IPerpdexMarket(market).swapDry(
+                oppositeAmount = IPerpdexMarket(market).previewSwap(
                     isBaseToQuote,
                     isExactInput,
                     amount.add(protocolFee),
@@ -320,7 +320,7 @@ library TakerLibrary {
                 );
             } else {
                 uint256 oppositeAmountWithoutFee =
-                    IPerpdexMarket(market).swapDry(isBaseToQuote, isExactInput, amount, isLiquidation);
+                    IPerpdexMarket(market).previewSwap(isBaseToQuote, isExactInput, amount, isLiquidation);
                 oppositeAmount = oppositeAmountWithoutFee.divRatio(PerpMath.subRatio(1e6, protocolFeeRatio));
                 protocolFee = oppositeAmount.sub(oppositeAmountWithoutFee);
             }
