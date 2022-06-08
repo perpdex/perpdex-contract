@@ -93,6 +93,11 @@ if (process.env.TESTNET_PRIVATE_KEY) {
         chainId: 81,
         accounts: [process.env.TESTNET_PRIVATE_KEY],
         gasMultiplier: 2,
+        verify: {
+            etherscan: {
+                apiUrl: "https://blockscout.com/shibuya",
+            },
+        },
     }
 }
 

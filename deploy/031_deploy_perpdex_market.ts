@@ -10,7 +10,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     const { deployer } = await getNamedAccounts()
 
     const priceFeedQuoteAddress = {
-        rinkeby: getOracleDeploy("ChainlinkPriceFeedETHUSD").address,
+        rinkeby: "ChainlinkPriceFeedETHUSD",
+        shibuya: "DiaPriceFeedASTRUSD",
     }[hre.network.name]
 
     const markets = {
@@ -21,15 +22,37 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
             },
             {
                 symbol: "BTC",
-                priceFeedBase: getOracleDeploy("ChainlinkPriceFeedBTCUSD").address,
+                priceFeedBase: "ChainlinkPriceFeedBTCUSD",
             },
             {
                 symbol: "LINK",
-                priceFeedBase: getOracleDeploy("ChainlinkPriceFeedLINKUSD").address,
+                priceFeedBase: "ChainlinkPriceFeedLINKUSD",
             },
             {
                 symbol: "MATIC",
-                priceFeedBase: getOracleDeploy("ChainlinkPriceFeedMATICUSD").address,
+                priceFeedBase: "ChainlinkPriceFeedMATICUSD",
+            },
+        ],
+        shibuya: [
+            {
+                symbol: "USD",
+                priceFeedBase: hre.ethers.constants.AddressZero,
+            },
+            {
+                symbol: "BTC",
+                priceFeedBase: "DiaPriceFeedBTCUSD",
+            },
+            {
+                symbol: "ETH",
+                priceFeedBase: "DiaPriceFeedETHUSD",
+            },
+            {
+                symbol: "SDN",
+                priceFeedBase: "DiaPriceFeedSDNUSD",
+            },
+            {
+                symbol: "KSM",
+                priceFeedBase: "DiaPriceFeedKSMUSD",
             },
         ],
     }[hre.network.name]
@@ -40,7 +63,16 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
         const market = await deploy("PerpdexMarket" + markets[i].symbol, {
             from: deployer,
             contract: "PerpdexMarket",
-            args: [markets[i].symbol, perpdexExchange.address, markets[i].priceFeedBase, priceFeedQuoteAddress],
+            args: [
+                markets[i].symbol,
+                perpdexExchange.address,
+                markets[i].priceFeedBase === hre.ethers.constants.AddressZero
+                    ? hre.ethers.constants.AddressZero
+                    : getOracleDeploy(markets[i].priceFeedBase).address,
+                priceFeedQuoteAddress === hre.ethers.constants.AddressZero
+                    ? hre.ethers.constants.AddressZero
+                    : getOracleDeploy(priceFeedQuoteAddress).address,
+            ],
             log: true,
             autoMine: true,
         })
