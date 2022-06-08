@@ -97,7 +97,6 @@ interface IPerpdexExchange {
         uint256 sharePriceAfterX96
     );
 
-    event PriceLimitConfigChanged(uint24 normalOrderRatio, uint24 liquidationRatio);
     event MaxMarketsPerAccountChanged(uint8 value);
     event ImRatioChanged(uint24 value);
     event MmRatioChanged(uint24 value);
@@ -127,8 +126,6 @@ interface IPerpdexExchange {
 
     // setters
 
-    function setPriceLimitConfig(PerpdexStructs.PriceLimitConfig calldata value) external;
-
     function setMaxMarketsPerAccount(uint8 value) external;
 
     function setImRatio(uint24 value) external;
@@ -149,18 +146,11 @@ interface IPerpdexExchange {
 
     function accountInfos(address trader) external view returns (PerpdexStructs.VaultInfo memory);
 
-    function priceLimitInfos(address market)
-        external
-        view
-        returns (uint256 referencePrice, uint256 referenceBlockNumber);
-
     function insuranceFundInfo() external view returns (int256 balance);
 
     function protocolInfo() external view returns (uint256 protocolFee);
 
     function settlementToken() external view returns (address);
-
-    function priceLimitConfig() external view returns (uint24 normalOrderRatio, uint24 liquidationRatio);
 
     function maxMarketsPerAccount() external view returns (uint8);
 

@@ -23,15 +23,11 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
     // states
     // trader
     mapping(address => PerpdexStructs.AccountInfo) public override accountInfos;
-    // market
-    mapping(address => PerpdexStructs.PriceLimitInfo) public override priceLimitInfos;
     PerpdexStructs.InsuranceFundInfo public override insuranceFundInfo;
     PerpdexStructs.ProtocolInfo public override protocolInfo;
 
     // config
     address public immutable override settlementToken;
-    PerpdexStructs.PriceLimitConfig public override priceLimitConfig =
-        PerpdexStructs.PriceLimitConfig({ normalOrderRatio: 5e4, liquidationRatio: 10e4 });
     uint8 public override maxMarketsPerAccount = 16;
     uint24 public override imRatio = 10e4;
     uint24 public override mmRatio = 5e4;
@@ -231,18 +227,6 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
         return (response.base, response.quote);
     }
 
-    function setPriceLimitConfig(PerpdexStructs.PriceLimitConfig calldata value)
-        external
-        override
-        onlyOwner
-        nonReentrant
-    {
-        require(value.liquidationRatio <= 5e5, "PE_SPLC: too large liquidation");
-        require(value.normalOrderRatio <= value.liquidationRatio, "PE_SPLC: invalid");
-        priceLimitConfig = value;
-        emit PriceLimitConfigChanged(value.normalOrderRatio, value.liquidationRatio);
-    }
-
     function setMaxMarketsPerAccount(uint8 value) external override onlyOwner nonReentrant {
         maxMarketsPerAccount = value;
         emit MaxMarketsPerAccountChanged(value);
@@ -380,7 +364,6 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
                 accountInfos[params.trader],
                 accountInfos[_msgSender()].vaultInfo,
                 insuranceFundInfo,
-                priceLimitInfos[params.market],
                 protocolInfo,
                 TakerLibrary.OpenPositionParams({
                     market: params.market,
@@ -388,7 +371,6 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
                     isExactInput: params.isExactInput,
                     amount: params.amount,
                     oppositeAmountBound: params.oppositeAmountBound,
-                    priceLimitConfig: priceLimitConfig,
                     mmRatio: mmRatio,
                     imRatio: imRatio,
                     maxMarketsPerAccount: maxMarketsPerAccount,

@@ -35,14 +35,4 @@ library PerpdexStructs {
     struct ProtocolInfo {
         uint256 protocolFee;
     }
-
-    struct PriceLimitInfo {
-        uint256 referencePrice;
-        uint256 referenceBlockNumber;
-    }
-
-    struct PriceLimitConfig {
-        uint24 normalOrderRatio;
-        uint24 liquidationRatio;
-    }
 }

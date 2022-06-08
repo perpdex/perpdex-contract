@@ -75,7 +75,7 @@ describe("TakerLibrary", () => {
         ].forEach(test => {
             it(test.title, async () => {
                 await market.mock.swap
-                    .withArgs(test.isBaseToQuote, test.isExactInput, test.swapAmount)
+                    .withArgs(test.isBaseToQuote, test.isExactInput, test.swapAmount, false)
                     .returns(test.swapOppositeAmount)
 
                 await library.setProtocolInfo({ protocolFee: test.protocolFeeBalance })
@@ -87,6 +87,7 @@ describe("TakerLibrary", () => {
                         test.isExactInput,
                         test.amount,
                         test.protocolFeeRatio,
+                        false,
                     ),
                 )
 
@@ -104,7 +105,7 @@ describe("TakerLibrary", () => {
 
             it(test.title + " dry", async () => {
                 await market.mock.swapDry
-                    .withArgs(test.isBaseToQuote, test.isExactInput, test.swapAmount)
+                    .withArgs(test.isBaseToQuote, test.isExactInput, test.swapAmount, false)
                     .returns(test.swapOppositeAmount)
 
                 const res = await library.swapWithProtocolFeeDry(
@@ -113,6 +114,7 @@ describe("TakerLibrary", () => {
                     test.isExactInput,
                     test.amount,
                     test.protocolFeeRatio,
+                    false,
                 )
 
                 expect(res[0]).to.eq(test.oppositeAmount)

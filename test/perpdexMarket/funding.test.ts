@@ -53,7 +53,7 @@ describe("PerpdexMarket funding", () => {
         })
 
         it("swap", async () => {
-            await expect(market.connect(exchange).swap(false, true, 2))
+            await expect(market.connect(exchange).swap(false, true, 2, false))
                 .to.emit(market, "FundingPaid")
                 .withArgs(expectedFundingRate)
         })

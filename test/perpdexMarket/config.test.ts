@@ -23,10 +23,90 @@ describe("PerpdexMarket config", () => {
 
     describe("initial values", () => {
         it("ok", async () => {
+            const priceLimitConfig = await market.priceLimitConfig()
+            expect(priceLimitConfig.normalOrderRatio).to.eq(5e4)
+            expect(priceLimitConfig.liquidationRatio).to.eq(10e4)
+            expect(priceLimitConfig.emaNormalOrderRatio).to.eq(20e4)
+            expect(priceLimitConfig.emaLiquidationRatio).to.eq(25e4)
+            expect(priceLimitConfig.emaSec).to.eq(300)
+
             expect(await market.poolFeeRatio()).to.eq(3e3)
             expect(await market.fundingMaxPremiumRatio()).to.eq(1e4)
             expect(await market.fundingMaxElapsedSec()).to.eq(24 * 60 * 60)
             expect(await market.fundingRolloverSec()).to.eq(24 * 60 * 60)
+        })
+    })
+
+    describe("setPriceLimitConfig", () => {
+        it("ok", async () => {
+            await expect(
+                market.connect(owner).setPriceLimitConfig({
+                    normalOrderRatio: 0,
+                    liquidationRatio: 0,
+                    emaNormalOrderRatio: 0,
+                    emaLiquidationRatio: 0,
+                    emaSec: 0,
+                }),
+            )
+                .to.emit(market, "PriceLimitConfigChanged")
+                .withArgs(0, 0, 0, 0, 0)
+            let priceLimitConfig = await market.priceLimitConfig()
+            expect(priceLimitConfig.normalOrderRatio).to.eq(0)
+            expect(priceLimitConfig.liquidationRatio).to.eq(0)
+
+            await expect(
+                market.connect(owner).setPriceLimitConfig({
+                    normalOrderRatio: 1,
+                    liquidationRatio: 5e5,
+                    emaNormalOrderRatio: 2,
+                    emaLiquidationRatio: 1e6 - 1,
+                    emaSec: 1,
+                }),
+            )
+                .to.emit(market, "PriceLimitConfigChanged")
+                .withArgs(1, 5e5, 2, 1e6 - 1, 1)
+            priceLimitConfig = await market.priceLimitConfig()
+            expect(priceLimitConfig.normalOrderRatio).to.eq(1)
+            expect(priceLimitConfig.liquidationRatio).to.eq(5e5)
+            expect(priceLimitConfig.emaNormalOrderRatio).to.eq(2)
+            expect(priceLimitConfig.emaLiquidationRatio).to.eq(1e6 - 1)
+            expect(priceLimitConfig.emaSec).to.eq(1)
+        })
+
+        it("revert when not owner", async () => {
+            await expect(
+                market.connect(alice).setPriceLimitConfig({
+                    normalOrderRatio: 0,
+                    liquidationRatio: 0,
+                    emaNormalOrderRatio: 0,
+                    emaLiquidationRatio: 0,
+                    emaSec: 0,
+                }),
+            ).to.be.revertedWith("Ownable: caller is not the owner")
+        })
+
+        it("revert when too large", async () => {
+            await expect(
+                market.connect(owner).setPriceLimitConfig({
+                    normalOrderRatio: 0,
+                    liquidationRatio: 5e5 + 1,
+                    emaNormalOrderRatio: 0,
+                    emaLiquidationRatio: 0,
+                    emaSec: 0,
+                }),
+            ).to.be.revertedWith("PE_SPLC: too large liquidation")
+        })
+
+        it("revert when normal order > liquidation", async () => {
+            await expect(
+                market.connect(owner).setPriceLimitConfig({
+                    normalOrderRatio: 2,
+                    liquidationRatio: 1,
+                    emaNormalOrderRatio: 0,
+                    emaLiquidationRatio: 0,
+                    emaSec: 0,
+                }),
+            ).to.be.revertedWith("PE_SPLC: invalid")
         })
     })
 

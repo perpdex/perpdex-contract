@@ -23,69 +23,11 @@ describe("PerpdexExchange config", () => {
 
     describe("initial values", () => {
         it("ok", async () => {
-            const priceLimitConfig = await exchange.priceLimitConfig()
-            expect(priceLimitConfig.normalOrderRatio).to.eq(5e4)
-            expect(priceLimitConfig.liquidationRatio).to.eq(10e4)
             expect(await exchange.maxMarketsPerAccount()).to.eq(16)
             expect(await exchange.imRatio()).to.eq(10e4)
             expect(await exchange.mmRatio()).to.eq(5e4)
             expect(await exchange.liquidationRewardRatio()).to.eq(20e4)
             expect(await exchange.protocolFeeRatio()).to.eq(0)
-        })
-    })
-
-    describe("setPriceLimitConfig", () => {
-        it("ok", async () => {
-            await expect(
-                exchange.connect(owner).setPriceLimitConfig({
-                    normalOrderRatio: 0,
-                    liquidationRatio: 0,
-                }),
-            )
-                .to.emit(exchange, "PriceLimitConfigChanged")
-                .withArgs(0, 0)
-            let priceLimitConfig = await exchange.priceLimitConfig()
-            expect(priceLimitConfig.normalOrderRatio).to.eq(0)
-            expect(priceLimitConfig.liquidationRatio).to.eq(0)
-
-            await expect(
-                exchange.connect(owner).setPriceLimitConfig({
-                    normalOrderRatio: 1,
-                    liquidationRatio: 5e5,
-                }),
-            )
-                .to.emit(exchange, "PriceLimitConfigChanged")
-                .withArgs(1, 5e5)
-            priceLimitConfig = await exchange.priceLimitConfig()
-            expect(priceLimitConfig.normalOrderRatio).to.eq(1)
-            expect(priceLimitConfig.liquidationRatio).to.eq(5e5)
-        })
-
-        it("revert when not owner", async () => {
-            await expect(
-                exchange.connect(alice).setPriceLimitConfig({
-                    normalOrderRatio: 0,
-                    liquidationRatio: 0,
-                }),
-            ).to.be.revertedWith("Ownable: caller is not the owner")
-        })
-
-        it("revert when too large", async () => {
-            await expect(
-                exchange.connect(owner).setPriceLimitConfig({
-                    normalOrderRatio: 0,
-                    liquidationRatio: 5e5 + 1,
-                }),
-            ).to.be.revertedWith("PE_SPLC: too large liquidation")
-        })
-
-        it("revert when normal order > liquidation", async () => {
-            await expect(
-                exchange.connect(owner).setPriceLimitConfig({
-                    normalOrderRatio: 2,
-                    liquidationRatio: 1,
-                }),
-            ).to.be.revertedWith("PE_SPLC: invalid")
         })
     })
 

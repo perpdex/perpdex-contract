@@ -11,7 +11,8 @@ interface IPerpdexMarket {
     function swap(
         bool isBaseToQuote,
         bool isExactInput,
-        uint256 amount
+        uint256 amount,
+        bool isLiquidation
     ) external returns (uint256);
 
     function addLiquidity(uint256 baseShare, uint256 quoteBalance)
@@ -33,7 +34,8 @@ interface IPerpdexMarket {
     function swapDry(
         bool isBaseToQuote,
         bool isExactInput,
-        uint256 amount
+        uint256 amount,
+        bool isLiquidation
     ) external view returns (uint256);
 
     function getMarkPriceX96() external view returns (uint256);
