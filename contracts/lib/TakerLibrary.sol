@@ -168,7 +168,7 @@ library TakerLibrary {
                 isLiquidation
             );
         } else {
-            (oppositeAmount, ) = swapWithProtocolFeeDry(
+            (oppositeAmount, ) = previewSwapWithProtocolFee(
                 params.market,
                 params.isBaseToQuote,
                 params.isExactInput,
@@ -310,7 +310,7 @@ library TakerLibrary {
         insuranceFundInfo.balance = insuranceFundInfo.balance.add(insuranceFundReward.toInt256());
     }
 
-    function swapWithProtocolFeeDry(
+    function previewSwapWithProtocolFee(
         address market,
         bool isBaseToQuote,
         bool isExactInput,

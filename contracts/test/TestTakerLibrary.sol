@@ -57,7 +57,7 @@ contract TestTakerLibrary {
         emit SwapWithProtocolFeeResult(oppositeAmount, protocolFee);
     }
 
-    function swapWithProtocolFeeDry(
+    function previewSwapWithProtocolFee(
         address market,
         bool isBaseToQuote,
         bool isExactInput,
@@ -66,7 +66,7 @@ contract TestTakerLibrary {
         bool isLiquidation
     ) external view returns (uint256 oppositeAmount, uint256 protocolFee) {
         return
-            TakerLibrary.swapWithProtocolFeeDry(
+            TakerLibrary.previewSwapWithProtocolFee(
                 market,
                 isBaseToQuote,
                 isExactInput,

@@ -108,7 +108,7 @@ describe("TakerLibrary", () => {
                     .withArgs(test.isBaseToQuote, test.isExactInput, test.swapAmount, false)
                     .returns(test.swapOppositeAmount)
 
-                const res = await library.swapWithProtocolFeeDry(
+                const res = await library.previewSwapWithProtocolFee(
                     market.address,
                     test.isBaseToQuote,
                     test.isExactInput,
