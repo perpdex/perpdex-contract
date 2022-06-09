@@ -228,25 +228,27 @@ contract PerpdexMarket is IPerpdexMarket, ReentrancyGuard, Ownable {
         bool isExactInput,
         bool isLiquidation
     ) external view override returns (uint256 amount) {
+        if (poolInfo.totalLiquidity == 0) return 0;
+
         uint256 sharePriceBeforeX96 = getShareMarkPriceX96();
 
-        uint256 priceBound;
+        uint256 sharePriceBound;
         if (isBaseToQuote) {
-            priceBound = PriceLimitLibrary.minPrice(
+            sharePriceBound = PriceLimitLibrary.minPrice(
                 priceLimitInfo,
                 priceLimitConfig,
                 sharePriceBeforeX96,
                 isLiquidation
             );
-            if (priceBound >= sharePriceBeforeX96) return 0;
+            if (sharePriceBound >= sharePriceBeforeX96) return 0;
         } else {
-            priceBound = PriceLimitLibrary.maxPrice(
+            sharePriceBound = PriceLimitLibrary.maxPrice(
                 priceLimitInfo,
                 priceLimitConfig,
                 sharePriceBeforeX96,
                 isLiquidation
             );
-            if (priceBound <= sharePriceBeforeX96) return 0;
+            if (sharePriceBound <= sharePriceBeforeX96) return 0;
         }
         amount = PoolLibrary.maxSwap(
             poolInfo.base,
@@ -254,7 +256,7 @@ contract PerpdexMarket is IPerpdexMarket, ReentrancyGuard, Ownable {
             isBaseToQuote,
             isExactInput,
             poolFeeRatio,
-            priceBound
+            sharePriceBound
         );
     }
 

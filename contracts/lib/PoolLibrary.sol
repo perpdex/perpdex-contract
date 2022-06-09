@@ -214,21 +214,21 @@ library PoolLibrary {
     ) internal pure returns (uint256 output) {
         if (isExactInput) {
             if (isBaseToQuote) {
-                uint256 quoteAfter = Math.sqrt(FullMath.mulDiv(base.mul(quote), priceBoundX96, FixedPoint96.Q96));
-                return quoteAfter - quote;
+                uint256 baseAfter = Math.sqrt(FullMath.mulDiv(base.mul(quote), FixedPoint96.Q96, priceBoundX96));
+                return baseAfter.sub(base);
             } else {
-                uint256 baseAfter =
-                    Math.sqrtRoundingUp(FullMath.mulDivRoundingUp(base.mul(quote), FixedPoint96.Q96, priceBoundX96));
-                return base - baseAfter;
+                uint256 quoteAfter = Math.sqrt(FullMath.mulDiv(base.mul(quote), priceBoundX96, FixedPoint96.Q96));
+                return quoteAfter.sub(quote);
             }
         } else {
             if (isBaseToQuote) {
+                uint256 quoteAfter =
+                    Math.sqrtRoundingUp(FullMath.mulDivRoundingUp(base.mul(quote), priceBoundX96, FixedPoint96.Q96));
+                return quote.sub(quoteAfter);
+            } else {
                 uint256 baseAfter =
                     Math.sqrtRoundingUp(FullMath.mulDivRoundingUp(base.mul(quote), FixedPoint96.Q96, priceBoundX96));
-                return base - baseAfter;
-            } else {
-                uint256 quoteAfter = Math.sqrt(FullMath.mulDiv(base.mul(quote), priceBoundX96, FixedPoint96.Q96));
-                return quoteAfter - quote;
+                return base.sub(baseAfter);
             }
         }
     }

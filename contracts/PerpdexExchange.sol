@@ -318,7 +318,7 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
     }
 
     function maxOpenPosition(MaxOpenPositionParams calldata params) external view override returns (uint256 amount) {
-        if (isMarketAllowed[params.market]) return 0;
+        if (!isMarketAllowed[params.market]) return 0;
 
         address trader = params.trader;
         address caller = params.caller;

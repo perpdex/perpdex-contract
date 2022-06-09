@@ -46,6 +46,10 @@ describe("PerpdexMarket swap", () => {
         it("revert", async () => {
             await expect(market.connect(exchange).swap(false, true, 1, false)).to.be.reverted
         })
+
+        it("revert preview", async () => {
+            await expect(market.connect(exchange).previewSwap(false, true, 1, false)).to.be.reverted
+        })
     })
 
     describe("with fee, without funding", () => {
