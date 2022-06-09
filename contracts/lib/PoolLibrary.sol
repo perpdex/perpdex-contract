@@ -184,14 +184,14 @@ library PoolLibrary {
         uint256 quote,
         SwapParams memory params
     ) internal pure returns (uint256 output) {
-        uint24 onePlusFeeRatio = 1e6 + params.feeRatio;
+        uint24 oneSubFeeRatio = PerpMath.subRatio(1e6, params.feeRatio);
 
         if (params.isExactInput) {
-            uint256 amountDivFee = params.amount.divRatio(onePlusFeeRatio);
+            uint256 amountSubFee = params.amount.mulRatio(oneSubFeeRatio);
             if (params.isBaseToQuote) {
-                output = quote.sub(FullMath.mulDivRoundingUp(base, quote, base.add(amountDivFee)));
+                output = quote.sub(FullMath.mulDivRoundingUp(base, quote, base.add(amountSubFee)));
             } else {
-                output = base.sub(FullMath.mulDivRoundingUp(base, quote, quote.add(amountDivFee)));
+                output = base.sub(FullMath.mulDivRoundingUp(base, quote, quote.add(amountSubFee)));
             }
         } else {
             if (params.isBaseToQuote) {
@@ -199,7 +199,7 @@ library PoolLibrary {
             } else {
                 output = FullMath.mulDivRoundingUp(base, quote, base.sub(params.amount)).sub(quote);
             }
-            output = output.mulRatioRoundingUp(onePlusFeeRatio);
+            output = output.divRatioRoundingUp(oneSubFeeRatio);
         }
         require(output > 0, "PL_SD: output is zero");
     }
