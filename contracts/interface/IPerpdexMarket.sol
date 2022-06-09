@@ -38,6 +38,12 @@ interface IPerpdexMarket {
         bool isLiquidation
     ) external view returns (uint256);
 
+    function maxSwap(
+        bool isBaseToQuote,
+        bool isExactInput,
+        bool isLiquidation
+    ) external view returns (uint256 amount);
+
     function getMarkPriceX96() external view returns (uint256);
 
     function getShareMarkPriceX96() external view returns (uint256);

@@ -148,6 +148,7 @@ library TakerLibrary {
 
     // Even if openPosition reverts, it may not revert.
     // Attempting to match reverts makes the implementation too complicated
+    // ignore initial margin check and close only check when liquidation
     function previewOpenPosition(
         PerpdexStructs.AccountInfo storage accountInfo,
         PreviewOpenPositionParams memory params
@@ -183,6 +184,29 @@ library TakerLibrary {
             params.amount,
             oppositeAmount
         );
+    }
+
+    // ignore initial margin check and close only check when liquidation
+    function maxOpenPosition(
+        PerpdexStructs.AccountInfo storage accountInfo,
+        address market,
+        bool isBaseToQuote,
+        bool isExactInput,
+        uint24 mmRatio,
+        uint24 protocolFeeRatio,
+        bool isSelf
+    ) internal view returns (uint256 amount) {
+        bool isLiquidation = !AccountLibrary.hasEnoughMaintenanceMargin(accountInfo, mmRatio);
+
+        if (!isSelf && isLiquidation) {
+            return 0;
+        }
+
+        if (protocolFeeRatio == 0) {
+            amount = IPerpdexMarket(market).maxSwap(isBaseToQuote, isExactInput, isLiquidation);
+        } else {
+            amount = maxSwapWithProtocolFee(market, isBaseToQuote, isExactInput, protocolFeeRatio, isLiquidation);
+        }
     }
 
     function _doSwap(
@@ -323,6 +347,26 @@ library TakerLibrary {
                 oppositeAmount = oppositeAmountWithoutFee.divRatio(PerpMath.subRatio(1e6, protocolFeeRatio));
                 protocolFee = oppositeAmount.sub(oppositeAmountWithoutFee);
             }
+        }
+    }
+
+    function maxSwapWithProtocolFee(
+        address market,
+        bool isBaseToQuote,
+        bool isExactInput,
+        uint24 protocolFeeRatio,
+        bool isLiquidation
+    ) internal view returns (uint256 amount) {
+        amount = IPerpdexMarket(market).maxSwap(isBaseToQuote, isExactInput, isLiquidation);
+
+        if (isExactInput) {
+            if (isBaseToQuote) {} else {
+                amount = amount.divRatio(PerpMath.subRatio(1e6, protocolFeeRatio));
+            }
+        } else {
+            if (isBaseToQuote) {
+                amount = amount.divRatio(PerpMath.subRatio(1e6, protocolFeeRatio));
+            } else {}
         }
     }
 

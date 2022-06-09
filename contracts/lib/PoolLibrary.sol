@@ -204,6 +204,35 @@ library PoolLibrary {
         require(output > 0, "PL_SD: output is zero");
     }
 
+    function maxSwap(
+        uint256 base,
+        uint256 quote,
+        bool isBaseToQuote,
+        bool isExactInput,
+        uint24 feeRatio,
+        uint256 priceBoundX96
+    ) internal pure returns (uint256 output) {
+        if (isExactInput) {
+            if (isBaseToQuote) {
+                uint256 quoteAfter = Math.sqrt(FullMath.mulDiv(base.mul(quote), priceBoundX96, FixedPoint96.Q96));
+                return quoteAfter - quote;
+            } else {
+                uint256 baseAfter =
+                    Math.sqrtRoundingUp(FullMath.mulDivRoundingUp(base.mul(quote), FixedPoint96.Q96, priceBoundX96));
+                return base - baseAfter;
+            }
+        } else {
+            if (isBaseToQuote) {
+                uint256 baseAfter =
+                    Math.sqrtRoundingUp(FullMath.mulDivRoundingUp(base.mul(quote), FixedPoint96.Q96, priceBoundX96));
+                return base - baseAfter;
+            } else {
+                uint256 quoteAfter = Math.sqrt(FullMath.mulDiv(base.mul(quote), priceBoundX96, FixedPoint96.Q96));
+                return quoteAfter - quote;
+            }
+        }
+    }
+
     function getMarkPriceX96(
         uint256 base,
         uint256 quote,

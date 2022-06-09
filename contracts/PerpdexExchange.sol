@@ -316,6 +316,24 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
             );
     }
 
+    function maxOpenPosition(MaxOpenPositionParams calldata params) external view override returns (uint256 amount) {
+        if (isMarketAllowed[params.market]) return 0;
+
+        address trader = params.trader;
+        address caller = params.caller;
+
+        return
+            TakerLibrary.maxOpenPosition({
+                accountInfo: accountInfos[trader],
+                market: params.market,
+                isBaseToQuote: params.isBaseToQuote,
+                isExactInput: params.isExactInput,
+                mmRatio: mmRatio,
+                protocolFeeRatio: protocolFeeRatio,
+                isSelf: trader == caller
+            });
+    }
+
     // convenient getters
 
     function getTotalAccountValue(address trader) external view override returns (int256) {

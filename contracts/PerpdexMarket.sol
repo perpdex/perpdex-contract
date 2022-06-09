@@ -223,6 +223,41 @@ contract PerpdexMarket is IPerpdexMarket, ReentrancyGuard, Ownable {
         );
     }
 
+    function maxSwap(
+        bool isBaseToQuote,
+        bool isExactInput,
+        bool isLiquidation
+    ) external view override returns (uint256 amount) {
+        uint256 sharePriceBeforeX96 = getShareMarkPriceX96();
+
+        uint256 priceBound;
+        if (isBaseToQuote) {
+            priceBound = PriceLimitLibrary.minPrice(
+                priceLimitInfo,
+                priceLimitConfig,
+                sharePriceBeforeX96,
+                isLiquidation
+            );
+            if (priceBound >= sharePriceBeforeX96) return 0;
+        } else {
+            priceBound = PriceLimitLibrary.maxPrice(
+                priceLimitInfo,
+                priceLimitConfig,
+                sharePriceBeforeX96,
+                isLiquidation
+            );
+            if (priceBound <= sharePriceBeforeX96) return 0;
+        }
+        amount = PoolLibrary.maxSwap(
+            poolInfo.base,
+            poolInfo.quote,
+            isBaseToQuote,
+            isExactInput,
+            poolFeeRatio,
+            priceBound
+        );
+    }
+
     function getShareMarkPriceX96() public view override returns (uint256) {
         return PoolLibrary.getShareMarkPriceX96(poolInfo.base, poolInfo.quote);
     }

@@ -43,6 +43,14 @@ interface IPerpdexExchange {
         uint256 oppositeAmountBound;
     }
 
+    struct MaxOpenPositionParams {
+        address trader;
+        address market;
+        address caller;
+        bool isBaseToQuote;
+        bool isExactInput;
+    }
+
     event Deposited(address indexed trader, uint256 amount);
     event Withdrawn(address indexed trader, uint256 amount);
     event InsuranceFundTransferred(address indexed trader, uint256 amount);
@@ -144,6 +152,8 @@ interface IPerpdexExchange {
         external
         view
         returns (int256 base, int256 quote);
+
+    function maxOpenPosition(MaxOpenPositionParams calldata params) external view returns (uint256 amount);
 
     // default getters
 

@@ -2,6 +2,7 @@
 pragma solidity 0.7.6;
 pragma abicoder v2;
 
+import { Math } from "@openzeppelin/contracts/math/Math.sol";
 import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
 import { FullMath } from "@uniswap/v3-core/contracts/libraries/FullMath.sol";
 import { PerpMath } from "./PerpMath.sol";
@@ -64,6 +65,42 @@ library PriceLimitLibrary {
                 "PLL_C: price band"
             );
         }
+    }
+
+    function maxPrice(
+        MarketStructs.PriceLimitInfo storage priceLimitInfo,
+        MarketStructs.PriceLimitConfig storage config,
+        uint256 priceBefore,
+        bool isLiquidation
+    ) internal view returns (uint256 price) {
+        (uint256 referencePrice, uint256 referenceTimestamp, uint256 emaPrice) =
+            updateDry(priceLimitInfo, config, priceBefore);
+
+        uint256 upperBound =
+            referencePrice.add(
+                referencePrice.mulRatio(isLiquidation ? config.liquidationRatio : config.normalOrderRatio)
+            );
+        uint256 upperBoundEma =
+            emaPrice.add(emaPrice.mulRatio(isLiquidation ? config.emaLiquidationRatio : config.emaNormalOrderRatio));
+        return Math.min(upperBound, upperBoundEma);
+    }
+
+    function minPrice(
+        MarketStructs.PriceLimitInfo storage priceLimitInfo,
+        MarketStructs.PriceLimitConfig storage config,
+        uint256 priceBefore,
+        bool isLiquidation
+    ) internal view returns (uint256 price) {
+        (uint256 referencePrice, uint256 referenceTimestamp, uint256 emaPrice) =
+            updateDry(priceLimitInfo, config, priceBefore);
+
+        uint256 upperBound =
+            referencePrice.sub(
+                referencePrice.mulRatio(isLiquidation ? config.liquidationRatio : config.normalOrderRatio)
+            );
+        uint256 upperBoundEma =
+            emaPrice.sub(emaPrice.mulRatio(isLiquidation ? config.emaLiquidationRatio : config.emaNormalOrderRatio));
+        return Math.max(upperBound, upperBoundEma);
     }
 
     // referenceTimestamp == 0 indicates not updated
