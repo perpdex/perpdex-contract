@@ -49,7 +49,7 @@ describe("Vault deposit test", () => {
 
             // update sender's balance
             const result = await perpdexExchange.accountInfos(alice.address)
-            expect(result.collateralBalance).to.eq(amount)
+            expect(result.collateralBalance).to.eq(amount.mul(1e12))
         })
 
         it("force error, not enough balance", async () => {

@@ -165,6 +165,8 @@ interface IPerpdexExchange {
 
     function settlementToken() external view returns (address);
 
+    function decimals() external view returns (uint8);
+
     function maxMarketsPerAccount() external view returns (uint8);
 
     function imRatio() external view returns (uint24);

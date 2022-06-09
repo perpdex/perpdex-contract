@@ -56,7 +56,7 @@ describe("Vault withdraw test", () => {
             // update alice perpdex account balance
             // alice account collateralBalance is 200 = 300 - 100
             const result = await perpdexExchange.accountInfos(alice.address)
-            expect(result.collateralBalance).to.eq(parseUsdc("200"))
+            expect(result.collateralBalance).to.eq(parseUsdc("200").mul(1e12))
         })
 
         it("force error, not enough balance to withdraw", async () => {
