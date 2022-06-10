@@ -55,19 +55,24 @@ describe("PerpdexMarket funding", () => {
         it("swap", async () => {
             await expect(market.connect(exchange).swap(false, true, 2, false))
                 .to.emit(market, "FundingPaid")
-                .withArgs(expectedFundingRate)
+                .withArgs(
+                    expectedFundingRate,
+                    60,
+                    Q96.mul(1e4).div(1e6),
+                    BigNumber.from("79251933340101200581120771203"),
+                )
         })
 
         it("addLiquidity", async () => {
             await expect(market.connect(exchange).addLiquidity(1, 1))
                 .to.emit(market, "FundingPaid")
-                .withArgs(expectedFundingRate)
+                .withArgs(expectedFundingRate, 60, Q96.mul(1e4).div(1e6), Q96)
         })
 
         it("removeLiquidity", async () => {
             await expect(market.connect(exchange).removeLiquidity(1))
                 .to.emit(market, "FundingPaid")
-                .withArgs(expectedFundingRate)
+                .withArgs(expectedFundingRate, 60, Q96.mul(1e4).div(1e6), Q96)
         })
     })
 })
