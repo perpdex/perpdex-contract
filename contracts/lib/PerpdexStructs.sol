@@ -30,9 +30,15 @@ library PerpdexStructs {
 
     struct InsuranceFundInfo {
         int256 balance;
+        uint256 liquidationRewardBalance;
     }
 
     struct ProtocolInfo {
         uint256 protocolFee;
+    }
+
+    struct LiquidationRewardConfig {
+        uint24 rewardRatio;
+        uint16 smoothEmaTime;
     }
 }

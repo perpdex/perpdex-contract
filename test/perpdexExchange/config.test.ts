@@ -26,7 +26,9 @@ describe("PerpdexExchange config", () => {
             expect(await exchange.maxMarketsPerAccount()).to.eq(16)
             expect(await exchange.imRatio()).to.eq(10e4)
             expect(await exchange.mmRatio()).to.eq(5e4)
-            expect(await exchange.liquidationRewardRatio()).to.eq(20e4)
+            const liqConfig = await exchange.liquidationRewardConfig()
+            expect(liqConfig.rewardRatio).to.eq(20e4)
+            expect(liqConfig.smoothEmaTime).to.eq(100)
             expect(await exchange.protocolFeeRatio()).to.eq(0)
         })
     })
@@ -94,28 +96,57 @@ describe("PerpdexExchange config", () => {
         })
     })
 
-    describe("setLiquidationRewardRatio", () => {
+    describe("setLiquidationRewardConfig", () => {
         it("ok", async () => {
-            await expect(exchange.connect(owner).setLiquidationRewardRatio(0))
-                .to.emit(exchange, "LiquidationRewardRatioChanged")
-                .withArgs(0)
-            expect(await exchange.liquidationRewardRatio()).to.eq(0)
-            await expect(exchange.connect(owner).setLiquidationRewardRatio(1e6 - 1))
-                .to.emit(exchange, "LiquidationRewardRatioChanged")
-                .withArgs(1e6 - 1)
-            expect(await exchange.liquidationRewardRatio()).to.eq(1e6 - 1)
+            await expect(
+                exchange.connect(owner).setLiquidationRewardConfig({
+                    rewardRatio: 0,
+                    smoothEmaTime: 1,
+                }),
+            )
+                .to.emit(exchange, "LiquidationRewardConfigChanged")
+                .withArgs(0, 1)
+            const config = await exchange.liquidationRewardConfig()
+            expect(config.rewardRatio).to.eq(0)
+            expect(config.smoothEmaTime).to.eq(1)
+            await expect(
+                exchange.connect(owner).setLiquidationRewardConfig({
+                    rewardRatio: 1e6 - 1,
+                    smoothEmaTime: 65535,
+                }),
+            )
+                .to.emit(exchange, "LiquidationRewardConfigChanged")
+                .withArgs(1e6 - 1, 65535)
+            const config2 = await exchange.liquidationRewardConfig()
+            expect(config2.rewardRatio).to.eq(1e6 - 1)
+            expect(config2.smoothEmaTime).to.eq(65535)
         })
 
         it("revert when not owner", async () => {
-            await expect(exchange.connect(alice).setLiquidationRewardRatio(1)).to.be.revertedWith(
-                "Ownable: caller is not the owner",
-            )
+            await expect(
+                exchange.connect(alice).setLiquidationRewardConfig({
+                    rewardRatio: 0,
+                    smoothEmaTime: 1,
+                }),
+            ).to.be.revertedWith("Ownable: caller is not the owner")
         })
 
         it("revert when too large", async () => {
-            await expect(exchange.connect(owner).setLiquidationRewardRatio(1e6)).to.be.revertedWith(
-                "PE_SLRR: too large",
-            )
+            await expect(
+                exchange.connect(owner).setLiquidationRewardConfig({
+                    rewardRatio: 1e6,
+                    smoothEmaTime: 1,
+                }),
+            ).to.be.revertedWith("PE_SLRC: too large reward ratio")
+        })
+
+        it("revert when smoothEmaTime zero", async () => {
+            await expect(
+                exchange.connect(owner).setLiquidationRewardConfig({
+                    rewardRatio: 0,
+                    smoothEmaTime: 0,
+                }),
+            ).to.be.revertedWith("PE_SLRC: ema time is zero")
         })
     })
 

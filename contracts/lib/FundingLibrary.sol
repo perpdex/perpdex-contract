@@ -120,7 +120,7 @@ library FundingLibrary {
         uint256 indexPriceBase,
         uint256 indexPriceQuote,
         uint256 markPriceX96
-    ) private view returns (int256 premiumX96) {
+    ) private pure returns (int256 premiumX96) {
         uint256 priceRatioX96 = markPriceX96;
 
         if (decimalsBase != 0 || indexPriceBase != 1) {

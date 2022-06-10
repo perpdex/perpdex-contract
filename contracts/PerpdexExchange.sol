@@ -32,8 +32,9 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
     uint8 public override maxMarketsPerAccount = 16;
     uint24 public override imRatio = 10e4;
     uint24 public override mmRatio = 5e4;
-    uint24 public override liquidationRewardRatio = 20e4;
     uint24 public override protocolFeeRatio = 0;
+    PerpdexStructs.LiquidationRewardConfig public override liquidationRewardConfig =
+        PerpdexStructs.LiquidationRewardConfig({ rewardRatio: 20e4, smoothEmaTime: 100 });
     mapping(address => bool) public override isMarketAllowed;
 
     modifier checkDeadline(uint256 deadline) {
@@ -247,10 +248,16 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
         emit MmRatioChanged(value);
     }
 
-    function setLiquidationRewardRatio(uint24 value) external override onlyOwner nonReentrant {
-        require(value < 1e6, "PE_SLRR: too large");
-        liquidationRewardRatio = value;
-        emit LiquidationRewardRatioChanged(value);
+    function setLiquidationRewardConfig(PerpdexStructs.LiquidationRewardConfig calldata value)
+        external
+        override
+        onlyOwner
+        nonReentrant
+    {
+        require(value.rewardRatio < 1e6, "PE_SLRC: too large reward ratio");
+        require(value.smoothEmaTime > 0, "PE_SLRC: ema time is zero");
+        liquidationRewardConfig = value;
+        emit LiquidationRewardConfigChanged(value.rewardRatio, value.smoothEmaTime);
     }
 
     function setProtocolFeeRatio(uint24 value) external override onlyOwner nonReentrant {
@@ -394,7 +401,7 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
                     imRatio: imRatio,
                     maxMarketsPerAccount: maxMarketsPerAccount,
                     protocolFeeRatio: protocolFeeRatio,
-                    liquidationRewardRatio: liquidationRewardRatio,
+                    liquidationRewardConfig: liquidationRewardConfig,
                     isSelf: params.trader == _msgSender()
                 })
             );

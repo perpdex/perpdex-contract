@@ -15,7 +15,7 @@ describe("TakerLibrary", () => {
         library = fixture.takerLibrary
     })
 
-    describe("processLiquidationFee", () => {
+    describe("processLiquidationReward", () => {
         ;[
             {
                 title: "normal",
@@ -23,7 +23,9 @@ describe("TakerLibrary", () => {
                 liquidatorCollateralBalance: 200,
                 insuranceFundBalance: 300,
                 mmRatio: 20e4,
-                liquidationRewardRatio: 25e4,
+                rewardRatio: 25e4,
+                smoothRatio: 0,
+                smoothEmaTime: 1,
                 exchangedQuote: 100,
                 liquidationReward: 5,
                 insuranceFundReward: 15,
@@ -35,7 +37,9 @@ describe("TakerLibrary", () => {
                 liquidatorCollateralBalance: 200,
                 insuranceFundBalance: 300,
                 mmRatio: 20e4,
-                liquidationRewardRatio: 25e4,
+                rewardRatio: 25e4,
+                smoothRatio: 0,
+                smoothEmaTime: 1,
                 exchangedQuote: 99,
                 liquidationReward: 4,
                 insuranceFundReward: 15,
@@ -47,7 +51,9 @@ describe("TakerLibrary", () => {
                 liquidatorCollateralBalance: 0,
                 insuranceFundBalance: 0,
                 mmRatio: 20e4,
-                liquidationRewardRatio: 25e4,
+                rewardRatio: 25e4,
+                smoothRatio: 0,
+                smoothEmaTime: 1,
                 exchangedQuote: 100,
                 liquidationReward: 5,
                 insuranceFundReward: 15,
@@ -57,15 +63,22 @@ describe("TakerLibrary", () => {
             it(test.title, async () => {
                 await library.setAccountInfo({ collateralBalance: test.collateralBalance }, [])
                 await library.setLiquidatorVaultInfo({ collateralBalance: test.liquidatorCollateralBalance })
-                await library.setInsuranceFundInfo({ balance: test.insuranceFundBalance })
+                await library.setInsuranceFundInfo({ balance: test.insuranceFundBalance, liquidationRewardBalance: 0 })
 
                 const res = expect(
-                    library.processLiquidationFee(test.mmRatio, test.liquidationRewardRatio, test.exchangedQuote),
+                    library.processLiquidationReward(
+                        test.mmRatio,
+                        {
+                            rewardRatio: test.rewardRatio,
+                            smoothEmaTime: test.smoothEmaTime,
+                        },
+                        test.exchangedQuote,
+                    ),
                 )
 
                 if (test.revertedWith === void 0) {
                     await res.to
-                        .emit(library, "ProcessLiquidationFeeResult")
+                        .emit(library, "ProcessLiquidationRewardResult")
                         .withArgs(test.liquidationReward, test.insuranceFundReward)
 
                     const vault = await library.accountInfo()
@@ -74,8 +87,8 @@ describe("TakerLibrary", () => {
                     )
                     const liquidatorBalance = await library.liquidatorVaultInfo()
                     expect(liquidatorBalance).to.eq(test.liquidatorCollateralBalance + test.liquidationReward)
-                    const insuranceFundBalance = await library.insuranceFundInfo()
-                    expect(insuranceFundBalance).to.eq(test.insuranceFundBalance + test.insuranceFundReward)
+                    const fundInfo = await library.insuranceFundInfo()
+                    expect(fundInfo.balance).to.eq(test.insuranceFundBalance + test.insuranceFundReward)
                 } else {
                     await res.to.revertedWith(test.revertedWith)
                 }

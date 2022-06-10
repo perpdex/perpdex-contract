@@ -28,8 +28,8 @@ library TakerLibrary {
         uint24 imRatio;
         uint8 maxMarketsPerAccount;
         uint24 protocolFeeRatio;
-        uint24 liquidationRewardRatio;
         bool isSelf;
+        PerpdexStructs.LiquidationRewardConfig liquidationRewardConfig;
     }
 
     struct PreviewOpenPositionParams {
@@ -86,12 +86,12 @@ library TakerLibrary {
         if (response.isLiquidation) {
             require(!isOpen, "TL_OP: no open when liquidation");
 
-            (response.liquidationReward, response.insuranceFundReward) = processLiquidationFee(
+            (response.liquidationReward, response.insuranceFundReward) = processLiquidationReward(
                 accountInfo.vaultInfo,
                 liquidatorVaultInfo,
                 insuranceFundInfo,
                 params.mmRatio,
-                params.liquidationRewardRatio,
+                params.liquidationRewardConfig,
                 response.quote.abs()
             );
         }
@@ -293,21 +293,37 @@ library TakerLibrary {
         protocolInfo.protocolFee = protocolInfo.protocolFee.add(protocolFee);
     }
 
-    function processLiquidationFee(
+    function processLiquidationReward(
         PerpdexStructs.VaultInfo storage vaultInfo,
         PerpdexStructs.VaultInfo storage liquidatorVaultInfo,
         PerpdexStructs.InsuranceFundInfo storage insuranceFundInfo,
         uint24 mmRatio,
-        uint24 liquidationRewardRatio,
+        PerpdexStructs.LiquidationRewardConfig memory liquidationRewardConfig,
         uint256 exchangedQuote
     ) internal returns (uint256 liquidationReward, uint256 insuranceFundReward) {
         uint256 penalty = exchangedQuote.mulRatio(mmRatio);
-        liquidationReward = penalty.mulRatio(liquidationRewardRatio);
+        liquidationReward = penalty.mulRatio(liquidationRewardConfig.rewardRatio);
         insuranceFundReward = penalty.sub(liquidationReward);
+
+        (insuranceFundInfo.liquidationRewardBalance, liquidationReward) = _smoothLiquidationReward(
+            insuranceFundInfo.liquidationRewardBalance,
+            liquidationReward,
+            liquidationRewardConfig.smoothEmaTime
+        );
 
         vaultInfo.collateralBalance = vaultInfo.collateralBalance.sub(penalty.toInt256());
         liquidatorVaultInfo.collateralBalance = liquidatorVaultInfo.collateralBalance.add(liquidationReward.toInt256());
         insuranceFundInfo.balance = insuranceFundInfo.balance.add(insuranceFundReward.toInt256());
+    }
+
+    function _smoothLiquidationReward(
+        uint256 rewardBalance,
+        uint256 reward,
+        uint24 emaTime
+    ) internal pure returns (uint256 outputRewardBalance, uint256 outputReward) {
+        rewardBalance = rewardBalance.add(reward);
+        outputReward = rewardBalance.div(emaTime);
+        outputRewardBalance = rewardBalance.sub(outputReward);
     }
 
     function previewSwapWithProtocolFee(
