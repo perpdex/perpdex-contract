@@ -28,10 +28,8 @@ library TakerLibrary {
         uint24 imRatio;
         uint8 maxMarketsPerAccount;
         uint24 protocolFeeRatio;
-        uint24 liquidationRewardRatio;
-        uint24 liquidationRewardSmoothRatio;
-        uint16 liquidationRewardSmoothEmaTime;
         bool isSelf;
+        PerpdexStructs.LiquidationRewardConfig liquidationRewardConfig;
     }
 
     struct PreviewOpenPositionParams {
@@ -93,9 +91,7 @@ library TakerLibrary {
                 liquidatorVaultInfo,
                 insuranceFundInfo,
                 params.mmRatio,
-                params.liquidationRewardRatio,
-                params.liquidationRewardSmoothRatio,
-                params.liquidationRewardSmoothEmaTime,
+                params.liquidationRewardConfig,
                 response.quote.abs()
             );
         }
@@ -302,20 +298,18 @@ library TakerLibrary {
         PerpdexStructs.VaultInfo storage liquidatorVaultInfo,
         PerpdexStructs.InsuranceFundInfo storage insuranceFundInfo,
         uint24 mmRatio,
-        uint24 liquidationRewardRatio,
-        uint24 liquidationRewardSmoothRatio,
-        uint24 liquidationRewardSmoothEmaTime,
+        PerpdexStructs.LiquidationRewardConfig memory liquidationRewardConfig,
         uint256 exchangedQuote
     ) internal returns (uint256 liquidationReward, uint256 insuranceFundReward) {
         uint256 penalty = exchangedQuote.mulRatio(mmRatio);
-        liquidationReward = penalty.mulRatio(liquidationRewardRatio);
+        liquidationReward = penalty.mulRatio(liquidationRewardConfig.rewardRatio);
         insuranceFundReward = penalty.sub(liquidationReward);
 
         (insuranceFundInfo.liquidationRewardBalance, liquidationReward) = _smoothLiquidationReward(
             insuranceFundInfo.liquidationRewardBalance,
             liquidationReward,
-            liquidationRewardSmoothRatio,
-            liquidationRewardSmoothEmaTime
+            liquidationRewardConfig.smoothRatio,
+            liquidationRewardConfig.smoothEmaTime
         );
 
         vaultInfo.collateralBalance = vaultInfo.collateralBalance.sub(penalty.toInt256());

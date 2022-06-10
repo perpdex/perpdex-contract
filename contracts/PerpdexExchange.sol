@@ -32,10 +32,9 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
     uint8 public override maxMarketsPerAccount = 16;
     uint24 public override imRatio = 10e4;
     uint24 public override mmRatio = 5e4;
-    uint24 public override liquidationRewardRatio = 20e4;
-    uint24 public override liquidationRewardSmoothRatio = 5e5;
-    uint16 public override liquidationRewardSmoothEmaTime = 100;
     uint24 public override protocolFeeRatio = 0;
+    PerpdexStructs.LiquidationRewardConfig public override liquidationRewardConfig =
+        PerpdexStructs.LiquidationRewardConfig({ rewardRatio: 20e4, smoothRatio: 5e5, smoothEmaTime: 100 });
     mapping(address => bool) public override isMarketAllowed;
 
     modifier checkDeadline(uint256 deadline) {
@@ -249,22 +248,17 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
         emit MmRatioChanged(value);
     }
 
-    function setLiquidationRewardRatio(uint24 value) external override onlyOwner nonReentrant {
-        require(value < 1e6, "PE_SLRR: too large");
-        liquidationRewardRatio = value;
-        emit LiquidationRewardRatioChanged(value);
-    }
-
-    function setLiquidationRewardSmoothRatio(uint24 value) external override onlyOwner nonReentrant {
-        require(value <= 1e6, "PE_SLRSR: too large");
-        liquidationRewardSmoothRatio = value;
-        emit LiquidationRewardSmoothRatioChanged(value);
-    }
-
-    function setLiquidationRewardSmoothEmaTime(uint16 value) external override onlyOwner nonReentrant {
-        require(value > 0, "PE_SLRSET: zero");
-        liquidationRewardSmoothEmaTime = value;
-        emit LiquidationRewardSmoothEmaTimeChanged(value);
+    function setLiquidationRewardConfig(PerpdexStructs.LiquidationRewardConfig calldata value)
+        external
+        override
+        onlyOwner
+        nonReentrant
+    {
+        require(value.rewardRatio < 1e6, "PE_SLRC: too large reward ratio");
+        require(value.smoothRatio <= 1e6, "PE_SLRC: too large smooth ratio");
+        require(value.smoothEmaTime > 0, "PE_SLRC: ema time is zero");
+        liquidationRewardConfig = value;
+        emit LiquidationRewardConfigChanged(value.rewardRatio, value.smoothRatio, value.smoothEmaTime);
     }
 
     function setProtocolFeeRatio(uint24 value) external override onlyOwner nonReentrant {
@@ -408,9 +402,7 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
                     imRatio: imRatio,
                     maxMarketsPerAccount: maxMarketsPerAccount,
                     protocolFeeRatio: protocolFeeRatio,
-                    liquidationRewardRatio: liquidationRewardRatio,
-                    liquidationRewardSmoothRatio: liquidationRewardSmoothRatio,
-                    liquidationRewardSmoothEmaTime: liquidationRewardSmoothEmaTime,
+                    liquidationRewardConfig: liquidationRewardConfig,
                     isSelf: params.trader == _msgSender()
                 })
             );
