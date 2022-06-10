@@ -198,7 +198,7 @@ library TakerLibrary {
     ) internal view returns (uint256 amount) {
         bool isLiquidation = !AccountLibrary.hasEnoughMaintenanceMargin(accountInfo, mmRatio);
 
-        if (!isSelf && isLiquidation) {
+        if (!isSelf && !isLiquidation) {
             return 0;
         }
 
