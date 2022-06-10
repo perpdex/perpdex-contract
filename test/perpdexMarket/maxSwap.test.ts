@@ -40,79 +40,35 @@ describe("PerpdexMarket maxSwap", () => {
         })
     })
 
-    // describe("with fee, without funding", () => {
-    //     beforeEach(async () => {
-    //         await market.connect(owner).setPoolFeeRatio(1e4)
-    //         await market.connect(exchange).addLiquidity(10000, 10000)
-    //     })
-    //     ;[
-    //         {
-    //             title: "long exact input",
-    //             isBaseToQuote: false,
-    //             isExactInput: true,
-    //             isLiquidation: false,
-    //             amount: 1,
-    //         },
-    //         {
-    //             title: "short exact input",
-    //             isBaseToQuote: true,
-    //             isExactInput: true,
-    //             isLiquidation: false,
-    //             amount: 1,
-    //         },
-    //         {
-    //             title: "long exact output",
-    //             isBaseToQuote: false,
-    //             isExactInput: false,
-    //             isLiquidation: false,
-    //             amount: 1,
-    //         },
-    //         {
-    //             title: "short exact output",
-    //             isBaseToQuote: true,
-    //             isExactInput: false,
-    //             isLiquidation: false,
-    //             amount: 1,
-    //         },
-    //     ].forEach(test => {
-    //         it(test.title, async () => {
-    //             const res = await market.maxSwap(test.isBaseToQuote, test.isExactInput, test.isLiquidation)
-    //             expect(res).to.eq(test.amount)
-    //         })
-    //     })
-    // })
-
-    describe("without fee, with funding", () => {
+    describe("with fee, without funding", () => {
         beforeEach(async () => {
-            await priceFeed.mock.getPrice.returns(BigNumber.from(10).pow(18))
+            await market.connect(owner).setPoolFeeRatio(1e4)
             await market.connect(exchange).addLiquidity(10000, 10000)
-            await market.connect(owner).setFundingMaxPremiumRatio(5e4)
-            await priceFeed.mock.getPrice.returns(2)
         })
         ;[
             {
-                title: "long exact input. funding not affect swap",
+                title: "long exact input",
                 isBaseToQuote: false,
                 isExactInput: true,
                 isLiquidation: false,
                 amount: 488,
             },
             {
-                title: "short exact input. funding not affect swap",
+                title: "short exact input",
                 isBaseToQuote: true,
                 isExactInput: true,
                 isLiquidation: false,
                 amount: 540,
             },
             {
-                title: "long exact output. funding not affect swap",
+                title: "long exact output",
                 isBaseToQuote: false,
                 isExactInput: false,
                 isLiquidation: false,
                 amount: 465,
             },
             {
-                title: "short exact input. funding not affect swap",
+                title: "short exact output",
                 isBaseToQuote: true,
                 isExactInput: false,
                 isLiquidation: false,
@@ -126,9 +82,12 @@ describe("PerpdexMarket maxSwap", () => {
         })
     })
 
-    describe("consistent with previewSwap", () => {
+    describe("without fee, with funding. funding not affect swap", () => {
         beforeEach(async () => {
+            await priceFeed.mock.getPrice.returns(BigNumber.from(10).pow(18))
             await market.connect(exchange).addLiquidity(10000, 10000)
+            await market.connect(owner).setFundingMaxPremiumRatio(5e4)
+            await priceFeed.mock.getPrice.returns(2)
         })
         ;[
             {
@@ -136,61 +95,61 @@ describe("PerpdexMarket maxSwap", () => {
                 isBaseToQuote: false,
                 isExactInput: true,
                 isLiquidation: false,
+                amount: 488,
             },
             {
                 title: "short exact input",
                 isBaseToQuote: true,
                 isExactInput: true,
                 isLiquidation: false,
+                amount: 540,
             },
             {
                 title: "long exact output",
                 isBaseToQuote: false,
                 isExactInput: false,
                 isLiquidation: false,
+                amount: 465,
             },
             {
-                title: "short exact input",
+                title: "short exact output",
                 isBaseToQuote: true,
                 isExactInput: false,
                 isLiquidation: false,
+                amount: 513,
             },
             {
                 title: "long exact input liquidation",
                 isBaseToQuote: false,
                 isExactInput: true,
                 isLiquidation: true,
+                amount: 954,
             },
             {
                 title: "short exact input liquidation",
                 isBaseToQuote: true,
                 isExactInput: true,
                 isLiquidation: true,
+                amount: 1180,
             },
             {
                 title: "long exact output liquidation",
                 isBaseToQuote: false,
                 isExactInput: false,
                 isLiquidation: true,
+                amount: 871,
             },
             {
-                title: "short exact input liquidation",
+                title: "short exact output liquidation",
                 isBaseToQuote: true,
                 isExactInput: false,
                 isLiquidation: true,
+                amount: 1055,
             },
         ].forEach(test => {
             it(test.title, async () => {
-                const amount = await market.maxSwap(test.isBaseToQuote, test.isExactInput, test.isLiquidation)
-                const res = market.previewSwap(test.isBaseToQuote, test.isExactInput, amount, test.isLiquidation)
-                await expect(res).not.to.reverted
-                const res2 = market.previewSwap(
-                    test.isBaseToQuote,
-                    test.isExactInput,
-                    amount.add(1),
-                    test.isLiquidation,
-                )
-                await expect(res2).to.reverted
+                const res = await market.maxSwap(test.isBaseToQuote, test.isExactInput, test.isLiquidation)
+                expect(res).to.eq(test.amount)
             })
         })
     })

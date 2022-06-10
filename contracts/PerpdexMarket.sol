@@ -197,7 +197,8 @@ contract PerpdexMarket is IPerpdexMarket, ReentrancyGuard, Ownable {
                 isExactInput: isExactInput,
                 amount: amount,
                 feeRatio: poolFeeRatio
-            })
+            }),
+            false
         );
     }
 

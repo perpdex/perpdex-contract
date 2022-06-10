@@ -165,6 +165,7 @@ describe("PerpdexMarket swap", () => {
                     .withArgs(test.isBaseToQuote, test.isExactInput, test.amount, test.oppositeAmount)
                     .to.emit(market, "FundingPaid")
                 const poolInfo = await market.poolInfo()
+                expect(poolInfo.base).to.eq(test.base)
                 expect(poolInfo.quote).to.eq(test.quote)
             })
 
