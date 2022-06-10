@@ -54,7 +54,7 @@ interface IPerpdexMarket {
         uint256 liquidity,
         uint256 cumBasePerLiquidityX96,
         uint256 cumQuotePerLiquidityX96
-    ) external view returns (uint256, uint256);
+    ) external view returns (int256, int256);
 
     function getCumDeleveragedPerLiquidityX96() external view returns (uint256, uint256);
 
