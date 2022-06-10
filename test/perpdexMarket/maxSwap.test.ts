@@ -116,7 +116,7 @@ describe("PerpdexMarket maxSwap", () => {
                 isBaseToQuote: true,
                 isExactInput: false,
                 isLiquidation: false,
-                amount: 513,
+                amount: 512,
             },
             {
                 title: "long exact input liquidation",
@@ -137,7 +137,7 @@ describe("PerpdexMarket maxSwap", () => {
                 isBaseToQuote: false,
                 isExactInput: false,
                 isLiquidation: true,
-                amount: 871,
+                amount: 870,
             },
             {
                 title: "short exact output liquidation",
