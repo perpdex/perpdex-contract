@@ -90,6 +90,7 @@ interface IPerpdexExchange {
         uint256 protocolFee,
         uint256 baseBalancePerShareX96,
         uint256 sharePriceAfterX96,
+        uint256 liquidationPenalty,
         uint256 liquidationReward,
         uint256 insuranceFundReward
     );

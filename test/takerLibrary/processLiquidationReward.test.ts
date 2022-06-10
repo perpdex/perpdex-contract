@@ -79,7 +79,11 @@ describe("TakerLibrary", () => {
                 if (test.revertedWith === void 0) {
                     await res.to
                         .emit(library, "ProcessLiquidationRewardResult")
-                        .withArgs(test.liquidationReward, test.insuranceFundReward)
+                        .withArgs(
+                            test.liquidationReward + test.insuranceFundReward,
+                            test.liquidationReward,
+                            test.insuranceFundReward,
+                        )
 
                     const vault = await library.accountInfo()
                     expect(vault.collateralBalance).to.eq(

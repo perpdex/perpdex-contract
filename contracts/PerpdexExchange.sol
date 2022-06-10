@@ -121,6 +121,7 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
                 response.protocolFee,
                 baseBalancePerShareX96,
                 shareMarkPriceAfterX96,
+                response.liquidationPenalty,
                 response.liquidationReward,
                 response.insuranceFundReward
             );

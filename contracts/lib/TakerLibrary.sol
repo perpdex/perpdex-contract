@@ -48,6 +48,7 @@ library TakerLibrary {
         int256 quote;
         int256 realizedPnl;
         uint256 protocolFee;
+        uint256 liquidationPenalty;
         uint256 liquidationReward;
         uint256 insuranceFundReward;
         bool isLiquidation;
@@ -86,7 +87,11 @@ library TakerLibrary {
         if (response.isLiquidation) {
             require(!isOpen, "TL_OP: no open when liquidation");
 
-            (response.liquidationReward, response.insuranceFundReward) = processLiquidationReward(
+            (
+                response.liquidationPenalty,
+                response.liquidationReward,
+                response.insuranceFundReward
+            ) = processLiquidationReward(
                 accountInfo.vaultInfo,
                 liquidatorVaultInfo,
                 insuranceFundInfo,
@@ -300,8 +305,15 @@ library TakerLibrary {
         uint24 mmRatio,
         PerpdexStructs.LiquidationRewardConfig memory liquidationRewardConfig,
         uint256 exchangedQuote
-    ) internal returns (uint256 liquidationReward, uint256 insuranceFundReward) {
-        uint256 penalty = exchangedQuote.mulRatio(mmRatio);
+    )
+        internal
+        returns (
+            uint256 penalty,
+            uint256 liquidationReward,
+            uint256 insuranceFundReward
+        )
+    {
+        penalty = exchangedQuote.mulRatio(mmRatio);
         liquidationReward = penalty.mulRatio(liquidationRewardConfig.rewardRatio);
         insuranceFundReward = penalty.sub(liquidationReward);
 

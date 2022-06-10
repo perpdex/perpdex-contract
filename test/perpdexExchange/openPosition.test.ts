@@ -555,6 +555,7 @@ describe("PerpdexExchange openPosition", () => {
                                     test.protocolFee,
                                     Q96,
                                     sharePrice,
+                                    test.liquidationReward + test.insuranceFund,
                                     test.liquidationReward,
                                     test.insuranceFund,
                                 )
