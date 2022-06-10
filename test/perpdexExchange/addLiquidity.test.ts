@@ -125,6 +125,8 @@ describe("PerpdexExchange addLiquidity", () => {
                     cumBaseSharePerLiquidityX96: Q96.mul(2),
                     cumQuotePerLiquidityX96: Q96.mul(3),
                 },
+                cumBaseSharePerLiquidityX96: Q96.mul(2),
+                cumQuotePerLiquidityX96: Q96.mul(3),
             },
             {
                 title: "minBase condition",
@@ -290,6 +292,8 @@ describe("PerpdexExchange addLiquidity", () => {
                             test.outputBase,
                             test.outputQuote,
                             test.afterMakerInfo.liquidity - test.makerInfo.liquidity,
+                            test.cumBaseSharePerLiquidityX96 || 0,
+                            test.cumQuotePerLiquidityX96 || 0,
                             test.poolInfo ? test.poolInfo.baseBalancePerShareX96 : Q96,
                             sharePrice,
                         )

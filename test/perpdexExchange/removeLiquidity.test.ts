@@ -127,6 +127,8 @@ describe("PerpdexExchange removeLiquidity", () => {
                     cumBaseSharePerLiquidityX96: Q96.mul(10),
                     cumQuotePerLiquidityX96: Q96.mul(20),
                 },
+                cumBaseSharePerLiquidityX96: Q96.mul(10),
+                cumQuotePerLiquidityX96: Q96.mul(20),
             },
             {
                 title: "minBase condition",
@@ -323,6 +325,8 @@ describe("PerpdexExchange removeLiquidity", () => {
                             test.outputBase,
                             test.outputQuote,
                             test.liquidity,
+                            test.cumBaseSharePerLiquidityX96 || 0,
+                            test.cumQuotePerLiquidityX96 || 0,
                             test.outputTakerBase,
                             test.outputTakerQuote,
                             test.afterCollateralBalance - test.collateralBalance,
