@@ -68,9 +68,10 @@ describe("TakerLibrary", () => {
                 const res = expect(
                     library.processLiquidationReward(
                         test.mmRatio,
-                        test.rewardRatio,
-                        test.smoothRatio,
-                        test.smoothEmaTime,
+                        {
+                            rewardRatio: test.rewardRatio,
+                            smoothEmaTime: test.smoothEmaTime,
+                        },
                         test.exchangedQuote,
                     ),
                 )
@@ -86,8 +87,8 @@ describe("TakerLibrary", () => {
                     )
                     const liquidatorBalance = await library.liquidatorVaultInfo()
                     expect(liquidatorBalance).to.eq(test.liquidatorCollateralBalance + test.liquidationReward)
-                    const insuranceFundBalance = await library.insuranceFundInfo()
-                    expect(insuranceFundBalance).to.eq(test.insuranceFundBalance + test.insuranceFundReward)
+                    const fundInfo = await library.insuranceFundInfo()
+                    expect(fundInfo.balance).to.eq(test.insuranceFundBalance + test.insuranceFundReward)
                 } else {
                     await res.to.revertedWith(test.revertedWith)
                 }

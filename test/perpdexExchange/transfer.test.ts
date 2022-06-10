@@ -27,8 +27,8 @@ describe("PerpdexExchange transfer", () => {
                 .to.emit(exchange, "InsuranceFundTransferred")
                 .withArgs(owner.address, 30)
 
-            const balance = await exchange.insuranceFundInfo()
-            expect(balance).to.eq(70)
+            const fundInfo = await exchange.insuranceFundInfo()
+            expect(fundInfo.balance).to.eq(70)
 
             const result = await exchange.accountInfos(owner.address)
             expect(result.collateralBalance).to.eq(30)

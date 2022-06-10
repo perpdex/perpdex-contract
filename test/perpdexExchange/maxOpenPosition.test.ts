@@ -27,7 +27,10 @@ describe("PerpdexExchange maxOpenPosition", () => {
 
         await exchange.connect(owner).setImRatio(10e4)
         await exchange.connect(owner).setMmRatio(5e4)
-        await exchange.connect(owner).setLiquidationRewardRatio(25e4)
+        await exchange.connect(owner).setLiquidationRewardConfig({
+            rewardRatio: 25e4,
+            smoothEmaTime: 1,
+        })
 
         await market.connect(owner).setPoolFeeRatio(0)
         await market.connect(owner).setFundingMaxPremiumRatio(0)
