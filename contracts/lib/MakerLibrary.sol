@@ -100,7 +100,10 @@ library MakerLibrary {
         require(AccountLibrary.hasEnoughInitialMargin(accountInfo, params.imRatio), "ML_AL: not enough im");
     }
 
-    // TODO: consider rounding error
+    // difficult to calculate without error
+    // underestimate the value to maintain the liquidation free condition
+    // the error will be a burden to the insurance fund
+    // the error is much smaller than the gas fee, so it is impossible to attack
     function blendCumPerLiquidity(
         uint256 liquidityBefore,
         uint256 addedLiquidity,
@@ -109,7 +112,7 @@ library MakerLibrary {
         uint256 cumAfter
     ) internal pure returns (uint256) {
         uint256 liquidityAfter = liquidityBefore.add(addedLiquidity);
-        uint256 cumBaseAfter = cumAfter.add(FullMath.mulDiv(addedToken, FixedPoint96.Q96, addedLiquidity));
+        cumAfter = cumAfter.add(FullMath.mulDiv(addedToken, FixedPoint96.Q96, addedLiquidity));
 
         return
             FullMath.mulDiv(cumBefore, liquidityBefore, liquidityAfter).add(
