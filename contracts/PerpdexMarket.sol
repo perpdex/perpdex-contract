@@ -246,13 +246,14 @@ contract PerpdexMarket is IPerpdexMarket, ReentrancyGuard, Ownable {
     }
 
     function _processFunding() internal {
-        int256 fundingRateX96 =
+        uint256 markPriceX96 = getMarkPriceX96();
+        (int256 fundingRateX96, uint32 elapsedSec, int256 premiumX96) =
             FundingLibrary.processFunding(
                 fundingInfo,
                 FundingLibrary.ProcessFundingParams({
                     priceFeedBase: priceFeedBase,
                     priceFeedQuote: priceFeedQuote,
-                    markPriceX96: getMarkPriceX96(),
+                    markPriceX96: markPriceX96,
                     maxPremiumRatio: fundingMaxPremiumRatio,
                     maxElapsedSec: fundingMaxElapsedSec,
                     rolloverSec: fundingRolloverSec
@@ -261,7 +262,7 @@ contract PerpdexMarket is IPerpdexMarket, ReentrancyGuard, Ownable {
         if (fundingRateX96 == 0) return;
 
         PoolLibrary.applyFunding(poolInfo, fundingRateX96);
-        emit FundingPaid(fundingRateX96);
+        emit FundingPaid(fundingRateX96, elapsedSec, premiumX96, markPriceX96);
     }
 
     function _doMaxSwap(
