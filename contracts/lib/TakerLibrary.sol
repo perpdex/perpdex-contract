@@ -365,7 +365,7 @@ library TakerLibrary {
             }
         } else {
             if (isBaseToQuote) {
-                amount = amount.divRatio(PerpMath.subRatio(1e6, protocolFeeRatio));
+                amount = amount.mulRatio(PerpMath.subRatio(1e6, protocolFeeRatio));
             } else {}
         }
     }
