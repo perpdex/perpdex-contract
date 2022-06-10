@@ -79,7 +79,9 @@ contract PerpdexMarket is IPerpdexMarket, ReentrancyGuard, Ownable {
         uint256 amount,
         bool isLiquidation
     ) external override onlyExchange nonReentrant returns (uint256 oppositeAmount) {
-        uint256 sharePriceBeforeX96 = getShareMarkPriceX96();
+        (uint256 maxAmount, MarketStructs.PriceLimitInfo memory updated) =
+            _doMaxSwap(isBaseToQuote, isExactInput, isLiquidation);
+        require(amount <= maxAmount, "PM_S: too large amount");
 
         oppositeAmount = PoolLibrary.swap(
             poolInfo,
@@ -91,15 +93,7 @@ contract PerpdexMarket is IPerpdexMarket, ReentrancyGuard, Ownable {
             })
         );
 
-        uint256 sharePriceAfterX96 = getShareMarkPriceX96();
-
-        PriceLimitLibrary.checkAndUpdate(
-            priceLimitInfo,
-            priceLimitConfig,
-            sharePriceBeforeX96,
-            sharePriceAfterX96,
-            isLiquidation
-        );
+        PriceLimitLibrary.update(priceLimitInfo, updated);
 
         emit Swapped(isBaseToQuote, isExactInput, amount, oppositeAmount);
 
@@ -192,6 +186,9 @@ contract PerpdexMarket is IPerpdexMarket, ReentrancyGuard, Ownable {
         uint256 amount,
         bool isLiquidation
     ) external view override returns (uint256 oppositeAmount) {
+        (uint256 maxAmount, ) = _doMaxSwap(isBaseToQuote, isExactInput, isLiquidation);
+        require(amount <= maxAmount, "PM_PS: too large amount");
+
         oppositeAmount = PoolLibrary.previewSwap(
             poolInfo.base,
             poolInfo.quote,
@@ -202,25 +199,6 @@ contract PerpdexMarket is IPerpdexMarket, ReentrancyGuard, Ownable {
                 feeRatio: poolFeeRatio
             })
         );
-
-        uint256 sharePriceBeforeX96 = getShareMarkPriceX96();
-        (uint256 poolBaseAfter, uint256 poolQuoteAfter) =
-            PoolLibrary.calcPoolAfter(
-                isBaseToQuote,
-                isExactInput,
-                poolInfo.base,
-                poolInfo.quote,
-                amount,
-                oppositeAmount
-            );
-        uint256 sharePriceAfterX96 = PoolLibrary.getShareMarkPriceX96(poolBaseAfter, poolQuoteAfter);
-        PriceLimitLibrary.check(
-            priceLimitInfo,
-            priceLimitConfig,
-            sharePriceBeforeX96,
-            sharePriceAfterX96,
-            isLiquidation
-        );
     }
 
     function maxSwap(
@@ -228,36 +206,7 @@ contract PerpdexMarket is IPerpdexMarket, ReentrancyGuard, Ownable {
         bool isExactInput,
         bool isLiquidation
     ) external view override returns (uint256 amount) {
-        if (poolInfo.totalLiquidity == 0) return 0;
-
-        uint256 sharePriceBeforeX96 = getShareMarkPriceX96();
-
-        uint256 sharePriceBound;
-        if (isBaseToQuote) {
-            sharePriceBound = PriceLimitLibrary.minPrice(
-                priceLimitInfo,
-                priceLimitConfig,
-                sharePriceBeforeX96,
-                isLiquidation
-            );
-            if (sharePriceBound >= sharePriceBeforeX96) return 0;
-        } else {
-            sharePriceBound = PriceLimitLibrary.maxPrice(
-                priceLimitInfo,
-                priceLimitConfig,
-                sharePriceBeforeX96,
-                isLiquidation
-            );
-            if (sharePriceBound <= sharePriceBeforeX96) return 0;
-        }
-        amount = PoolLibrary.maxSwap(
-            poolInfo.base,
-            poolInfo.quote,
-            isBaseToQuote,
-            isExactInput,
-            poolFeeRatio,
-            sharePriceBound
-        );
+        (amount, ) = _doMaxSwap(isBaseToQuote, isExactInput, isLiquidation);
     }
 
     function getShareMarkPriceX96() public view override returns (uint256) {
@@ -312,5 +261,43 @@ contract PerpdexMarket is IPerpdexMarket, ReentrancyGuard, Ownable {
 
         PoolLibrary.applyFunding(poolInfo, fundingRateX96);
         emit FundingPaid(fundingRateX96);
+    }
+
+    function _doMaxSwap(
+        bool isBaseToQuote,
+        bool isExactInput,
+        bool isLiquidation
+    ) private view returns (uint256 amount, MarketStructs.PriceLimitInfo memory updated) {
+        if (poolInfo.totalLiquidity == 0) return (0, updated);
+
+        uint256 sharePriceBeforeX96 = getShareMarkPriceX96();
+        updated = PriceLimitLibrary.updateDry(priceLimitInfo, priceLimitConfig, sharePriceBeforeX96);
+
+        uint256 sharePriceBound;
+        if (isBaseToQuote) {
+            sharePriceBound = PriceLimitLibrary.minPrice(
+                updated.referencePrice,
+                updated.emaPrice,
+                priceLimitConfig,
+                isLiquidation
+            );
+            if (sharePriceBound >= sharePriceBeforeX96) return (0, updated);
+        } else {
+            sharePriceBound = PriceLimitLibrary.maxPrice(
+                updated.referencePrice,
+                updated.emaPrice,
+                priceLimitConfig,
+                isLiquidation
+            );
+            if (sharePriceBound <= sharePriceBeforeX96) return (0, updated);
+        }
+        amount = PoolLibrary.maxSwap(
+            poolInfo.base,
+            poolInfo.quote,
+            isBaseToQuote,
+            isExactInput,
+            poolFeeRatio,
+            sharePriceBound
+        );
     }
 }

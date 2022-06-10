@@ -19,22 +19,6 @@ contract TestPriceLimitLibrary {
         priceLimitConfig = value;
     }
 
-    function check(
-        uint256 priceBefore,
-        uint256 priceAfter,
-        bool isLiquidation
-    )
-        external
-        view
-        returns (
-            uint256 referencePrice,
-            uint256 referenceTimestamp,
-            uint256 emaPrice
-        )
-    {
-        return PriceLimitLibrary.check(priceLimitInfo, priceLimitConfig, priceBefore, priceAfter, isLiquidation);
-    }
-
     function isWithinPriceLimit(
         uint256 referencePrice,
         uint256 price,

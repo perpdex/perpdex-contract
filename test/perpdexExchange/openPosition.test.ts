@@ -398,8 +398,8 @@ describe("PerpdexExchange openPosition", () => {
                     baseBalanceShare: 100,
                     quoteBalance: -100,
                 },
-                revertedWith: "PLL_C: price limit",
-                revertedWithDry: "PLL_C: price limit",
+                revertedWith: "PM_S: too large amount",
+                revertedWithDry: "PM_PS: too large amount",
             },
             {
                 title: "price limit liquidation",
@@ -414,8 +414,8 @@ describe("PerpdexExchange openPosition", () => {
                     baseBalanceShare: -1000,
                     quoteBalance: 1000,
                 },
-                revertedWith: "PLL_C: price limit",
-                revertedWithDry: "PLL_C: price limit",
+                revertedWith: "PM_S: too large amount",
+                revertedWithDry: "PM_PS: too large amount",
             },
             {
                 title: "liquidation",

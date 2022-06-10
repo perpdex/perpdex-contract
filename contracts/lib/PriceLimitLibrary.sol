@@ -12,70 +12,21 @@ library PriceLimitLibrary {
     using PerpMath for uint256;
     using SafeMath for uint256;
 
-    function checkAndUpdate(
-        MarketStructs.PriceLimitInfo storage priceLimitInfo,
-        MarketStructs.PriceLimitConfig storage config,
-        uint256 priceBefore,
-        uint256 priceAfter,
-        bool isLiquidation
-    ) internal {
-        (uint256 referencePrice, uint256 referenceTimestamp, uint256 emaPrice) =
-            check(priceLimitInfo, config, priceBefore, priceAfter, isLiquidation);
-        if (referenceTimestamp > 0) {
-            priceLimitInfo.referencePrice = referencePrice;
-            priceLimitInfo.referenceTimestamp = referenceTimestamp;
-            priceLimitInfo.emaPrice = emaPrice;
-        }
-    }
-
-    function check(
-        MarketStructs.PriceLimitInfo storage priceLimitInfo,
-        MarketStructs.PriceLimitConfig storage config,
-        uint256 priceBefore,
-        uint256 priceAfter,
-        bool isLiquidation
-    )
+    function update(MarketStructs.PriceLimitInfo storage priceLimitInfo, MarketStructs.PriceLimitInfo memory value)
         internal
-        view
-        returns (
-            uint256 referencePrice,
-            uint256 referenceTimestamp,
-            uint256 emaPrice
-        )
     {
-        (referencePrice, referenceTimestamp, emaPrice) = updateDry(priceLimitInfo, config, priceBefore);
-
-        if (isPriceLimitNeeded(referencePrice, priceBefore, priceAfter)) {
-            require(
-                isWithinPriceLimit(
-                    referencePrice,
-                    priceAfter,
-                    isLiquidation ? config.liquidationRatio : config.normalOrderRatio
-                ),
-                "PLL_C: price limit"
-            );
-        }
-        if (isPriceLimitNeeded(emaPrice, priceBefore, priceAfter)) {
-            require(
-                isWithinPriceLimit(
-                    emaPrice,
-                    priceAfter,
-                    isLiquidation ? config.emaLiquidationRatio : config.emaNormalOrderRatio
-                ),
-                "PLL_C: price band"
-            );
-        }
+        if (value.referenceTimestamp == 0) return;
+        priceLimitInfo.referencePrice = value.referencePrice;
+        priceLimitInfo.referenceTimestamp = value.referenceTimestamp;
+        priceLimitInfo.emaPrice = value.emaPrice;
     }
 
     function maxPrice(
-        MarketStructs.PriceLimitInfo storage priceLimitInfo,
+        uint256 referencePrice,
+        uint256 emaPrice,
         MarketStructs.PriceLimitConfig storage config,
-        uint256 priceBefore,
         bool isLiquidation
     ) internal view returns (uint256 price) {
-        (uint256 referencePrice, uint256 referenceTimestamp, uint256 emaPrice) =
-            updateDry(priceLimitInfo, config, priceBefore);
-
         uint256 upperBound =
             referencePrice.add(
                 referencePrice.mulRatio(isLiquidation ? config.liquidationRatio : config.normalOrderRatio)
@@ -86,21 +37,18 @@ library PriceLimitLibrary {
     }
 
     function minPrice(
-        MarketStructs.PriceLimitInfo storage priceLimitInfo,
+        uint256 referencePrice,
+        uint256 emaPrice,
         MarketStructs.PriceLimitConfig storage config,
-        uint256 priceBefore,
         bool isLiquidation
     ) internal view returns (uint256 price) {
-        (uint256 referencePrice, uint256 referenceTimestamp, uint256 emaPrice) =
-            updateDry(priceLimitInfo, config, priceBefore);
-
-        uint256 upperBound =
+        uint256 lowerBound =
             referencePrice.sub(
                 referencePrice.mulRatio(isLiquidation ? config.liquidationRatio : config.normalOrderRatio)
             );
-        uint256 upperBoundEma =
+        uint256 lowerBoundEma =
             emaPrice.sub(emaPrice.mulRatio(isLiquidation ? config.emaLiquidationRatio : config.emaNormalOrderRatio));
-        return Math.max(upperBound, upperBoundEma);
+        return Math.max(lowerBound, lowerBoundEma);
     }
 
     // referenceTimestamp == 0 indicates not updated
@@ -108,33 +56,29 @@ library PriceLimitLibrary {
         MarketStructs.PriceLimitInfo storage priceLimitInfo,
         MarketStructs.PriceLimitConfig storage config,
         uint256 price
-    )
-        internal
-        view
-        returns (
-            uint256 referencePrice,
-            uint256 referenceTimestamp,
-            uint256 emaPrice
-        )
-    {
+    ) internal view returns (MarketStructs.PriceLimitInfo memory updated) {
         uint256 currentTimestamp = block.number;
         uint256 refTimestamp = priceLimitInfo.referenceTimestamp;
-        if (currentTimestamp <= refTimestamp) return (priceLimitInfo.referencePrice, 0, priceLimitInfo.emaPrice);
+        if (currentTimestamp <= refTimestamp) {
+            updated.referencePrice = priceLimitInfo.referencePrice;
+            updated.emaPrice = priceLimitInfo.emaPrice;
+            return updated;
+        }
 
         uint256 elapsed = currentTimestamp.sub(refTimestamp);
 
         if (priceLimitInfo.referencePrice == 0) {
-            emaPrice = price;
+            updated.emaPrice = price;
         } else {
             uint32 emaSec = config.emaSec;
             uint256 denominator = elapsed.add(emaSec);
-            emaPrice = FullMath.mulDiv(priceLimitInfo.emaPrice, emaSec, denominator).add(
+            updated.emaPrice = FullMath.mulDiv(priceLimitInfo.emaPrice, emaSec, denominator).add(
                 FullMath.mulDiv(price, elapsed, denominator)
             );
         }
 
-        referencePrice = price;
-        referenceTimestamp = currentTimestamp;
+        updated.referencePrice = price;
+        updated.referenceTimestamp = currentTimestamp;
     }
 
     function isPriceLimitNeeded(
