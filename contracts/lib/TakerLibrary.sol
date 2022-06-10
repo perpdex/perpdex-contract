@@ -308,7 +308,6 @@ library TakerLibrary {
         (insuranceFundInfo.liquidationRewardBalance, liquidationReward) = _smoothLiquidationReward(
             insuranceFundInfo.liquidationRewardBalance,
             liquidationReward,
-            liquidationRewardConfig.smoothRatio,
             liquidationRewardConfig.smoothEmaTime
         );
 
@@ -320,17 +319,11 @@ library TakerLibrary {
     function _smoothLiquidationReward(
         uint256 rewardBalance,
         uint256 reward,
-        uint24 smoothRatio,
         uint24 emaTime
     ) internal pure returns (uint256 outputRewardBalance, uint256 outputReward) {
-        uint256 smooth = reward.mulRatio(smoothRatio);
-        reward = reward.sub(smooth);
-
-        rewardBalance = rewardBalance.add(smooth);
-        smooth = rewardBalance.div(emaTime);
-
-        outputRewardBalance = rewardBalance.sub(smooth);
-        outputReward = reward.add(smooth);
+        rewardBalance = rewardBalance.add(reward);
+        outputReward = rewardBalance.div(emaTime);
+        outputRewardBalance = rewardBalance.sub(outputReward);
     }
 
     function previewSwapWithProtocolFee(

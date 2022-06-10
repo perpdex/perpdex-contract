@@ -39,7 +39,6 @@ library PerpdexStructs {
 
     struct LiquidationRewardConfig {
         uint24 rewardRatio;
-        uint24 smoothRatio;
         uint16 smoothEmaTime;
     }
 }

@@ -34,7 +34,7 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
     uint24 public override mmRatio = 5e4;
     uint24 public override protocolFeeRatio = 0;
     PerpdexStructs.LiquidationRewardConfig public override liquidationRewardConfig =
-        PerpdexStructs.LiquidationRewardConfig({ rewardRatio: 20e4, smoothRatio: 5e5, smoothEmaTime: 100 });
+        PerpdexStructs.LiquidationRewardConfig({ rewardRatio: 20e4, smoothEmaTime: 100 });
     mapping(address => bool) public override isMarketAllowed;
 
     modifier checkDeadline(uint256 deadline) {
@@ -255,10 +255,9 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
         nonReentrant
     {
         require(value.rewardRatio < 1e6, "PE_SLRC: too large reward ratio");
-        require(value.smoothRatio <= 1e6, "PE_SLRC: too large smooth ratio");
         require(value.smoothEmaTime > 0, "PE_SLRC: ema time is zero");
         liquidationRewardConfig = value;
-        emit LiquidationRewardConfigChanged(value.rewardRatio, value.smoothRatio, value.smoothEmaTime);
+        emit LiquidationRewardConfigChanged(value.rewardRatio, value.smoothEmaTime);
     }
 
     function setProtocolFeeRatio(uint24 value) external override onlyOwner nonReentrant {
