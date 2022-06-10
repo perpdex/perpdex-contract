@@ -42,8 +42,8 @@ describe("Vault withdraw eth", () => {
                 base: 10000,
                 quote: 10000,
                 totalLiquidity: 10000,
-                cumDeleveragedBasePerLiquidityX96: 0,
-                cumDeleveragedQuotePerLiquidityX96: 0,
+                cumBasePerLiquidityX96: 0,
+                cumQuotePerLiquidityX96: 0,
                 baseBalancePerShareX96: Q96,
             })
 
@@ -61,8 +61,8 @@ describe("Vault withdraw eth", () => {
                 base: 10000,
                 quote: 10000,
                 totalLiquidity: 10000,
-                cumDeleveragedBasePerLiquidityX96: 0,
-                cumDeleveragedQuotePerLiquidityX96: 0,
+                cumBasePerLiquidityX96: 0,
+                cumQuotePerLiquidityX96: 0,
                 baseBalancePerShareX96: Q96,
             })
 
@@ -86,8 +86,8 @@ describe("Vault withdraw eth", () => {
                 base: 10000,
                 quote: 10000,
                 totalLiquidity: 10000,
-                cumDeleveragedBasePerLiquidityX96: 0,
-                cumDeleveragedQuotePerLiquidityX96: 0,
+                cumBasePerLiquidityX96: 0,
+                cumQuotePerLiquidityX96: 0,
                 baseBalancePerShareX96: Q96,
             })
 

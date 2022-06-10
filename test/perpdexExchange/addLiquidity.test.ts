@@ -67,8 +67,8 @@ describe("PerpdexExchange addLiquidity", () => {
                     baseDebtShare: 0,
                     quoteDebt: 0,
                     liquidity: 0,
-                    cumDeleveragedBaseSharePerLiquidityX96: 0,
-                    cumDeleveragedQuotePerLiquidityX96: 0,
+                    cumBaseSharePerLiquidityX96: 0,
+                    cumQuotePerLiquidityX96: 0,
                 },
                 outputBase: 100,
                 outputQuote: 100,
@@ -81,8 +81,8 @@ describe("PerpdexExchange addLiquidity", () => {
                     baseDebtShare: 100,
                     quoteDebt: 100,
                     liquidity: 100,
-                    cumDeleveragedBaseSharePerLiquidityX96: 0,
-                    cumDeleveragedQuotePerLiquidityX96: 0,
+                    cumBaseSharePerLiquidityX96: 0,
+                    cumQuotePerLiquidityX96: 0,
                 },
             },
             {
@@ -100,15 +100,15 @@ describe("PerpdexExchange addLiquidity", () => {
                     baseDebtShare: 0,
                     quoteDebt: 0,
                     liquidity: 1,
-                    cumDeleveragedBaseSharePerLiquidityX96: 0,
-                    cumDeleveragedQuotePerLiquidityX96: 0,
+                    cumBaseSharePerLiquidityX96: 0,
+                    cumQuotePerLiquidityX96: 0,
                 },
                 poolInfo: {
                     base: 10000,
                     quote: 10000,
                     totalLiquidity: 10000,
-                    cumDeleveragedBasePerLiquidityX96: Q96.mul(2),
-                    cumDeleveragedQuotePerLiquidityX96: Q96.mul(3),
+                    cumBasePerLiquidityX96: Q96.mul(2),
+                    cumQuotePerLiquidityX96: Q96.mul(3),
                     baseBalancePerShareX96: Q96,
                 },
                 outputBase: 100,
@@ -122,8 +122,8 @@ describe("PerpdexExchange addLiquidity", () => {
                     baseDebtShare: 98,
                     quoteDebt: 97,
                     liquidity: 101,
-                    cumDeleveragedBaseSharePerLiquidityX96: Q96.mul(2),
-                    cumDeleveragedQuotePerLiquidityX96: Q96.mul(3),
+                    cumBaseSharePerLiquidityX96: Q96.mul(2),
+                    cumQuotePerLiquidityX96: Q96.mul(3),
                 },
             },
             {
@@ -141,8 +141,8 @@ describe("PerpdexExchange addLiquidity", () => {
                     baseDebtShare: 0,
                     quoteDebt: 0,
                     liquidity: 0,
-                    cumDeleveragedBaseSharePerLiquidityX96: 0,
-                    cumDeleveragedQuotePerLiquidityX96: 0,
+                    cumBaseSharePerLiquidityX96: 0,
+                    cumQuotePerLiquidityX96: 0,
                 },
                 revertedWith: "ML_AL: too small output base",
             },
@@ -161,8 +161,8 @@ describe("PerpdexExchange addLiquidity", () => {
                     baseDebtShare: 0,
                     quoteDebt: 0,
                     liquidity: 0,
-                    cumDeleveragedBaseSharePerLiquidityX96: 0,
-                    cumDeleveragedQuotePerLiquidityX96: 0,
+                    cumBaseSharePerLiquidityX96: 0,
+                    cumQuotePerLiquidityX96: 0,
                 },
                 revertedWith: "ML_AL: too small output quote",
             },
@@ -181,8 +181,8 @@ describe("PerpdexExchange addLiquidity", () => {
                     baseDebtShare: 0,
                     quoteDebt: 0,
                     liquidity: 0,
-                    cumDeleveragedBaseSharePerLiquidityX96: 0,
-                    cumDeleveragedQuotePerLiquidityX96: 0,
+                    cumBaseSharePerLiquidityX96: 0,
+                    cumQuotePerLiquidityX96: 0,
                 },
                 isMarketAllowed: false,
                 revertedWith: "PE_CMA: market not allowed",
@@ -202,8 +202,8 @@ describe("PerpdexExchange addLiquidity", () => {
                     baseDebtShare: 0,
                     quoteDebt: 0,
                     liquidity: 0,
-                    cumDeleveragedBaseSharePerLiquidityX96: 0,
-                    cumDeleveragedQuotePerLiquidityX96: 0,
+                    cumBaseSharePerLiquidityX96: 0,
+                    cumQuotePerLiquidityX96: 0,
                 },
                 revertedWith: "ML_AL: not enough im",
             },
@@ -222,15 +222,15 @@ describe("PerpdexExchange addLiquidity", () => {
                     baseDebtShare: 0,
                     quoteDebt: 0,
                     liquidity: 0,
-                    cumDeleveragedBaseSharePerLiquidityX96: 0,
-                    cumDeleveragedQuotePerLiquidityX96: 0,
+                    cumBaseSharePerLiquidityX96: 0,
+                    cumQuotePerLiquidityX96: 0,
                 },
                 poolInfo: {
                     base: 10000,
                     quote: 40000,
                     totalLiquidity: 20000,
-                    cumDeleveragedBasePerLiquidityX96: 0,
-                    cumDeleveragedQuotePerLiquidityX96: 0,
+                    cumBasePerLiquidityX96: 0,
+                    cumQuotePerLiquidityX96: 0,
                     baseBalancePerShareX96: Q96.mul(2),
                 },
                 outputBase: 100,
@@ -244,8 +244,8 @@ describe("PerpdexExchange addLiquidity", () => {
                     baseDebtShare: 100,
                     quoteDebt: 400,
                     liquidity: 200,
-                    cumDeleveragedBaseSharePerLiquidityX96: 0,
-                    cumDeleveragedQuotePerLiquidityX96: 0,
+                    cumBaseSharePerLiquidityX96: 0,
+                    cumQuotePerLiquidityX96: 0,
                 },
             },
         ].forEach(test => {
@@ -305,12 +305,8 @@ describe("PerpdexExchange addLiquidity", () => {
                     expect(makerInfo.baseDebtShare).to.eq(test.afterMakerInfo.baseDebtShare)
                     expect(makerInfo.quoteDebt).to.eq(test.afterMakerInfo.quoteDebt)
                     expect(makerInfo.liquidity).to.eq(test.afterMakerInfo.liquidity)
-                    expect(makerInfo.cumDeleveragedBaseSharePerLiquidityX96).to.eq(
-                        test.afterMakerInfo.cumDeleveragedBaseSharePerLiquidityX96,
-                    )
-                    expect(makerInfo.cumDeleveragedQuotePerLiquidityX96).to.eq(
-                        test.afterMakerInfo.cumDeleveragedQuotePerLiquidityX96,
-                    )
+                    expect(makerInfo.cumBaseSharePerLiquidityX96).to.eq(test.afterMakerInfo.cumBaseSharePerLiquidityX96)
+                    expect(makerInfo.cumQuotePerLiquidityX96).to.eq(test.afterMakerInfo.cumQuotePerLiquidityX96)
                 } else {
                     await res.to.revertedWith(test.revertedWith)
                 }

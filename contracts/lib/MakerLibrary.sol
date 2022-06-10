@@ -68,14 +68,14 @@ library MakerLibrary {
         require(baseShare >= params.minBase, "ML_AL: too small output base");
         require(quoteBalance >= params.minQuote, "ML_AL: too small output quote");
 
-        (uint256 cumDeleveragedBaseSharePerLiquidityX96, uint256 cumDeleveragedQuotePerLiquidityX96) =
+        (uint256 cumBaseSharePerLiquidityX96, uint256 cumQuotePerLiquidityX96) =
             IPerpdexMarket(params.market).getCumDeleveragedPerLiquidityX96();
 
         makerInfo.baseDebtShare = makerInfo.baseDebtShare.add(baseShare.toInt256());
         makerInfo.quoteDebt = makerInfo.quoteDebt.add(quoteBalance.toInt256());
         makerInfo.liquidity = makerInfo.liquidity.add(liquidity);
-        makerInfo.cumDeleveragedBaseSharePerLiquidityX96 = cumDeleveragedBaseSharePerLiquidityX96;
-        makerInfo.cumDeleveragedQuotePerLiquidityX96 = cumDeleveragedQuotePerLiquidityX96;
+        makerInfo.cumBaseSharePerLiquidityX96 = cumBaseSharePerLiquidityX96;
+        makerInfo.cumQuotePerLiquidityX96 = cumQuotePerLiquidityX96;
 
         AccountLibrary.updateMarkets(accountInfo, params.market, params.maxMarketsPerAccount);
 
@@ -106,12 +106,12 @@ library MakerLibrary {
         }
 
         {
-            (uint256 cumDeleveragedBaseSharePerLiquidityX96, uint256 cumDeleveragedQuotePerLiquidityX96) =
+            (uint256 cumBaseSharePerLiquidityX96, uint256 cumQuotePerLiquidityX96) =
                 IPerpdexMarket(params.market).getCumDeleveragedPerLiquidityX96();
 
             PerpdexStructs.MakerInfo storage makerInfo = accountInfo.makerInfos[params.market];
-            makerInfo.cumDeleveragedBaseSharePerLiquidityX96 = cumDeleveragedBaseSharePerLiquidityX96;
-            makerInfo.cumDeleveragedQuotePerLiquidityX96 = cumDeleveragedQuotePerLiquidityX96;
+            makerInfo.cumBaseSharePerLiquidityX96 = cumBaseSharePerLiquidityX96;
+            makerInfo.cumQuotePerLiquidityX96 = cumQuotePerLiquidityX96;
         }
 
         {
@@ -142,8 +142,8 @@ library MakerLibrary {
         (uint256 deleveragedBaseShare, uint256 deleveragedQuoteBalance) =
             IPerpdexMarket(market).getLiquidityDeleveraged(
                 makerInfo.liquidity,
-                makerInfo.cumDeleveragedBaseSharePerLiquidityX96,
-                makerInfo.cumDeleveragedQuotePerLiquidityX96
+                makerInfo.cumBaseSharePerLiquidityX96,
+                makerInfo.cumQuotePerLiquidityX96
             );
         makerInfo.baseDebtShare = makerInfo.baseDebtShare.sub(deleveragedBaseShare.toInt256());
         makerInfo.quoteDebt = makerInfo.quoteDebt.sub(deleveragedQuoteBalance.toInt256());

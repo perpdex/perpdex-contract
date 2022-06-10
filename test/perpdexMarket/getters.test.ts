@@ -47,8 +47,8 @@ describe("PerpdexMarket getters", () => {
                     base: test.base,
                     quote: test.quote,
                     totalLiquidity: 0,
-                    cumDeleveragedBasePerLiquidityX96: 0,
-                    cumDeleveragedQuotePerLiquidityX96: 0,
+                    cumBasePerLiquidityX96: 0,
+                    cumQuotePerLiquidityX96: 0,
                     baseBalancePerShareX96: test.baseBalancePerShareX96,
                 })
                 expect(await market.getMarkPriceX96()).to.eq(test.markPriceX96)
@@ -100,8 +100,8 @@ describe("PerpdexMarket getters", () => {
                     base: test.base,
                     quote: test.quote,
                     totalLiquidity: test.totalLiquidity,
-                    cumDeleveragedBasePerLiquidityX96: 0,
-                    cumDeleveragedQuotePerLiquidityX96: 0,
+                    cumBasePerLiquidityX96: 0,
+                    cumQuotePerLiquidityX96: 0,
                     baseBalancePerShareX96: 0,
                 })
                 if (test.revertedWith !== void 0) {
@@ -122,8 +122,8 @@ describe("PerpdexMarket getters", () => {
                 poolCumDeleveragedBasePerLiquidityX96: BigNumber.from(2).pow(96).mul(2),
                 poolCumDeleveragedQuotePerLiquidityX96: BigNumber.from(2).pow(96).mul(20),
                 liquidity: 3,
-                cumDeleveragedBasePerLiquidityX96: BigNumber.from(2).pow(96),
-                cumDeleveragedQuotePerLiquidityX96: BigNumber.from(2).pow(96).mul(10),
+                cumBasePerLiquidityX96: BigNumber.from(2).pow(96),
+                cumQuotePerLiquidityX96: BigNumber.from(2).pow(96).mul(10),
                 outputBase: 3,
                 outputQuote: 30,
             },
@@ -132,8 +132,8 @@ describe("PerpdexMarket getters", () => {
                 poolCumDeleveragedBasePerLiquidityX96: BigNumber.from(2).pow(96).mul(2),
                 poolCumDeleveragedQuotePerLiquidityX96: BigNumber.from(2).pow(96).mul(20),
                 liquidity: 0,
-                cumDeleveragedBasePerLiquidityX96: BigNumber.from(2).pow(96),
-                cumDeleveragedQuotePerLiquidityX96: BigNumber.from(2).pow(96).mul(10),
+                cumBasePerLiquidityX96: BigNumber.from(2).pow(96),
+                cumQuotePerLiquidityX96: BigNumber.from(2).pow(96).mul(10),
                 outputBase: 0,
                 outputQuote: 0,
             },
@@ -142,8 +142,8 @@ describe("PerpdexMarket getters", () => {
                 poolCumDeleveragedBasePerLiquidityX96: BigNumber.from(2).pow(96),
                 poolCumDeleveragedQuotePerLiquidityX96: BigNumber.from(2).pow(96),
                 liquidity: 1,
-                cumDeleveragedBasePerLiquidityX96: BigNumber.from(2).pow(96),
-                cumDeleveragedQuotePerLiquidityX96: BigNumber.from(2).pow(96),
+                cumBasePerLiquidityX96: BigNumber.from(2).pow(96),
+                cumQuotePerLiquidityX96: BigNumber.from(2).pow(96),
                 outputBase: 0,
                 outputQuote: 0,
             },
@@ -152,8 +152,8 @@ describe("PerpdexMarket getters", () => {
                 poolCumDeleveragedBasePerLiquidityX96: 0,
                 poolCumDeleveragedQuotePerLiquidityX96: BigNumber.from(2).pow(96),
                 liquidity: 1,
-                cumDeleveragedBasePerLiquidityX96: BigNumber.from(2).pow(96),
-                cumDeleveragedQuotePerLiquidityX96: BigNumber.from(2).pow(96),
+                cumBasePerLiquidityX96: BigNumber.from(2).pow(96),
+                cumQuotePerLiquidityX96: BigNumber.from(2).pow(96),
                 revertedWith: "SafeMath: subtraction overflow",
             },
             {
@@ -161,8 +161,8 @@ describe("PerpdexMarket getters", () => {
                 poolCumDeleveragedBasePerLiquidityX96: BigNumber.from(2).pow(96),
                 poolCumDeleveragedQuotePerLiquidityX96: 0,
                 liquidity: 1,
-                cumDeleveragedBasePerLiquidityX96: BigNumber.from(2).pow(96),
-                cumDeleveragedQuotePerLiquidityX96: BigNumber.from(2).pow(96),
+                cumBasePerLiquidityX96: BigNumber.from(2).pow(96),
+                cumQuotePerLiquidityX96: BigNumber.from(2).pow(96),
                 revertedWith: "SafeMath: subtraction overflow",
             },
         ].forEach(test => {
@@ -171,23 +171,23 @@ describe("PerpdexMarket getters", () => {
                     base: 0,
                     quote: 0,
                     totalLiquidity: 0,
-                    cumDeleveragedBasePerLiquidityX96: test.poolCumDeleveragedBasePerLiquidityX96,
-                    cumDeleveragedQuotePerLiquidityX96: test.poolCumDeleveragedQuotePerLiquidityX96,
+                    cumBasePerLiquidityX96: test.poolCumDeleveragedBasePerLiquidityX96,
+                    cumQuotePerLiquidityX96: test.poolCumDeleveragedQuotePerLiquidityX96,
                     baseBalancePerShareX96: 0,
                 })
                 if (test.revertedWith !== void 0) {
                     await expect(
                         market.getLiquidityDeleveraged(
                             test.liquidity,
-                            test.cumDeleveragedBasePerLiquidityX96,
-                            test.cumDeleveragedQuotePerLiquidityX96,
+                            test.cumBasePerLiquidityX96,
+                            test.cumQuotePerLiquidityX96,
                         ),
                     ).to.revertedWith(test.revertedWith)
                 } else {
                     const res = await market.getLiquidityDeleveraged(
                         test.liquidity,
-                        test.cumDeleveragedBasePerLiquidityX96,
-                        test.cumDeleveragedQuotePerLiquidityX96,
+                        test.cumBasePerLiquidityX96,
+                        test.cumQuotePerLiquidityX96,
                     )
                     expect(res[0]).to.eq(test.outputBase)
                     expect(res[1]).to.eq(test.outputQuote)
@@ -202,13 +202,13 @@ describe("PerpdexMarket getters", () => {
                 base: 0,
                 quote: 0,
                 totalLiquidity: 0,
-                cumDeleveragedBasePerLiquidityX96: 1,
-                cumDeleveragedQuotePerLiquidityX96: 2,
+                cumBasePerLiquidityX96: 1,
+                cumQuotePerLiquidityX96: 2,
                 baseBalancePerShareX96: 3,
             })
-            const cumDeleveragedPerLiquidityX96 = await market.getCumDeleveragedPerLiquidityX96()
-            expect(cumDeleveragedPerLiquidityX96[0]).to.eq(1)
-            expect(cumDeleveragedPerLiquidityX96[1]).to.eq(2)
+            const cumPerLiquidityX96 = await market.getCumDeleveragedPerLiquidityX96()
+            expect(cumPerLiquidityX96[0]).to.eq(1)
+            expect(cumPerLiquidityX96[1]).to.eq(2)
             expect(await market.baseBalancePerShareX96()).to.eq(3)
         })
     })
