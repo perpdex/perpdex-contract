@@ -33,6 +33,8 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
     uint24 public override imRatio = 10e4;
     uint24 public override mmRatio = 5e4;
     uint24 public override liquidationRewardRatio = 20e4;
+    uint24 public override liquidationRewardSmoothRatio = 5e5;
+    uint16 public override liquidationRewardSmoothEmaTime = 100;
     uint24 public override protocolFeeRatio = 0;
     mapping(address => bool) public override isMarketAllowed;
 
@@ -253,6 +255,18 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
         emit LiquidationRewardRatioChanged(value);
     }
 
+    function setLiquidationRewardSmoothRatio(uint24 value) external override onlyOwner nonReentrant {
+        require(value <= 1e6, "PE_SLRSR: too large");
+        liquidationRewardSmoothRatio = value;
+        emit LiquidationRewardSmoothRatioChanged(value);
+    }
+
+    function setLiquidationRewardSmoothEmaTime(uint16 value) external override onlyOwner nonReentrant {
+        require(value > 0, "PE_SLRSET: zero");
+        liquidationRewardSmoothEmaTime = value;
+        emit LiquidationRewardSmoothEmaTimeChanged(value);
+    }
+
     function setProtocolFeeRatio(uint24 value) external override onlyOwner nonReentrant {
         require(value <= 1e4, "PE_SPFR: too large");
         protocolFeeRatio = value;
@@ -395,6 +409,8 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
                     maxMarketsPerAccount: maxMarketsPerAccount,
                     protocolFeeRatio: protocolFeeRatio,
                     liquidationRewardRatio: liquidationRewardRatio,
+                    liquidationRewardSmoothRatio: liquidationRewardSmoothRatio,
+                    liquidationRewardSmoothEmaTime: liquidationRewardSmoothEmaTime,
                     isSelf: params.trader == _msgSender()
                 })
             );

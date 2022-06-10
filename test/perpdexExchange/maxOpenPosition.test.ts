@@ -40,7 +40,7 @@ describe("PerpdexExchange maxOpenPosition", () => {
             emaSec: 300,
         })
 
-        await exchange.setInsuranceFundInfo({ balance: 10000 })
+        await exchange.setInsuranceFundInfo({ balance: 10000, liquidationRewardBalance: 0 })
         await exchange.setProtocolInfo({ protocolFee: 10000 })
 
         await exchange.setAccountInfo(

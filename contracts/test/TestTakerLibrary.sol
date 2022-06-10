@@ -79,6 +79,8 @@ contract TestTakerLibrary {
     function processLiquidationReward(
         uint24 mmRatio,
         uint24 liquidationRewardRatio,
+        uint24 liquidationRewardSmoothRatio,
+        uint16 liquidationRewardSmoothEmaTime,
         uint256 exchangedQuote
     ) external {
         (uint256 liquidationReward, uint256 insuranceFundReward) =
@@ -88,6 +90,8 @@ contract TestTakerLibrary {
                 insuranceFundInfo,
                 mmRatio,
                 liquidationRewardRatio,
+                liquidationRewardSmoothRatio,
+                liquidationRewardSmoothEmaTime,
                 exchangedQuote
             );
         emit ProcessLiquidationRewardResult(liquidationReward, insuranceFundReward);

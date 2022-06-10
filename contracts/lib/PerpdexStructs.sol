@@ -36,4 +36,10 @@ library PerpdexStructs {
     struct ProtocolInfo {
         uint256 protocolFee;
     }
+
+    //    struct LiquidationRewardConfig {
+    //        uint24 rewardRatio;
+    //        uint24 smoothRatio;
+    //        uint16 smoothEmaTime;
+    //    }
 }

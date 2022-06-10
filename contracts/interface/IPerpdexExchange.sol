@@ -109,6 +109,8 @@ interface IPerpdexExchange {
     event ImRatioChanged(uint24 value);
     event MmRatioChanged(uint24 value);
     event LiquidationRewardRatioChanged(uint24 value);
+    event LiquidationRewardSmoothRatioChanged(uint24 value);
+    event LiquidationRewardSmoothEmaTimeChanged(uint16 value);
     event ProtocolFeeRatioChanged(uint24 value);
     event IsMarketAllowedChanged(address indexed market, bool isMarketAllowed);
 
@@ -142,6 +144,10 @@ interface IPerpdexExchange {
 
     function setLiquidationRewardRatio(uint24 value) external;
 
+    function setLiquidationRewardSmoothRatio(uint24 value) external;
+
+    function setLiquidationRewardSmoothEmaTime(uint16 value) external;
+
     function setProtocolFeeRatio(uint24 value) external;
 
     function setIsMarketAllowed(address market, bool value) external;
@@ -159,7 +165,7 @@ interface IPerpdexExchange {
 
     function accountInfos(address trader) external view returns (PerpdexStructs.VaultInfo memory);
 
-    function insuranceFundInfo() external view returns (int256 balance);
+    function insuranceFundInfo() external view returns (int256 balance, uint256 liquidationRewardBalance);
 
     function protocolInfo() external view returns (uint256 protocolFee);
 
@@ -174,6 +180,10 @@ interface IPerpdexExchange {
     function mmRatio() external view returns (uint24);
 
     function liquidationRewardRatio() external view returns (uint24);
+
+    function liquidationRewardSmoothRatio() external view returns (uint24);
+
+    function liquidationRewardSmoothEmaTime() external view returns (uint16);
 
     function protocolFeeRatio() external view returns (uint24);
 

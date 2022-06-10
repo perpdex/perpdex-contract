@@ -29,6 +29,8 @@ library TakerLibrary {
         uint8 maxMarketsPerAccount;
         uint24 protocolFeeRatio;
         uint24 liquidationRewardRatio;
+        uint24 liquidationRewardSmoothRatio;
+        uint16 liquidationRewardSmoothEmaTime;
         bool isSelf;
     }
 
@@ -92,6 +94,8 @@ library TakerLibrary {
                 insuranceFundInfo,
                 params.mmRatio,
                 params.liquidationRewardRatio,
+                params.liquidationRewardSmoothRatio,
+                params.liquidationRewardSmoothEmaTime,
                 response.quote.abs()
             );
         }
@@ -296,18 +300,43 @@ library TakerLibrary {
     function processLiquidationReward(
         PerpdexStructs.VaultInfo storage vaultInfo,
         PerpdexStructs.VaultInfo storage liquidatorVaultInfo,
-        PerpdexStructs.ProtocolInfo storage protocolInfo,
+        PerpdexStructs.InsuranceFundInfo storage insuranceFundInfo,
         uint24 mmRatio,
         uint24 liquidationRewardRatio,
+        uint24 liquidationRewardSmoothRatio,
+        uint24 liquidationRewardSmoothEmaTime,
         uint256 exchangedQuote
     ) internal returns (uint256 liquidationReward, uint256 insuranceFundReward) {
         uint256 penalty = exchangedQuote.mulRatio(mmRatio);
         liquidationReward = penalty.mulRatio(liquidationRewardRatio);
         insuranceFundReward = penalty.sub(liquidationReward);
 
+        (insuranceFundInfo.liquidationRewardBalance, liquidationReward) = _smoothLiquidationReward(
+            insuranceFundInfo.liquidationRewardBalance,
+            liquidationReward,
+            liquidationRewardSmoothRatio,
+            liquidationRewardSmoothEmaTime
+        );
+
         vaultInfo.collateralBalance = vaultInfo.collateralBalance.sub(penalty.toInt256());
         liquidatorVaultInfo.collateralBalance = liquidatorVaultInfo.collateralBalance.add(liquidationReward.toInt256());
         insuranceFundInfo.balance = insuranceFundInfo.balance.add(insuranceFundReward.toInt256());
+    }
+
+    function _smoothLiquidationReward(
+        uint256 rewardBalance,
+        uint256 reward,
+        uint24 smoothRatio,
+        uint24 emaTime
+    ) internal pure returns (uint256 outputRewardBalance, uint256 outputReward) {
+        uint256 smooth = reward.mulRatio(smoothRatio);
+        reward = reward.sub(smooth);
+
+        rewardBalance = rewardBalance.add(smooth);
+        smooth = rewardBalance.div(emaTime);
+
+        outputRewardBalance = rewardBalance.sub(smooth);
+        outputReward = reward.add(smooth);
     }
 
     function previewSwapWithProtocolFee(

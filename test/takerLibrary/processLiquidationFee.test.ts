@@ -23,7 +23,9 @@ describe("TakerLibrary", () => {
                 liquidatorCollateralBalance: 200,
                 insuranceFundBalance: 300,
                 mmRatio: 20e4,
-                liquidationRewardRatio: 25e4,
+                rewardRatio: 25e4,
+                smoothRatio: 0,
+                smoothEmaTime: 1,
                 exchangedQuote: 100,
                 liquidationReward: 5,
                 insuranceFundReward: 15,
@@ -35,7 +37,9 @@ describe("TakerLibrary", () => {
                 liquidatorCollateralBalance: 200,
                 insuranceFundBalance: 300,
                 mmRatio: 20e4,
-                liquidationRewardRatio: 25e4,
+                rewardRatio: 25e4,
+                smoothRatio: 0,
+                smoothEmaTime: 1,
                 exchangedQuote: 99,
                 liquidationReward: 4,
                 insuranceFundReward: 15,
@@ -47,7 +51,9 @@ describe("TakerLibrary", () => {
                 liquidatorCollateralBalance: 0,
                 insuranceFundBalance: 0,
                 mmRatio: 20e4,
-                liquidationRewardRatio: 25e4,
+                rewardRatio: 25e4,
+                smoothRatio: 0,
+                smoothEmaTime: 1,
                 exchangedQuote: 100,
                 liquidationReward: 5,
                 insuranceFundReward: 15,
@@ -57,10 +63,16 @@ describe("TakerLibrary", () => {
             it(test.title, async () => {
                 await library.setAccountInfo({ collateralBalance: test.collateralBalance }, [])
                 await library.setLiquidatorVaultInfo({ collateralBalance: test.liquidatorCollateralBalance })
-                await library.setInsuranceFundInfo({ balance: test.insuranceFundBalance })
+                await library.setInsuranceFundInfo({ balance: test.insuranceFundBalance, liquidationRewardBalance: 0 })
 
                 const res = expect(
-                    library.processLiquidationReward(test.mmRatio, test.liquidationRewardRatio, test.exchangedQuote),
+                    library.processLiquidationReward(
+                        test.mmRatio,
+                        test.rewardRatio,
+                        test.smoothRatio,
+                        test.smoothEmaTime,
+                        test.exchangedQuote,
+                    ),
                 )
 
                 if (test.revertedWith === void 0) {

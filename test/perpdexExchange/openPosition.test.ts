@@ -28,6 +28,7 @@ describe("PerpdexExchange openPosition", () => {
         await exchange.connect(owner).setImRatio(10e4)
         await exchange.connect(owner).setMmRatio(5e4)
         await exchange.connect(owner).setLiquidationRewardRatio(25e4)
+        await exchange.connect(owner).setLiquidationSmoothRatio(0)
 
         await market.connect(owner).setPoolFeeRatio(0)
         await market.connect(owner).setFundingMaxPremiumRatio(0)
@@ -40,7 +41,7 @@ describe("PerpdexExchange openPosition", () => {
             emaSec: 300,
         })
 
-        await exchange.setInsuranceFundInfo({ balance: 10000 })
+        await exchange.setInsuranceFundInfo({ balance: 10000, liquidationRewardBalance: 0 })
         await exchange.setProtocolInfo({ protocolFee: 10000 })
 
         await exchange.setAccountInfo(
@@ -582,7 +583,9 @@ describe("PerpdexExchange openPosition", () => {
                         expect(takerInfo.baseBalanceShare).to.eq(test.afterTakerInfo.baseBalanceShare)
                         expect(takerInfo.quoteBalance).to.eq(test.afterTakerInfo.quoteBalance)
 
-                        expect(await exchange.insuranceFundInfo()).to.eq(test.insuranceFund + 10000)
+                        const fundInfo = await exchange.insuranceFundInfo()
+                        expect(fundInfo[0]).to.eq(test.insuranceFund + 10000)
+                        expect(fundInfo[1]).to.eq(0)
                         expect(await exchange.protocolInfo()).to.eq(test.protocolFee + 10000)
                     } else {
                         await res.to.revertedWith(test.revertedWith)
