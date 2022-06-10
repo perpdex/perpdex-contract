@@ -22,8 +22,8 @@ library PoolLibrary {
     struct SwapParams {
         bool isBaseToQuote;
         bool isExactInput;
-        uint256 amount;
         uint24 feeRatio;
+        uint256 amount;
     }
 
     struct AddLiquidityParams {
@@ -72,7 +72,7 @@ library PoolLibrary {
         internal
         returns (uint256 oppositeAmount)
     {
-        oppositeAmount = swapDry(poolInfo.base, poolInfo.quote, params);
+        oppositeAmount = previewSwap(poolInfo.base, poolInfo.quote, params, false);
         (poolInfo.base, poolInfo.quote) = calcPoolAfter(
             params.isBaseToQuote,
             params.isExactInput,
@@ -179,19 +179,20 @@ library PoolLibrary {
         );
     }
 
-    function swapDry(
+    function previewSwap(
         uint256 base,
         uint256 quote,
-        SwapParams memory params
+        SwapParams memory params,
+        bool noRevert
     ) internal pure returns (uint256 output) {
-        uint24 onePlusFeeRatio = 1e6 + params.feeRatio;
+        uint24 oneSubFeeRatio = PerpMath.subRatio(1e6, params.feeRatio);
 
         if (params.isExactInput) {
-            uint256 amountDivFee = params.amount.divRatio(onePlusFeeRatio);
+            uint256 amountSubFee = params.amount.mulRatio(oneSubFeeRatio);
             if (params.isBaseToQuote) {
-                output = quote.sub(FullMath.mulDivRoundingUp(base, quote, base.add(amountDivFee)));
+                output = quote.sub(FullMath.mulDivRoundingUp(base, quote, base.add(amountSubFee)));
             } else {
-                output = base.sub(FullMath.mulDivRoundingUp(base, quote, quote.add(amountDivFee)));
+                output = base.sub(FullMath.mulDivRoundingUp(base, quote, quote.add(amountSubFee)));
             }
         } else {
             if (params.isBaseToQuote) {
@@ -199,9 +200,48 @@ library PoolLibrary {
             } else {
                 output = FullMath.mulDivRoundingUp(base, quote, base.sub(params.amount)).sub(quote);
             }
-            output = output.mulRatioRoundingUp(onePlusFeeRatio);
+            output = output.divRatioRoundingUp(oneSubFeeRatio);
         }
-        require(output > 0, "PL_SD: output is zero");
+        if (!noRevert) {
+            require(output > 0, "PL_SD: output is zero");
+        }
+    }
+
+    function _solveQuadratic(uint256 b, uint256 cNeg) private pure returns (uint256) {
+        return Math.sqrt(b.mul(b).add(cNeg.mul(4))).sub(b).div(2);
+    }
+
+    function maxSwap(
+        uint256 base,
+        uint256 quote,
+        bool isBaseToQuote,
+        bool isExactInput,
+        uint24 feeRatio,
+        uint256 priceBoundX96
+    ) internal pure returns (uint256 output) {
+        uint24 oneSubFeeRatio = PerpMath.subRatio(1e6, feeRatio);
+        uint256 k = base.mul(quote);
+
+        if (isBaseToQuote) {
+            uint256 kDivP = FullMath.mulDiv(k, FixedPoint96.Q96, priceBoundX96);
+            uint256 b = base.add(base.mulRatio(oneSubFeeRatio));
+            uint256 cNeg = kDivP.sub(base.mul(base));
+            output = _solveQuadratic(b.divRatio(oneSubFeeRatio), cNeg.divRatio(oneSubFeeRatio));
+        } else {
+            // https://www.wolframalpha.com/input?i=%28x+%2B+a%29+*+%28x+%2B+a+*+%281+-+f%29%29+%3D+kp+solve+a
+            uint256 kp = FullMath.mulDiv(k, priceBoundX96, FixedPoint96.Q96);
+            uint256 b = quote.add(quote.mulRatio(oneSubFeeRatio));
+            uint256 cNeg = kp.sub(quote.mul(quote));
+            output = _solveQuadratic(b.divRatio(oneSubFeeRatio), cNeg.divRatio(oneSubFeeRatio));
+        }
+        if (!isExactInput) {
+            output = previewSwap(
+                base,
+                quote,
+                SwapParams({ isBaseToQuote: isBaseToQuote, isExactInput: true, feeRatio: feeRatio, amount: output }),
+                true
+            );
+        }
     }
 
     function getMarkPriceX96(

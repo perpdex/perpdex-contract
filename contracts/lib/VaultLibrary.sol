@@ -6,12 +6,14 @@ import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
 import { SignedSafeMath } from "@openzeppelin/contracts/math/SignedSafeMath.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
-import { IERC20Metadata } from "../interface/IERC20Metadata.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/SafeCast.sol";
+import { PerpMath } from "./PerpMath.sol";
+import { IERC20Metadata } from "../interface/IERC20Metadata.sol";
 import { AccountLibrary } from "./AccountLibrary.sol";
 import { PerpdexStructs } from "./PerpdexStructs.sol";
 
 library VaultLibrary {
+    using PerpMath for int256;
     using SafeCast for uint256;
     using SafeMath for uint256;
     using SignedSafeMath for int256;
@@ -32,7 +34,11 @@ library VaultLibrary {
     function deposit(PerpdexStructs.AccountInfo storage accountInfo, DepositParams memory params) internal {
         require(params.amount > 0, "VL_D: zero amount");
         _transferTokenIn(params.settlementToken, params.from, params.amount);
-        accountInfo.vaultInfo.collateralBalance = accountInfo.vaultInfo.collateralBalance.add(params.amount.toInt256());
+        uint256 collateralAmount =
+            _toCollateralAmount(params.amount, IERC20Metadata(params.settlementToken).decimals());
+        accountInfo.vaultInfo.collateralBalance = accountInfo.vaultInfo.collateralBalance.add(
+            collateralAmount.toInt256()
+        );
     }
 
     function depositEth(PerpdexStructs.AccountInfo storage accountInfo, uint256 amount) internal {
@@ -42,7 +48,14 @@ library VaultLibrary {
 
     function withdraw(PerpdexStructs.AccountInfo storage accountInfo, WithdrawParams memory params) internal {
         require(params.amount > 0, "VL_W: zero amount");
-        accountInfo.vaultInfo.collateralBalance = accountInfo.vaultInfo.collateralBalance.sub(params.amount.toInt256());
+
+        uint256 collateralAmount =
+            params.settlementToken == address(0)
+                ? params.amount
+                : _toCollateralAmount(params.amount, IERC20Metadata(params.settlementToken).decimals());
+        accountInfo.vaultInfo.collateralBalance = accountInfo.vaultInfo.collateralBalance.sub(
+            collateralAmount.toInt256()
+        );
 
         require(AccountLibrary.hasEnoughInitialMargin(accountInfo, params.imRatio), "VL_W: not enough initial margin");
 
@@ -84,5 +97,12 @@ library VaultLibrary {
             (IERC20Metadata(token).balanceOf(address(this)).sub(balanceBefore)) == amount,
             "VL_TTI: inconsistent balance"
         );
+    }
+
+    function _toCollateralAmount(uint256 amount, uint8 tokenDecimals) private view returns (uint256) {
+        int256 decimalsDiff = 18 - tokenDecimals;
+        uint256 decimalsDiffAbs = decimalsDiff.abs();
+        require(decimalsDiffAbs <= 77, "VL_TCA: too large decimals diff");
+        return decimalsDiff >= 0 ? amount.mul(10**decimalsDiffAbs) : amount.div(10**decimalsDiffAbs);
     }
 }

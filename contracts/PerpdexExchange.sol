@@ -28,6 +28,7 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
 
     // config
     address public immutable override settlementToken;
+    uint8 public constant override decimals = 18;
     uint8 public override maxMarketsPerAccount = 16;
     uint24 public override imRatio = 10e4;
     uint24 public override mmRatio = 5e4;
@@ -290,7 +291,7 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
 
     // dry run
 
-    function openPositionDry(OpenPositionDryParams calldata params)
+    function previewOpenPosition(PreviewOpenPositionParams calldata params)
         external
         view
         override
@@ -301,9 +302,9 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
         address caller = params.caller;
 
         return
-            TakerLibrary.openPositionDry(
+            TakerLibrary.previewOpenPosition(
                 accountInfos[trader],
-                TakerLibrary.OpenPositionDryParams({
+                TakerLibrary.PreviewOpenPositionParams({
                     market: params.market,
                     isBaseToQuote: params.isBaseToQuote,
                     isExactInput: params.isExactInput,
@@ -314,6 +315,24 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
                     isSelf: trader == caller
                 })
             );
+    }
+
+    function maxOpenPosition(MaxOpenPositionParams calldata params) external view override returns (uint256 amount) {
+        if (!isMarketAllowed[params.market]) return 0;
+
+        address trader = params.trader;
+        address caller = params.caller;
+
+        return
+            TakerLibrary.maxOpenPosition({
+                accountInfo: accountInfos[trader],
+                market: params.market,
+                isBaseToQuote: params.isBaseToQuote,
+                isExactInput: params.isExactInput,
+                mmRatio: mmRatio,
+                protocolFeeRatio: protocolFeeRatio,
+                isSelf: trader == caller
+            });
     }
 
     // convenient getters

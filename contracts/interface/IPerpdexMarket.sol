@@ -31,12 +31,18 @@ interface IPerpdexMarket {
 
     function exchange() external view returns (address);
 
-    function swapDry(
+    function previewSwap(
         bool isBaseToQuote,
         bool isExactInput,
         uint256 amount,
         bool isLiquidation
     ) external view returns (uint256);
+
+    function maxSwap(
+        bool isBaseToQuote,
+        bool isExactInput,
+        bool isLiquidation
+    ) external view returns (uint256 amount);
 
     function getMarkPriceX96() external view returns (uint256);
 

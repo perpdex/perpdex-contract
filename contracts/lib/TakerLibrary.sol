@@ -32,7 +32,7 @@ library TakerLibrary {
         bool isSelf;
     }
 
-    struct OpenPositionDryParams {
+    struct PreviewOpenPositionParams {
         address market;
         bool isBaseToQuote;
         bool isExactInput;
@@ -148,11 +148,11 @@ library TakerLibrary {
 
     // Even if openPosition reverts, it may not revert.
     // Attempting to match reverts makes the implementation too complicated
-    function openPositionDry(PerpdexStructs.AccountInfo storage accountInfo, OpenPositionDryParams memory params)
-        internal
-        view
-        returns (int256 base, int256 quote)
-    {
+    // ignore initial margin check and close only check when liquidation
+    function previewOpenPosition(
+        PerpdexStructs.AccountInfo storage accountInfo,
+        PreviewOpenPositionParams memory params
+    ) internal view returns (int256 base, int256 quote) {
         bool isLiquidation = !AccountLibrary.hasEnoughMaintenanceMargin(accountInfo, params.mmRatio);
 
         if (!params.isSelf) {
@@ -161,14 +161,14 @@ library TakerLibrary {
 
         uint256 oppositeAmount;
         if (params.protocolFeeRatio == 0) {
-            oppositeAmount = IPerpdexMarket(params.market).swapDry(
+            oppositeAmount = IPerpdexMarket(params.market).previewSwap(
                 params.isBaseToQuote,
                 params.isExactInput,
                 params.amount,
                 isLiquidation
             );
         } else {
-            (oppositeAmount, ) = swapWithProtocolFeeDry(
+            (oppositeAmount, ) = previewSwapWithProtocolFee(
                 params.market,
                 params.isBaseToQuote,
                 params.isExactInput,
@@ -184,6 +184,29 @@ library TakerLibrary {
             params.amount,
             oppositeAmount
         );
+    }
+
+    // ignore initial margin check and close only check when liquidation
+    function maxOpenPosition(
+        PerpdexStructs.AccountInfo storage accountInfo,
+        address market,
+        bool isBaseToQuote,
+        bool isExactInput,
+        uint24 mmRatio,
+        uint24 protocolFeeRatio,
+        bool isSelf
+    ) internal view returns (uint256 amount) {
+        bool isLiquidation = !AccountLibrary.hasEnoughMaintenanceMargin(accountInfo, mmRatio);
+
+        if (!isSelf && !isLiquidation) {
+            return 0;
+        }
+
+        if (protocolFeeRatio == 0) {
+            amount = IPerpdexMarket(market).maxSwap(isBaseToQuote, isExactInput, isLiquidation);
+        } else {
+            amount = maxSwapWithProtocolFee(market, isBaseToQuote, isExactInput, protocolFeeRatio, isLiquidation);
+        }
     }
 
     function _doSwap(
@@ -287,7 +310,7 @@ library TakerLibrary {
         insuranceFundInfo.balance = insuranceFundInfo.balance.add(insuranceFundReward.toInt256());
     }
 
-    function swapWithProtocolFeeDry(
+    function previewSwapWithProtocolFee(
         address market,
         bool isBaseToQuote,
         bool isExactInput,
@@ -297,12 +320,12 @@ library TakerLibrary {
     ) internal view returns (uint256 oppositeAmount, uint256 protocolFee) {
         if (isExactInput) {
             if (isBaseToQuote) {
-                oppositeAmount = IPerpdexMarket(market).swapDry(isBaseToQuote, isExactInput, amount, isLiquidation);
+                oppositeAmount = IPerpdexMarket(market).previewSwap(isBaseToQuote, isExactInput, amount, isLiquidation);
                 protocolFee = oppositeAmount.mulRatio(protocolFeeRatio);
                 oppositeAmount = oppositeAmount.sub(protocolFee);
             } else {
                 protocolFee = amount.mulRatio(protocolFeeRatio);
-                oppositeAmount = IPerpdexMarket(market).swapDry(
+                oppositeAmount = IPerpdexMarket(market).previewSwap(
                     isBaseToQuote,
                     isExactInput,
                     amount.sub(protocolFee),
@@ -312,7 +335,7 @@ library TakerLibrary {
         } else {
             if (isBaseToQuote) {
                 protocolFee = amount.divRatio(PerpMath.subRatio(1e6, protocolFeeRatio)).sub(amount);
-                oppositeAmount = IPerpdexMarket(market).swapDry(
+                oppositeAmount = IPerpdexMarket(market).previewSwap(
                     isBaseToQuote,
                     isExactInput,
                     amount.add(protocolFee),
@@ -320,10 +343,30 @@ library TakerLibrary {
                 );
             } else {
                 uint256 oppositeAmountWithoutFee =
-                    IPerpdexMarket(market).swapDry(isBaseToQuote, isExactInput, amount, isLiquidation);
+                    IPerpdexMarket(market).previewSwap(isBaseToQuote, isExactInput, amount, isLiquidation);
                 oppositeAmount = oppositeAmountWithoutFee.divRatio(PerpMath.subRatio(1e6, protocolFeeRatio));
                 protocolFee = oppositeAmount.sub(oppositeAmountWithoutFee);
             }
+        }
+    }
+
+    function maxSwapWithProtocolFee(
+        address market,
+        bool isBaseToQuote,
+        bool isExactInput,
+        uint24 protocolFeeRatio,
+        bool isLiquidation
+    ) internal view returns (uint256 amount) {
+        amount = IPerpdexMarket(market).maxSwap(isBaseToQuote, isExactInput, isLiquidation);
+
+        if (isExactInput) {
+            if (isBaseToQuote) {} else {
+                amount = amount.divRatio(PerpMath.subRatio(1e6, protocolFeeRatio));
+            }
+        } else {
+            if (isBaseToQuote) {
+                amount = amount.mulRatio(PerpMath.subRatio(1e6, protocolFeeRatio));
+            } else {}
         }
     }
 

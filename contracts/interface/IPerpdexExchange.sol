@@ -33,7 +33,7 @@ interface IPerpdexExchange {
         uint256 deadline;
     }
 
-    struct OpenPositionDryParams {
+    struct PreviewOpenPositionParams {
         address trader;
         address market;
         address caller;
@@ -41,6 +41,14 @@ interface IPerpdexExchange {
         bool isExactInput;
         uint256 amount;
         uint256 oppositeAmountBound;
+    }
+
+    struct MaxOpenPositionParams {
+        address trader;
+        address market;
+        address caller;
+        bool isBaseToQuote;
+        bool isExactInput;
     }
 
     event Deposited(address indexed trader, uint256 amount);
@@ -140,7 +148,12 @@ interface IPerpdexExchange {
 
     // dry run getters
 
-    function openPositionDry(OpenPositionDryParams calldata params) external view returns (int256 base, int256 quote);
+    function previewOpenPosition(PreviewOpenPositionParams calldata params)
+        external
+        view
+        returns (int256 base, int256 quote);
+
+    function maxOpenPosition(MaxOpenPositionParams calldata params) external view returns (uint256 amount);
 
     // default getters
 
@@ -151,6 +164,8 @@ interface IPerpdexExchange {
     function protocolInfo() external view returns (uint256 protocolFee);
 
     function settlementToken() external view returns (address);
+
+    function decimals() external view returns (uint8);
 
     function maxMarketsPerAccount() external view returns (uint8);
 

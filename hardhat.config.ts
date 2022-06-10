@@ -7,11 +7,13 @@ import { config as dotenvConfig } from "dotenv"
 import "hardhat-contract-sizer"
 import "hardhat-dependency-compiler"
 import "hardhat-deploy"
-import "hardhat-gas-reporter"
 import { HardhatUserConfig } from "hardhat/config"
 import { resolve } from "path"
 import "solidity-coverage"
 import "./mocha-test"
+
+// import after mocha-test
+import "hardhat-gas-reporter"
 
 dotenvConfig({ path: resolve(__dirname, "./.env") })
 
@@ -57,7 +59,7 @@ const config: HardhatUserConfig = {
         disambiguatePaths: false,
     },
     gasReporter: {
-        excludeContracts: ["test"],
+        // excludeContracts: ["test"],
     },
     mocha: {
         require: ["ts-node/register/files"],

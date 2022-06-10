@@ -244,7 +244,7 @@ describe("PoolLibrary swap", () => {
             it(test.title + " dry", async () => {
                 if (test.revertedWith !== void 0) {
                     await expect(
-                        library.swapDry(10000, 10000, {
+                        library.previewSwap(10000, 10000, {
                             isBaseToQuote: test.isBaseToQuote,
                             isExactInput: test.isExactInput,
                             amount: test.amount,
@@ -252,7 +252,7 @@ describe("PoolLibrary swap", () => {
                         }),
                     ).to.revertedWith(test.revertedWith)
                 } else {
-                    const res = await library.swapDry(10000, 10000, {
+                    const res = await library.previewSwap(10000, 10000, {
                         isBaseToQuote: test.isBaseToQuote,
                         isExactInput: test.isExactInput,
                         amount: test.amount,
@@ -282,18 +282,18 @@ describe("PoolLibrary swap", () => {
                 title: "long exact input",
                 isBaseToQuote: false,
                 isExactInput: true,
-                amount: 10100,
+                amount: 10102,
                 oppositeAmount: 5000,
                 base: 5000,
-                quote: 20100,
+                quote: 20102,
             },
             {
                 title: "short exact input",
                 isBaseToQuote: true,
                 isExactInput: true,
-                amount: 10100,
+                amount: 10102,
                 oppositeAmount: 5000,
-                base: 20100,
+                base: 20102,
                 quote: 5000,
             },
             {
@@ -301,17 +301,17 @@ describe("PoolLibrary swap", () => {
                 isBaseToQuote: false,
                 isExactInput: false,
                 amount: 5000,
-                oppositeAmount: 10100,
+                oppositeAmount: 10102,
                 base: 5000,
-                quote: 20100,
+                quote: 20102,
             },
             {
                 title: "short exact input",
                 isBaseToQuote: true,
                 isExactInput: false,
                 amount: 5000,
-                oppositeAmount: 10100,
-                base: 20100,
+                oppositeAmount: 10102,
+                base: 20102,
                 quote: 5000,
             },
         ].forEach(test => {
@@ -336,7 +336,7 @@ describe("PoolLibrary swap", () => {
             })
 
             it(test.title + " dry", async () => {
-                const res = await library.swapDry(10000, 10000, {
+                const res = await library.previewSwap(10000, 10000, {
                     isBaseToQuote: test.isBaseToQuote,
                     isExactInput: test.isExactInput,
                     amount: test.amount,

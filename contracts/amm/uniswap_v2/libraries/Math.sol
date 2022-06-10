@@ -21,4 +21,11 @@ library Math {
             z = 1;
         }
     }
+
+    function sqrtRoundingUp(uint256 y) internal pure returns (uint256 z) {
+        z = sqrt(y);
+        if (z * z != y) {
+            z = z + 1;
+        }
+    }
 }

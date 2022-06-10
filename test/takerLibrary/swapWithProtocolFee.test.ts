@@ -104,11 +104,11 @@ describe("TakerLibrary", () => {
             })
 
             it(test.title + " dry", async () => {
-                await market.mock.swapDry
+                await market.mock.previewSwap
                     .withArgs(test.isBaseToQuote, test.isExactInput, test.swapAmount, false)
                     .returns(test.swapOppositeAmount)
 
-                const res = await library.swapWithProtocolFeeDry(
+                const res = await library.previewSwapWithProtocolFee(
                     market.address,
                     test.isBaseToQuote,
                     test.isExactInput,

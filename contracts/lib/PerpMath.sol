@@ -65,12 +65,12 @@ library PerpMath {
         return FullMath.mulDiv(value, ratio, 1e6);
     }
 
-    function mulRatioRoundingUp(uint256 value, uint24 ratio) internal pure returns (uint256) {
-        return FullMath.mulDivRoundingUp(value, ratio, 1e6);
-    }
-
     function divRatio(uint256 value, uint24 ratio) internal pure returns (uint256) {
         return FullMath.mulDiv(value, 1e6, ratio);
+    }
+
+    function divRatioRoundingUp(uint256 value, uint24 ratio) internal pure returns (uint256) {
+        return FullMath.mulDivRoundingUp(value, 1e6, ratio);
     }
 
     /// @param denominator cannot be 0 and is checked in FullMath.mulDiv()

@@ -46,6 +46,10 @@ describe("PerpdexMarket swap", () => {
         it("revert", async () => {
             await expect(market.connect(exchange).swap(false, true, 1, false)).to.be.reverted
         })
+
+        it("revert preview", async () => {
+            await expect(market.connect(exchange).previewSwap(false, true, 1, false)).to.be.reverted
+        })
     })
 
     describe("with fee, without funding", () => {
@@ -104,7 +108,7 @@ describe("PerpdexMarket swap", () => {
             })
 
             it(test.title + " dry", async () => {
-                const res = await market.swapDry(test.isBaseToQuote, test.isExactInput, test.amount, false)
+                const res = await market.previewSwap(test.isBaseToQuote, test.isExactInput, test.amount, false)
                 expect(res).to.eq(test.oppositeAmount)
             })
         })
@@ -161,11 +165,12 @@ describe("PerpdexMarket swap", () => {
                     .withArgs(test.isBaseToQuote, test.isExactInput, test.amount, test.oppositeAmount)
                     .to.emit(market, "FundingPaid")
                 const poolInfo = await market.poolInfo()
+                expect(poolInfo.base).to.eq(test.base)
                 expect(poolInfo.quote).to.eq(test.quote)
             })
 
             it(test.title + " dry", async () => {
-                const res = await market.swapDry(test.isBaseToQuote, test.isExactInput, test.amount, false)
+                const res = await market.previewSwap(test.isBaseToQuote, test.isExactInput, test.amount, false)
                 expect(res).to.eq(test.oppositeAmount)
             })
         })

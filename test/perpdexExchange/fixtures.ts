@@ -1,4 +1,3 @@
-import { MockContract, smockit } from "@eth-optimism/smock"
 import { ethers, waffle } from "hardhat"
 import { TestPerpdexExchange, TestPerpdexMarket, TestERC20 } from "../../typechain"
 import { BigNumber, Wallet } from "ethers"
