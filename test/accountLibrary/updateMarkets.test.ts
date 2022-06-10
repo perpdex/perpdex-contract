@@ -129,8 +129,8 @@ describe("AccountLibrary updateMarkets", () => {
                         baseDebtShare: 0,
                         quoteDebt: 0,
                         liquidity: test.accountInfo[i].makerLiquidity,
-                        cumDeleveragedBaseSharePerLiquidityX96: 0,
-                        cumDeleveragedQuotePerLiquidityX96: 0,
+                        cumBaseSharePerLiquidityX96: 0,
+                        cumQuotePerLiquidityX96: 0,
                     })
                 }
                 const res = library.updateMarkets(idxToMarket(test.market), test.maxMarketsPerAccount)

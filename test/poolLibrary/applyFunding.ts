@@ -23,8 +23,8 @@ describe("PoolLibrary", () => {
                 base: 10000,
                 quote: 10000,
                 totalLiquidity: 10000,
-                cumDeleveragedBasePerLiquidityX96: 1,
-                cumDeleveragedQuotePerLiquidityX96: 1,
+                cumBasePerLiquidityX96: 1,
+                cumQuotePerLiquidityX96: 1,
                 baseBalancePerShareX96: BigNumber.from(10).pow(18),
                 fundingRateX96: 0,
                 afterBase: 10000,
@@ -38,8 +38,8 @@ describe("PoolLibrary", () => {
                 base: 10000,
                 quote: 10000,
                 totalLiquidity: 10000,
-                cumDeleveragedBasePerLiquidityX96: 1,
-                cumDeleveragedQuotePerLiquidityX96: 1,
+                cumBasePerLiquidityX96: 1,
+                cumQuotePerLiquidityX96: 1,
                 baseBalancePerShareX96: BigNumber.from(10).pow(18),
                 fundingRateX96: BigNumber.from(2).pow(96).div(4),
                 afterBase: 10000,
@@ -53,8 +53,8 @@ describe("PoolLibrary", () => {
                 base: 10000,
                 quote: 10000,
                 totalLiquidity: 10000,
-                cumDeleveragedBasePerLiquidityX96: 1,
-                cumDeleveragedQuotePerLiquidityX96: 1,
+                cumBasePerLiquidityX96: 1,
+                cumQuotePerLiquidityX96: 1,
                 baseBalancePerShareX96: BigNumber.from(10).pow(18),
                 fundingRateX96: BigNumber.from(2).pow(96).div(-4),
                 afterBase: 8000,
@@ -69,8 +69,8 @@ describe("PoolLibrary", () => {
                     base: test.base,
                     quote: test.quote,
                     totalLiquidity: test.totalLiquidity,
-                    cumDeleveragedBasePerLiquidityX96: test.cumDeleveragedBasePerLiquidityX96,
-                    cumDeleveragedQuotePerLiquidityX96: test.cumDeleveragedQuotePerLiquidityX96,
+                    cumBasePerLiquidityX96: test.cumBasePerLiquidityX96,
+                    cumQuotePerLiquidityX96: test.cumQuotePerLiquidityX96,
                     baseBalancePerShareX96: test.baseBalancePerShareX96,
                 })
 
@@ -80,8 +80,8 @@ describe("PoolLibrary", () => {
                 expect(res.base).to.eq(test.afterBase)
                 expect(res.quote).to.eq(test.afterQuote)
                 expect(res.totalLiquidity).to.eq(test.totalLiquidity)
-                expect(res.cumDeleveragedBasePerLiquidityX96).to.eq(test.afterCumDeleveragedBasePerLiquidityX96)
-                expect(res.cumDeleveragedQuotePerLiquidityX96).to.eq(test.afterCumDeleveragedQuotePerLiquidityX96)
+                expect(res.cumBasePerLiquidityX96).to.eq(test.afterCumDeleveragedBasePerLiquidityX96)
+                expect(res.cumQuotePerLiquidityX96).to.eq(test.afterCumDeleveragedQuotePerLiquidityX96)
                 expect(res.baseBalancePerShareX96).to.eq(test.afterBaseBalancePerShareX96)
             })
         })

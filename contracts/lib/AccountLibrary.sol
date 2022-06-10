@@ -61,8 +61,8 @@ library AccountLibrary {
                 (uint256 deleveragedBaseShare, uint256 deleveragedQuoteBalance) =
                     IPerpdexMarket(market).getLiquidityDeleveraged(
                         makerInfo.liquidity,
-                        makerInfo.cumDeleveragedBaseSharePerLiquidityX96,
-                        makerInfo.cumDeleveragedQuotePerLiquidityX96
+                        makerInfo.cumBaseSharePerLiquidityX96,
+                        makerInfo.cumQuotePerLiquidityX96
                     );
                 baseShare = baseShare.add(poolBaseShare.add(deleveragedBaseShare).toInt256());
                 quoteBalance = quoteBalance.add(poolQuoteBalance.add(deleveragedQuoteBalance).toInt256());
@@ -89,8 +89,8 @@ library AccountLibrary {
             (uint256 deleveragedBaseShare, ) =
                 IPerpdexMarket(market).getLiquidityDeleveraged(
                     makerInfo.liquidity,
-                    makerInfo.cumDeleveragedBaseSharePerLiquidityX96,
-                    makerInfo.cumDeleveragedQuotePerLiquidityX96
+                    makerInfo.cumBaseSharePerLiquidityX96,
+                    makerInfo.cumQuotePerLiquidityX96
                 );
             baseShare = baseShare.add(poolBaseShare.add(deleveragedBaseShare).toInt256());
         }
@@ -196,8 +196,8 @@ library AccountLibrary {
                 (uint256 deleveragedBaseShare, uint256 deleveragedQuoteBalance) =
                     IPerpdexMarket(market).getLiquidityDeleveraged(
                         makerInfo.liquidity,
-                        makerInfo.cumDeleveragedBaseSharePerLiquidityX96,
-                        makerInfo.cumDeleveragedQuotePerLiquidityX96
+                        makerInfo.cumBaseSharePerLiquidityX96,
+                        makerInfo.cumQuotePerLiquidityX96
                     );
                 baseShare = baseShare.add(deleveragedBaseShare.toInt256());
                 quoteBalance = quoteBalance.add(deleveragedQuoteBalance.toInt256());

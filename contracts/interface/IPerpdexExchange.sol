@@ -62,6 +62,8 @@ interface IPerpdexExchange {
         uint256 base,
         uint256 quote,
         uint256 liquidity,
+        uint256 cumBasePerLiquidityX96,
+        uint256 cumQuotePerLiquidityX96,
         uint256 baseBalancePerShareX96,
         uint256 sharePriceAfterX96
     );
@@ -73,6 +75,8 @@ interface IPerpdexExchange {
         uint256 base,
         uint256 quote,
         uint256 liquidity,
+        uint256 cumBasePerLiquidityX96,
+        uint256 cumQuotePerLiquidityX96,
         int256 takerBase,
         int256 takerQuote,
         int256 realizedPnl,
@@ -90,6 +94,7 @@ interface IPerpdexExchange {
         uint256 protocolFee,
         uint256 baseBalancePerShareX96,
         uint256 sharePriceAfterX96,
+        uint256 liquidationPenalty,
         uint256 liquidationReward,
         uint256 insuranceFundReward
     );
@@ -130,7 +135,7 @@ interface IPerpdexExchange {
 
     function removeLiquidity(RemoveLiquidityParams calldata params) external returns (uint256 base, uint256 quote);
 
-    function openPosition(OpenPositionParams calldata params) external returns (int256 base, int256 quote);
+    function openPosition(OpenPositionParams calldata params) external returns (uint256 oppositeAmount);
 
     // setters
 
@@ -151,7 +156,7 @@ interface IPerpdexExchange {
     function previewOpenPosition(PreviewOpenPositionParams calldata params)
         external
         view
-        returns (int256 base, int256 quote);
+        returns (uint256 oppositeAmount);
 
     function maxOpenPosition(MaxOpenPositionParams calldata params) external view returns (uint256 amount);
 

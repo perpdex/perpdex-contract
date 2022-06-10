@@ -220,21 +220,21 @@ contract PerpdexMarket is IPerpdexMarket, ReentrancyGuard, Ownable {
 
     function getLiquidityDeleveraged(
         uint256 liquidity,
-        uint256 cumDeleveragedBasePerLiquidityX96,
-        uint256 cumDeleveragedQuotePerLiquidityX96
+        uint256 cumBasePerLiquidityX96,
+        uint256 cumQuotePerLiquidityX96
     ) external view override returns (uint256, uint256) {
         return
             PoolLibrary.getLiquidityDeleveraged(
-                poolInfo.cumDeleveragedBasePerLiquidityX96,
-                poolInfo.cumDeleveragedQuotePerLiquidityX96,
+                poolInfo.cumBasePerLiquidityX96,
+                poolInfo.cumQuotePerLiquidityX96,
                 liquidity,
-                cumDeleveragedBasePerLiquidityX96,
-                cumDeleveragedQuotePerLiquidityX96
+                cumBasePerLiquidityX96,
+                cumQuotePerLiquidityX96
             );
     }
 
     function getCumDeleveragedPerLiquidityX96() external view override returns (uint256, uint256) {
-        return (poolInfo.cumDeleveragedBasePerLiquidityX96, poolInfo.cumDeleveragedQuotePerLiquidityX96);
+        return (poolInfo.cumBasePerLiquidityX96, poolInfo.cumQuotePerLiquidityX96);
     }
 
     function baseBalancePerShareX96() external view override returns (uint256) {

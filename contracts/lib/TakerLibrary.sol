@@ -48,6 +48,7 @@ library TakerLibrary {
         int256 quote;
         int256 realizedPnl;
         uint256 protocolFee;
+        uint256 liquidationPenalty;
         uint256 liquidationReward;
         uint256 insuranceFundReward;
         bool isLiquidation;
@@ -86,7 +87,11 @@ library TakerLibrary {
         if (response.isLiquidation) {
             require(!isOpen, "TL_OP: no open when liquidation");
 
-            (response.liquidationReward, response.insuranceFundReward) = processLiquidationReward(
+            (
+                response.liquidationPenalty,
+                response.liquidationReward,
+                response.insuranceFundReward
+            ) = processLiquidationReward(
                 accountInfo.vaultInfo,
                 liquidatorVaultInfo,
                 insuranceFundInfo,
@@ -152,14 +157,14 @@ library TakerLibrary {
     function previewOpenPosition(
         PerpdexStructs.AccountInfo storage accountInfo,
         PreviewOpenPositionParams memory params
-    ) internal view returns (int256 base, int256 quote) {
+    ) internal view returns (uint256 oppositeAmount) {
         bool isLiquidation = !AccountLibrary.hasEnoughMaintenanceMargin(accountInfo, params.mmRatio);
 
         if (!params.isSelf) {
             require(isLiquidation, "TL_OPD: enough mm");
         }
 
-        uint256 oppositeAmount;
+        oppositeAmount;
         if (params.protocolFeeRatio == 0) {
             oppositeAmount = IPerpdexMarket(params.market).previewSwap(
                 params.isBaseToQuote,
@@ -178,12 +183,6 @@ library TakerLibrary {
             );
         }
         validateSlippage(params.isExactInput, oppositeAmount, params.oppositeAmountBound);
-        (base, quote) = swapResponseToBaseQuote(
-            params.isBaseToQuote,
-            params.isExactInput,
-            params.amount,
-            oppositeAmount
-        );
     }
 
     // ignore initial margin check and close only check when liquidation
@@ -300,8 +299,15 @@ library TakerLibrary {
         uint24 mmRatio,
         PerpdexStructs.LiquidationRewardConfig memory liquidationRewardConfig,
         uint256 exchangedQuote
-    ) internal returns (uint256 liquidationReward, uint256 insuranceFundReward) {
-        uint256 penalty = exchangedQuote.mulRatio(mmRatio);
+    )
+        internal
+        returns (
+            uint256 penalty,
+            uint256 liquidationReward,
+            uint256 insuranceFundReward
+        )
+    {
+        penalty = exchangedQuote.mulRatio(mmRatio);
         liquidationReward = penalty.mulRatio(liquidationRewardConfig.rewardRatio);
         insuranceFundReward = penalty.sub(liquidationReward);
 

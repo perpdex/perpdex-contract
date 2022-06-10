@@ -37,8 +37,8 @@ describe("PoolLibrary swap", () => {
                 base: 10000,
                 quote: 10000,
                 totalLiquidity: 10000,
-                cumDeleveragedBasePerLiquidityX96: 0,
-                cumDeleveragedQuotePerLiquidityX96: 0,
+                cumBasePerLiquidityX96: 0,
+                cumQuotePerLiquidityX96: 0,
                 baseBalancePerShareX96: Q96,
             })
         })
@@ -235,8 +235,8 @@ describe("PoolLibrary swap", () => {
                     expect(poolInfo.base).to.eq(test.base)
                     expect(poolInfo.quote).to.eq(test.quote)
                     expect(poolInfo.totalLiquidity).to.eq(10000)
-                    expect(poolInfo.cumDeleveragedBasePerLiquidityX96).to.eq(0)
-                    expect(poolInfo.cumDeleveragedQuotePerLiquidityX96).to.eq(0)
+                    expect(poolInfo.cumBasePerLiquidityX96).to.eq(0)
+                    expect(poolInfo.cumQuotePerLiquidityX96).to.eq(0)
                     expect(poolInfo.baseBalancePerShareX96).to.eq(Q96)
                 }
             })
@@ -272,8 +272,8 @@ describe("PoolLibrary swap", () => {
                 base: 10000,
                 quote: 10000,
                 totalLiquidity: 10000,
-                cumDeleveragedBasePerLiquidityX96: 0,
-                cumDeleveragedQuotePerLiquidityX96: 0,
+                cumBasePerLiquidityX96: 0,
+                cumQuotePerLiquidityX96: 0,
                 baseBalancePerShareX96: Q96,
             })
         })
@@ -330,8 +330,8 @@ describe("PoolLibrary swap", () => {
                 expect(poolInfo.base).to.eq(test.base)
                 expect(poolInfo.quote).to.eq(test.quote)
                 expect(poolInfo.totalLiquidity).to.eq(10000)
-                expect(poolInfo.cumDeleveragedBasePerLiquidityX96).to.eq(0)
-                expect(poolInfo.cumDeleveragedQuotePerLiquidityX96).to.eq(0)
+                expect(poolInfo.cumBasePerLiquidityX96).to.eq(0)
+                expect(poolInfo.cumQuotePerLiquidityX96).to.eq(0)
                 expect(poolInfo.baseBalancePerShareX96).to.eq(Q96)
             })
 

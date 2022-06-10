@@ -17,6 +17,7 @@ import { PerpMath } from "./lib/PerpMath.sol";
 
 contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
     using Address for address;
+    using PerpMath for int256;
     using PerpMath for uint256;
     using SafeCast for uint256;
 
@@ -103,7 +104,7 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
         nonReentrant
         checkDeadline(params.deadline)
         checkMarketAllowed(params.market)
-        returns (int256 base, int256 quote)
+        returns (uint256 oppositeAmount)
     {
         TakerLibrary.OpenPositionResponse memory response = _doOpenPosition(params);
 
@@ -121,6 +122,7 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
                 response.protocolFee,
                 baseBalancePerShareX96,
                 shareMarkPriceAfterX96,
+                response.liquidationPenalty,
                 response.liquidationReward,
                 response.insuranceFundReward
             );
@@ -137,7 +139,7 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
             );
         }
 
-        return (response.base, response.quote);
+        oppositeAmount = params.isExactInput == params.isBaseToQuote ? response.quote.abs() : response.base.abs();
     }
 
     function addLiquidity(AddLiquidityParams calldata params)
@@ -177,6 +179,8 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
             response.base,
             response.quote,
             response.liquidity,
+            response.cumBasePerLiquidityX96,
+            response.cumQuotePerLiquidityX96,
             baseBalancePerShareX96,
             shareMarkPriceAfterX96
         );
@@ -219,6 +223,8 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
             response.base,
             response.quote,
             params.liquidity,
+            response.cumBasePerLiquidityX96,
+            response.cumQuotePerLiquidityX96,
             response.takerBase,
             response.takerQuote,
             response.realizedPnl,
@@ -303,7 +309,7 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
         view
         override
         checkMarketAllowed(params.market)
-        returns (int256 base, int256 quote)
+        returns (uint256 oppositeAmount)
     {
         address trader = params.trader;
         address caller = params.caller;
