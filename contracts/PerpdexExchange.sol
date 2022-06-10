@@ -179,6 +179,8 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
             response.base,
             response.quote,
             response.liquidity,
+            response.cumBasePerLiquidityX96,
+            response.cumQuotePerLiquidityX96,
             baseBalancePerShareX96,
             shareMarkPriceAfterX96
         );
@@ -221,6 +223,8 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
             response.base,
             response.quote,
             params.liquidity,
+            response.cumBasePerLiquidityX96,
+            response.cumQuotePerLiquidityX96,
             response.takerBase,
             response.takerQuote,
             response.realizedPnl,
