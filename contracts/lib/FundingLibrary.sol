@@ -38,11 +38,15 @@ library FundingLibrary {
     // must not revert even if priceFeed is malicious
     function processFunding(MarketStructs.FundingInfo storage fundingInfo, ProcessFundingParams memory params)
         internal
-        returns (int256 fundingRateX96)
+        returns (
+            int256 fundingRateX96,
+            uint32 elapsedSec,
+            int256 premiumX96
+        )
     {
         uint256 currentTimestamp = block.timestamp;
-        uint256 elapsedSec = currentTimestamp.sub(fundingInfo.prevIndexPriceTimestamp);
-        if (elapsedSec == 0) return 0;
+        uint256 elapsedSec256 = currentTimestamp.sub(fundingInfo.prevIndexPriceTimestamp);
+        if (elapsedSec256 == 0) return (0, 0, 0);
 
         uint256 indexPriceBase = _getIndexPriceSafe(params.priceFeedBase);
         uint256 indexPriceQuote = _getIndexPriceSafe(params.priceFeedQuote);
@@ -55,17 +59,17 @@ library FundingLibrary {
             decimalsBase > MAX_DECIMALS ||
             decimalsQuote > MAX_DECIMALS
         ) {
-            return 0;
+            return (0, 0, 0);
         }
 
-        elapsedSec = Math.min(elapsedSec, params.maxElapsedSec);
+        elapsedSec256 = Math.min(elapsedSec256, params.maxElapsedSec);
+        elapsedSec = elapsedSec256.toUint32();
 
-        int256 premiumX96 =
-            _calcPremiumX96(decimalsBase, decimalsQuote, indexPriceBase, indexPriceQuote, params.markPriceX96);
+        premiumX96 = _calcPremiumX96(decimalsBase, decimalsQuote, indexPriceBase, indexPriceQuote, params.markPriceX96);
 
         int256 maxPremiumX96 = FixedPoint96.Q96.mulRatio(params.maxPremiumRatio).toInt256();
         premiumX96 = (-maxPremiumX96).max(maxPremiumX96.min(premiumX96));
-        fundingRateX96 = premiumX96.mulDiv(elapsedSec.toInt256(), params.rolloverSec);
+        fundingRateX96 = premiumX96.mulDiv(elapsedSec256.toInt256(), params.rolloverSec);
 
         fundingInfo.prevIndexPriceBase = indexPriceBase;
         fundingInfo.prevIndexPriceQuote = indexPriceQuote;

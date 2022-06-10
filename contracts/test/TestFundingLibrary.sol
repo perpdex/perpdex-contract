@@ -13,7 +13,7 @@ contract TestFundingLibrary {
     MarketStructs.FundingInfo public fundingInfo;
 
     function processFunding(FundingLibrary.ProcessFundingParams memory params) external {
-        int256 fundingRateX96 = FundingLibrary.processFunding(fundingInfo, params);
+        (int256 fundingRateX96, , ) = FundingLibrary.processFunding(fundingInfo, params);
         emit ProcessFundingResult(fundingRateX96);
     }
 
