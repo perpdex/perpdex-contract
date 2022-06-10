@@ -80,25 +80,4 @@ library PriceLimitLibrary {
         updated.referencePrice = price;
         updated.referenceTimestamp = currentTimestamp;
     }
-
-    function isPriceLimitNeeded(
-        uint256 referencePrice,
-        uint256 priceBefore,
-        uint256 priceAfter
-    ) internal pure returns (bool) {
-        if (referencePrice == priceAfter) return false;
-        if (referencePrice < priceAfter) return priceBefore < priceAfter;
-        return priceBefore > priceAfter;
-    }
-
-    function isWithinPriceLimit(
-        uint256 referencePrice,
-        uint256 price,
-        uint24 priceLimitRatio
-    ) internal pure returns (bool) {
-        uint256 maxChange = referencePrice.mulRatio(priceLimitRatio);
-        uint256 upperBound = referencePrice.add(maxChange);
-        uint256 lowerBound = referencePrice.sub(maxChange);
-        return lowerBound <= price && price <= upperBound;
-    }
 }

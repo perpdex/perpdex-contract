@@ -18,12 +18,4 @@ contract TestPriceLimitLibrary {
     function setPriceLimitConfig(address market, MarketStructs.PriceLimitConfig memory value) external {
         priceLimitConfig = value;
     }
-
-    function isWithinPriceLimit(
-        uint256 referencePrice,
-        uint256 price,
-        uint24 priceLimitRatio
-    ) external pure returns (bool) {
-        return PriceLimitLibrary.isWithinPriceLimit(referencePrice, price, priceLimitRatio);
-    }
 }
