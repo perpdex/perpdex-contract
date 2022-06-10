@@ -157,14 +157,14 @@ library TakerLibrary {
     function previewOpenPosition(
         PerpdexStructs.AccountInfo storage accountInfo,
         PreviewOpenPositionParams memory params
-    ) internal view returns (int256 base, int256 quote) {
+    ) internal view returns (uint256 oppositeAmount) {
         bool isLiquidation = !AccountLibrary.hasEnoughMaintenanceMargin(accountInfo, params.mmRatio);
 
         if (!params.isSelf) {
             require(isLiquidation, "TL_OPD: enough mm");
         }
 
-        uint256 oppositeAmount;
+        oppositeAmount;
         if (params.protocolFeeRatio == 0) {
             oppositeAmount = IPerpdexMarket(params.market).previewSwap(
                 params.isBaseToQuote,
@@ -183,12 +183,6 @@ library TakerLibrary {
             );
         }
         validateSlippage(params.isExactInput, oppositeAmount, params.oppositeAmountBound);
-        (base, quote) = swapResponseToBaseQuote(
-            params.isBaseToQuote,
-            params.isExactInput,
-            params.amount,
-            oppositeAmount
-        );
     }
 
     // ignore initial margin check and close only check when liquidation

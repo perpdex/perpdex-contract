@@ -608,11 +608,27 @@ describe("PerpdexExchange openPosition", () => {
                         })
 
                         if (test.revertedWithDry === void 0) {
-                            const resDry = await call
-                            expect(resDry[0]).to.eq(
-                                test.afterTakerInfo.baseBalanceShare - test.takerInfo.baseBalanceShare,
-                            )
-                            expect(resDry[1]).to.eq(
+                            const oppositeAmount = await call
+                            let base, quote
+                            if (test.isExactInput) {
+                                if (test.isBaseToQuote) {
+                                    base = -test.amount
+                                    quote = oppositeAmount
+                                } else {
+                                    base = oppositeAmount
+                                    quote = -test.amount
+                                }
+                            } else {
+                                if (test.isBaseToQuote) {
+                                    base = oppositeAmount.mul(-1)
+                                    quote = test.amount
+                                } else {
+                                    base = test.amount
+                                    quote = oppositeAmount.mul(-1)
+                                }
+                            }
+                            expect(base).to.eq(test.afterTakerInfo.baseBalanceShare - test.takerInfo.baseBalanceShare)
+                            expect(quote).to.eq(
                                 test.afterTakerInfo.quoteBalance -
                                     test.takerInfo.quoteBalance +
                                     test.afterCollateralBalance -

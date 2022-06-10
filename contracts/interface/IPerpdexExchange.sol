@@ -131,7 +131,7 @@ interface IPerpdexExchange {
 
     function removeLiquidity(RemoveLiquidityParams calldata params) external returns (uint256 base, uint256 quote);
 
-    function openPosition(OpenPositionParams calldata params) external returns (int256 base, int256 quote);
+    function openPosition(OpenPositionParams calldata params) external returns (uint256 oppositeAmount);
 
     // setters
 
@@ -152,7 +152,7 @@ interface IPerpdexExchange {
     function previewOpenPosition(PreviewOpenPositionParams calldata params)
         external
         view
-        returns (int256 base, int256 quote);
+        returns (uint256 oppositeAmount);
 
     function maxOpenPosition(MaxOpenPositionParams calldata params) external view returns (uint256 amount);
 
