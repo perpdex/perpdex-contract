@@ -15,6 +15,15 @@ contract TestPriceLimitLibrary {
         return PriceLimitLibrary.updateDry(priceLimitInfo, priceLimitConfig, price);
     }
 
+    function priceBound(
+        uint256 referencePrice,
+        uint256 emaPrice,
+        bool isLiquidation,
+        bool isUpperBound
+    ) external view returns (uint256 price) {
+        return PriceLimitLibrary.priceBound(referencePrice, emaPrice, priceLimitConfig, isLiquidation, isUpperBound);
+    }
+
     function setPriceLimitInfo(MarketStructs.PriceLimitInfo memory value) external {
         priceLimitInfo = value;
     }

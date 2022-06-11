@@ -51,33 +51,21 @@ library PriceLimitLibrary {
         updated.referenceTimestamp = currentTimestamp;
     }
 
-    function maxPrice(
+    function priceBound(
         uint256 referencePrice,
         uint256 emaPrice,
         MarketStructs.PriceLimitConfig storage config,
-        bool isLiquidation
+        bool isLiquidation,
+        bool isUpperBound
     ) internal view returns (uint256 price) {
-        uint256 upperBound =
-            referencePrice.add(
-                referencePrice.mulRatio(isLiquidation ? config.liquidationRatio : config.normalOrderRatio)
-            );
-        uint256 upperBoundEma =
-            emaPrice.add(emaPrice.mulRatio(isLiquidation ? config.emaLiquidationRatio : config.emaNormalOrderRatio));
-        return Math.min(upperBound, upperBoundEma);
-    }
+        uint256 referenceRange =
+            referencePrice.mulRatio(isLiquidation ? config.liquidationRatio : config.normalOrderRatio);
+        uint256 emaRange = emaPrice.mulRatio(isLiquidation ? config.emaLiquidationRatio : config.emaNormalOrderRatio);
 
-    function minPrice(
-        uint256 referencePrice,
-        uint256 emaPrice,
-        MarketStructs.PriceLimitConfig storage config,
-        bool isLiquidation
-    ) internal view returns (uint256 price) {
-        uint256 lowerBound =
-            referencePrice.sub(
-                referencePrice.mulRatio(isLiquidation ? config.liquidationRatio : config.normalOrderRatio)
-            );
-        uint256 lowerBoundEma =
-            emaPrice.sub(emaPrice.mulRatio(isLiquidation ? config.emaLiquidationRatio : config.emaNormalOrderRatio));
-        return Math.max(lowerBound, lowerBoundEma);
+        if (isUpperBound) {
+            return Math.min(referencePrice.add(referenceRange), emaPrice.add(emaRange));
+        } else {
+            return Math.max(referencePrice.sub(referenceRange), emaPrice.sub(emaRange));
+        }
     }
 }

@@ -217,6 +217,8 @@ library PoolLibrary {
         return Math.sqrt(b.mul(b).add(cNeg.mul(4))).sub(b).div(2);
     }
 
+    // must not revert
+    // TODO: handle priceBoundX96
     function maxSwap(
         uint256 base,
         uint256 quote,
