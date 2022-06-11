@@ -282,24 +282,14 @@ contract PerpdexMarket is IPerpdexMarket, ReentrancyGuard, Ownable {
         uint256 sharePriceBeforeX96 = getShareMarkPriceX96();
         updated = PriceLimitLibrary.updateDry(priceLimitInfo, priceLimitConfig, sharePriceBeforeX96);
 
-        uint256 sharePriceBound;
-        if (isBaseToQuote) {
-            sharePriceBound = PriceLimitLibrary.minPrice(
+        uint256 sharePriceBound =
+            PriceLimitLibrary.priceBound(
                 updated.referencePrice,
                 updated.emaPrice,
                 priceLimitConfig,
-                isLiquidation
+                isLiquidation,
+                !isBaseToQuote
             );
-            if (sharePriceBound >= sharePriceBeforeX96) return (0, updated);
-        } else {
-            sharePriceBound = PriceLimitLibrary.maxPrice(
-                updated.referencePrice,
-                updated.emaPrice,
-                priceLimitConfig,
-                isLiquidation
-            );
-            if (sharePriceBound <= sharePriceBeforeX96) return (0, updated);
-        }
         amount = PoolLibrary.maxSwap(
             poolInfo.base,
             poolInfo.quote,

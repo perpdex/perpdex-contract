@@ -21,43 +21,13 @@ library PriceLimitLibrary {
         priceLimitInfo.emaPrice = value.emaPrice;
     }
 
-    function maxPrice(
-        uint256 referencePrice,
-        uint256 emaPrice,
-        MarketStructs.PriceLimitConfig storage config,
-        bool isLiquidation
-    ) internal view returns (uint256 price) {
-        uint256 upperBound =
-            referencePrice.add(
-                referencePrice.mulRatio(isLiquidation ? config.liquidationRatio : config.normalOrderRatio)
-            );
-        uint256 upperBoundEma =
-            emaPrice.add(emaPrice.mulRatio(isLiquidation ? config.emaLiquidationRatio : config.emaNormalOrderRatio));
-        return Math.min(upperBound, upperBoundEma);
-    }
-
-    function minPrice(
-        uint256 referencePrice,
-        uint256 emaPrice,
-        MarketStructs.PriceLimitConfig storage config,
-        bool isLiquidation
-    ) internal view returns (uint256 price) {
-        uint256 lowerBound =
-            referencePrice.sub(
-                referencePrice.mulRatio(isLiquidation ? config.liquidationRatio : config.normalOrderRatio)
-            );
-        uint256 lowerBoundEma =
-            emaPrice.sub(emaPrice.mulRatio(isLiquidation ? config.emaLiquidationRatio : config.emaNormalOrderRatio));
-        return Math.max(lowerBound, lowerBoundEma);
-    }
-
     // referenceTimestamp == 0 indicates not updated
     function updateDry(
         MarketStructs.PriceLimitInfo storage priceLimitInfo,
         MarketStructs.PriceLimitConfig storage config,
         uint256 price
     ) internal view returns (MarketStructs.PriceLimitInfo memory updated) {
-        uint256 currentTimestamp = block.number;
+        uint256 currentTimestamp = block.timestamp;
         uint256 refTimestamp = priceLimitInfo.referenceTimestamp;
         if (currentTimestamp <= refTimestamp) {
             updated.referencePrice = priceLimitInfo.referencePrice;
@@ -79,5 +49,23 @@ library PriceLimitLibrary {
 
         updated.referencePrice = price;
         updated.referenceTimestamp = currentTimestamp;
+    }
+
+    function priceBound(
+        uint256 referencePrice,
+        uint256 emaPrice,
+        MarketStructs.PriceLimitConfig storage config,
+        bool isLiquidation,
+        bool isUpperBound
+    ) internal view returns (uint256 price) {
+        uint256 referenceRange =
+            referencePrice.mulRatio(isLiquidation ? config.liquidationRatio : config.normalOrderRatio);
+        uint256 emaRange = emaPrice.mulRatio(isLiquidation ? config.emaLiquidationRatio : config.emaNormalOrderRatio);
+
+        if (isUpperBound) {
+            return Math.min(referencePrice.add(referenceRange), emaPrice.add(emaRange));
+        } else {
+            return Math.max(referencePrice.sub(referenceRange), emaPrice.sub(emaRange));
+        }
     }
 }

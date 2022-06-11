@@ -42,13 +42,11 @@ describe("PerpdexMarket funding", () => {
             await priceFeed.mock.getPrice.returns(1)
 
             const currentTimestamp = await getTimestamp()
-
             await market.setFundingInfo({
                 prevIndexPriceBase: BigNumber.from(10).pow(18),
                 prevIndexPriceQuote: 1,
                 prevIndexPriceTimestamp: currentTimestamp + 1000,
             })
-
             await setNextTimestamp(currentTimestamp + 1000 + 60)
         })
 
@@ -102,13 +100,11 @@ describe("PerpdexMarket funding", () => {
             await priceFeed.mock.getPrice.returns(BigNumber.from(10).pow(18).mul(2))
 
             const currentTimestamp = await getTimestamp()
-
             await market.setFundingInfo({
                 prevIndexPriceBase: BigNumber.from(10).pow(18),
                 prevIndexPriceQuote: 1,
                 prevIndexPriceTimestamp: currentTimestamp + 1000,
             })
-
             await setNextTimestamp(currentTimestamp + 1000 + 60)
         })
 
@@ -128,6 +124,104 @@ describe("PerpdexMarket funding", () => {
 
             const poolInfo = await market.poolInfo()
             expect(poolInfo.cumBasePerLiquidityX96).to.eq(cumBasePerLiquidityX96)
+        })
+    })
+
+    describe("price not changed. share price changed.", () => {
+        let priceBefore, sharePriceBefore
+
+        beforeEach(async () => {
+            // sufficiently large pool to minimize swap impact
+            await market.connect(exchange).addLiquidity(Q96, Q96)
+            await market.connect(owner).setFundingMaxPremiumRatio(1e4)
+
+            priceBefore = await market.getMarkPriceX96()
+            sharePriceBefore = await market.getShareMarkPriceX96()
+
+            const currentTimestamp = await getTimestamp()
+            await market.setFundingInfo({
+                prevIndexPriceBase: BigNumber.from(10).pow(18),
+                prevIndexPriceQuote: 1,
+                prevIndexPriceTimestamp: currentTimestamp + 1000,
+            })
+            await setNextTimestamp(currentTimestamp + 1000 + 3600)
+        })
+
+        it("positive funding", async () => {
+            await priceFeed.mock.getPrice.returns(BigNumber.from(10).pow(18).div(2))
+
+            await expect(market.connect(exchange).swap(false, true, 2, false)).to.emit(market, "FundingPaid")
+
+            const priceAfter = await market.getMarkPriceX96()
+            const priceRange = priceBefore.div(BigNumber.from(10).pow(18))
+            expect(priceAfter).to.be.gt(priceBefore.sub(priceRange))
+            expect(priceAfter).to.be.lt(priceBefore.add(priceRange))
+
+            const sharePriceAfter = await market.getShareMarkPriceX96()
+            expect(sharePriceAfter).to.be.gt(sharePriceBefore.sub(sharePriceBefore.mul(11).div(1000)))
+            expect(sharePriceAfter).to.be.lt(sharePriceBefore.sub(sharePriceBefore.mul(9).div(1000)))
+        })
+
+        it("negative funding", async () => {
+            await priceFeed.mock.getPrice.returns(BigNumber.from(10).pow(18).mul(2))
+
+            await expect(market.connect(exchange).swap(false, true, 2, false)).to.emit(market, "FundingPaid")
+
+            const priceAfter = await market.getMarkPriceX96()
+            const priceError = priceBefore.div(BigNumber.from(10).pow(18))
+            expect(priceAfter).to.be.gt(priceBefore.sub(priceError))
+            expect(priceAfter).to.be.lt(priceBefore.add(priceError))
+
+            const sharePriceAfter = await market.getShareMarkPriceX96()
+            expect(sharePriceAfter).to.be.gt(sharePriceBefore.add(sharePriceBefore.mul(9).div(1000)))
+            expect(sharePriceAfter).to.be.lt(sharePriceBefore.add(sharePriceBefore.mul(11).div(1000)))
+        })
+    })
+
+    describe("total pool assets not changed", () => {
+        const totalBase = poolInfo => {
+            return poolInfo.base.add(poolInfo.totalLiquidity.mul(poolInfo.cumBasePerLiquidityX96).div(Q96))
+        }
+        const totalQuote = poolInfo => {
+            return poolInfo.quote.add(poolInfo.totalLiquidity.mul(poolInfo.cumQuotePerLiquidityX96).div(Q96))
+        }
+
+        let poolInfoBefore
+
+        beforeEach(async () => {
+            // sufficiently large pool to minimize swap impact
+            await market.connect(exchange).addLiquidity(Q96, Q96)
+            await market.connect(owner).setFundingMaxPremiumRatio(1e4)
+
+            poolInfoBefore = await market.poolInfo()
+
+            const currentTimestamp = await getTimestamp()
+            await market.setFundingInfo({
+                prevIndexPriceBase: BigNumber.from(10).pow(18),
+                prevIndexPriceQuote: 1,
+                prevIndexPriceTimestamp: currentTimestamp + 1000,
+            })
+            await setNextTimestamp(currentTimestamp + 1000 + 3600)
+        })
+
+        it("positive funding", async () => {
+            await priceFeed.mock.getPrice.returns(BigNumber.from(10).pow(18).div(2))
+
+            await expect(market.connect(exchange).swap(false, true, 2, false)).to.emit(market, "FundingPaid")
+
+            const poolInfoAfter = await market.poolInfo()
+            expect(totalBase(poolInfoAfter)).to.be.closeTo(totalBase(poolInfoBefore), 100)
+            expect(totalQuote(poolInfoAfter)).to.be.closeTo(totalQuote(poolInfoBefore), 100)
+        })
+
+        it("negative funding", async () => {
+            await priceFeed.mock.getPrice.returns(BigNumber.from(10).pow(18).mul(2))
+
+            await expect(market.connect(exchange).swap(false, true, 2, false)).to.emit(market, "FundingPaid")
+
+            const poolInfoAfter = await market.poolInfo()
+            expect(totalBase(poolInfoAfter)).to.be.closeTo(totalBase(poolInfoBefore), 100)
+            expect(totalQuote(poolInfoAfter)).to.be.closeTo(totalQuote(poolInfoBefore), 100)
         })
     })
 })

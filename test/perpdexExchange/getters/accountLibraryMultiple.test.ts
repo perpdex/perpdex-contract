@@ -186,6 +186,165 @@ describe("PerpdexExchange getters", () => {
                 hasEnoughMaintenanceMargin: true,
                 hasEnoughInitialMargin: true,
             },
+            {
+                title: "not enough im and liquidation free",
+                collateralBalance: 0,
+                takerInfos: [
+                    {
+                        baseBalanceShare: 25,
+                        quoteBalance: 0,
+                    },
+                    {
+                        baseBalanceShare: 30,
+                        quoteBalance: 0,
+                    },
+                ],
+                makerInfos: [
+                    {
+                        liquidity: 0,
+                        cumBaseSharePerLiquidityX96: 0,
+                        cumQuotePerLiquidityX96: 0,
+                    },
+                    {
+                        liquidity: 0,
+                        cumBaseSharePerLiquidityX96: 0,
+                        cumQuotePerLiquidityX96: 0,
+                    },
+                ],
+                poolInfos: [
+                    {
+                        base: 10000,
+                        quote: 40000,
+                        totalLiquidity: 20000,
+                        cumBasePerLiquidityX96: 0,
+                        cumQuotePerLiquidityX96: 0,
+                        baseBalancePerShareX96: Q96,
+                    },
+                    {
+                        base: 10000,
+                        quote: 40000,
+                        totalLiquidity: 20000,
+                        cumBasePerLiquidityX96: 0,
+                        cumQuotePerLiquidityX96: 0,
+                        baseBalancePerShareX96: Q96,
+                    },
+                ],
+                totalAccountValue: 220,
+                positionShares: [25, 30],
+                positionNotionals: [100, 120],
+                totalPositionNotional: 220,
+                openPositionShares: [25, 30],
+                openPositionNotionals: [100, 120],
+                totalOpenPositionNotional: 220,
+                hasEnoughMaintenanceMargin: true,
+                hasEnoughInitialMargin: true,
+            },
+            {
+                title: "not enough im and not liquidation free negative base",
+                collateralBalance: 0,
+                takerInfos: [
+                    {
+                        baseBalanceShare: 25,
+                        quoteBalance: 0,
+                    },
+                    {
+                        baseBalanceShare: -1,
+                        quoteBalance: 0,
+                    },
+                ],
+                makerInfos: [
+                    {
+                        liquidity: 0,
+                        cumBaseSharePerLiquidityX96: 0,
+                        cumQuotePerLiquidityX96: 0,
+                    },
+                    {
+                        liquidity: 0,
+                        cumBaseSharePerLiquidityX96: 0,
+                        cumQuotePerLiquidityX96: 0,
+                    },
+                ],
+                poolInfos: [
+                    {
+                        base: 10000,
+                        quote: 40000,
+                        totalLiquidity: 20000,
+                        cumBasePerLiquidityX96: 0,
+                        cumQuotePerLiquidityX96: 0,
+                        baseBalancePerShareX96: Q96,
+                    },
+                    {
+                        base: 10000,
+                        quote: 40000,
+                        totalLiquidity: 20000,
+                        cumBasePerLiquidityX96: 0,
+                        cumQuotePerLiquidityX96: 0,
+                        baseBalancePerShareX96: Q96,
+                    },
+                ],
+                totalAccountValue: 96,
+                positionShares: [25, -1],
+                positionNotionals: [100, -4],
+                totalPositionNotional: 104,
+                openPositionShares: [25, 1],
+                openPositionNotionals: [100, 4],
+                totalOpenPositionNotional: 104,
+                hasEnoughMaintenanceMargin: true,
+                hasEnoughInitialMargin: false,
+            },
+            {
+                title: "not enough im and not liquidation free negative quote",
+                collateralBalance: 0,
+                takerInfos: [
+                    {
+                        baseBalanceShare: 25,
+                        quoteBalance: 0,
+                    },
+                    {
+                        baseBalanceShare: 30,
+                        quoteBalance: -1,
+                    },
+                ],
+                makerInfos: [
+                    {
+                        liquidity: 0,
+                        cumBaseSharePerLiquidityX96: 0,
+                        cumQuotePerLiquidityX96: 0,
+                    },
+                    {
+                        liquidity: 0,
+                        cumBaseSharePerLiquidityX96: 0,
+                        cumQuotePerLiquidityX96: 0,
+                    },
+                ],
+                poolInfos: [
+                    {
+                        base: 10000,
+                        quote: 40000,
+                        totalLiquidity: 20000,
+                        cumBasePerLiquidityX96: 0,
+                        cumQuotePerLiquidityX96: 0,
+                        baseBalancePerShareX96: Q96,
+                    },
+                    {
+                        base: 10000,
+                        quote: 40000,
+                        totalLiquidity: 20000,
+                        cumBasePerLiquidityX96: 0,
+                        cumQuotePerLiquidityX96: 0,
+                        baseBalancePerShareX96: Q96,
+                    },
+                ],
+                totalAccountValue: 219,
+                positionShares: [25, 30],
+                positionNotionals: [100, 120],
+                totalPositionNotional: 220,
+                openPositionShares: [25, 30],
+                openPositionNotionals: [100, 120],
+                totalOpenPositionNotional: 220,
+                hasEnoughMaintenanceMargin: true,
+                hasEnoughInitialMargin: false,
+            },
         ].forEach(test => {
             it(test.title, async () => {
                 await exchange.connect(owner).setImRatio(10e4)

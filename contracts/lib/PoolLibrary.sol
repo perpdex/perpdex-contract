@@ -217,6 +217,7 @@ library PoolLibrary {
         return Math.sqrt(b.mul(b).add(cNeg.mul(4))).sub(b).div(2);
     }
 
+    // must not revert
     function maxSwap(
         uint256 base,
         uint256 quote,
@@ -230,14 +231,18 @@ library PoolLibrary {
 
         if (isBaseToQuote) {
             uint256 kDivP = FullMath.mulDiv(k, FixedPoint96.Q96, priceBoundX96);
+            uint256 baseSqr = base.mul(base);
+            if (kDivP <= baseSqr) return 0;
+            uint256 cNeg = kDivP.sub(baseSqr);
             uint256 b = base.add(base.mulRatio(oneSubFeeRatio));
-            uint256 cNeg = kDivP.sub(base.mul(base));
             output = _solveQuadratic(b.divRatio(oneSubFeeRatio), cNeg.divRatio(oneSubFeeRatio));
         } else {
             // https://www.wolframalpha.com/input?i=%28x+%2B+a%29+*+%28x+%2B+a+*+%281+-+f%29%29+%3D+kp+solve+a
             uint256 kp = FullMath.mulDiv(k, priceBoundX96, FixedPoint96.Q96);
+            uint256 quoteSqr = quote.mul(quote);
+            if (kp <= quoteSqr) return 0;
+            uint256 cNeg = kp.sub(quoteSqr);
             uint256 b = quote.add(quote.mulRatio(oneSubFeeRatio));
-            uint256 cNeg = kp.sub(quote.mul(quote));
             output = _solveQuadratic(b.divRatio(oneSubFeeRatio), cNeg.divRatio(oneSubFeeRatio));
         }
         if (!isExactInput) {
@@ -269,12 +274,12 @@ library PoolLibrary {
         uint256 cumBasePerLiquidityX96,
         uint256 cumQuotePerLiquidityX96
     ) internal pure returns (int256, int256) {
-        int256 BasePerLiquidityX96 = poolCumBasePerLiquidityX96.toInt256().sub(cumBasePerLiquidityX96.toInt256());
-        int256 QuotePerLiquidityX96 = poolCumQuotePerLiquidityX96.toInt256().sub(cumQuotePerLiquidityX96.toInt256());
+        int256 basePerLiquidityX96 = poolCumBasePerLiquidityX96.toInt256().sub(cumBasePerLiquidityX96.toInt256());
+        int256 quotePerLiquidityX96 = poolCumQuotePerLiquidityX96.toInt256().sub(cumQuotePerLiquidityX96.toInt256());
 
         return (
-            liquidity.toInt256().mulDiv(BasePerLiquidityX96, FixedPoint96.Q96),
-            liquidity.toInt256().mulDiv(QuotePerLiquidityX96, FixedPoint96.Q96)
+            liquidity.toInt256().mulDiv(basePerLiquidityX96, FixedPoint96.Q96),
+            liquidity.toInt256().mulDiv(quotePerLiquidityX96, FixedPoint96.Q96)
         );
     }
 }

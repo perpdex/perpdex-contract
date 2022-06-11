@@ -1,73 +1,56 @@
-// import { expect } from "chai"
-// import { waffle } from "hardhat"
-// import { TestPriceLimitLibrary } from "../../typechain"
-// import { createPriceLimitLibraryFixture } from "./fixtures"
-// import { getTimestamp, setNextTimestamp } from "../helper/time"
-//
-// describe("PriceLimitLibrary update", () => {
-//     let loadFixture = waffle.createFixtureLoader(waffle.provider.getWallets())
-//     let fixture
-//
-//     let library: TestPriceLimitLibrary
-//
-//     beforeEach(async () => {
-//         fixture = await loadFixture(createPriceLimitLibraryFixture())
-//         library = fixture.priceLimitLibrary
-//     })
-//
-//     describe("update", () => {
-//         ;[
-//             {
-//                 title: "initial",
-//                 referencePrice: 0,
-//                 referenceTimestamp: 0,
-//                 price: 100,
-//                 afterReferencePrice: 100,
-//                 afterReferenceTimestamp: 1,
-//             },
-//             {
-//                 title: "next",
-//                 referencePrice: 1,
-//                 referenceTimestamp: -1,
-//                 price: 2,
-//                 afterReferencePrice: 2,
-//                 afterReferenceTimestamp: 0,
-//             },
-//             {
-//                 title: "same",
-//                 referencePrice: 1,
-//                 referenceTimestamp: 0,
-//                 price: 2,
-//                 afterReferencePrice: 1,
-//                 afterReferenceTimestamp: 0,
-//             },
-//             {
-//                 title: "before",
-//                 referencePrice: 1,
-//                 referenceTimestamp: 1,
-//                 price: 2,
-//                 afterReferencePrice: 1,
-//                 afterReferenceTimestamp: 1,
-//             },
-//         ].forEach(test => {
-//             it(test.title, async () => {
-//                 const nextTimestamp = (await getTimestamp()) + 1000
-//                 await setNextTimestamp(nextTimestamp)
-//
-//                 await library.update(
-//                     {
-//                         referencePrice: test.referencePrice,
-//                         referenceTimestamp: nextTimestamp + test.referenceTimestamp,
-//                         emaPrice: test.referencePrice,
-//                     },
-//                     0,
-//                     test.price,
-//                 )
-//
-//                 const res = await library.priceLimitInfo()
-//                 expect(res.referencePrice).to.eq(test.afterReferencePrice)
-//                 expect(res.referenceTimestamp).to.eq(nextTimestamp + test.afterReferenceTimestamp)
-//             })
-//         })
-//     })
-// })
+import { expect } from "chai"
+import { waffle } from "hardhat"
+import { TestPriceLimitLibrary } from "../../typechain"
+import { createPriceLimitLibraryFixture } from "./fixtures"
+
+describe("PriceLimitLibrary update", () => {
+    let loadFixture = waffle.createFixtureLoader(waffle.provider.getWallets())
+    let fixture
+
+    let library: TestPriceLimitLibrary
+
+    beforeEach(async () => {
+        fixture = await loadFixture(createPriceLimitLibraryFixture())
+        library = fixture.priceLimitLibrary
+    })
+
+    describe("reference time 0", () => {
+        it("not update", async () => {
+            await library.setPriceLimitInfo({
+                referencePrice: 1,
+                referenceTimestamp: 2,
+                emaPrice: 3,
+            })
+            await library.update({
+                referencePrice: 10,
+                referenceTimestamp: 0,
+                emaPrice: 30,
+            })
+
+            const updated = await library.priceLimitInfo()
+            expect(updated.referencePrice).to.eq(1)
+            expect(updated.referenceTimestamp).to.eq(2)
+            expect(updated.emaPrice).to.eq(3)
+        })
+    })
+
+    describe("reference time > 0", () => {
+        it("update", async () => {
+            await library.setPriceLimitInfo({
+                referencePrice: 1,
+                referenceTimestamp: 2,
+                emaPrice: 3,
+            })
+            await library.update({
+                referencePrice: 10,
+                referenceTimestamp: 3,
+                emaPrice: 30,
+            })
+
+            const updated = await library.priceLimitInfo()
+            expect(updated.referencePrice).to.eq(10)
+            expect(updated.referenceTimestamp).to.eq(3)
+            expect(updated.emaPrice).to.eq(30)
+        })
+    })
+})
