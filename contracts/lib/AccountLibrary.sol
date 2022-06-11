@@ -7,7 +7,7 @@ import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
 import { SignedSafeMath } from "@openzeppelin/contracts/math/SignedSafeMath.sol";
 import { FullMath } from "@uniswap/v3-core/contracts/libraries/FullMath.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/SafeCast.sol";
-import { IPerpdexMarket } from "../interface/IPerpdexMarket.sol";
+import { IPerpdexMarketMinimum } from "../interface/IPerpdexMarketMinimum.sol";
 import { PerpdexStructs } from "./PerpdexStructs.sol";
 
 // https://help.ftx.com/hc/en-us/articles/360024780511-Complete-Futures-Specs
@@ -52,24 +52,24 @@ library AccountLibrary {
             address market = markets[i];
 
             PerpdexStructs.MakerInfo storage makerInfo = accountInfo.makerInfos[market];
-            int256 baseShare = accountInfo.takerInfos[market].baseBalanceShare.sub(makerInfo.baseDebtShare);
-            int256 quoteBalance = accountInfo.takerInfos[market].quoteBalance.sub(makerInfo.quoteDebt);
+            int256 baseShare = accountInfo.takerInfos[market].baseBalanceShare;
+            int256 quoteBalance = accountInfo.takerInfos[market].quoteBalance;
 
             if (makerInfo.liquidity != 0) {
                 (uint256 poolBaseShare, uint256 poolQuoteBalance) =
-                    IPerpdexMarket(market).getLiquidityValue(makerInfo.liquidity);
-                (uint256 deleveragedBaseShare, uint256 deleveragedQuoteBalance) =
-                    IPerpdexMarket(market).getLiquidityDeleveraged(
+                    IPerpdexMarketMinimum(market).getLiquidityValue(makerInfo.liquidity);
+                (int256 deleveragedBaseShare, int256 deleveragedQuoteBalance) =
+                    IPerpdexMarketMinimum(market).getLiquidityDeleveraged(
                         makerInfo.liquidity,
                         makerInfo.cumBaseSharePerLiquidityX96,
                         makerInfo.cumQuotePerLiquidityX96
                     );
-                baseShare = baseShare.add(poolBaseShare.add(deleveragedBaseShare).toInt256());
-                quoteBalance = quoteBalance.add(poolQuoteBalance.add(deleveragedQuoteBalance).toInt256());
+                baseShare = baseShare.add(poolBaseShare.toInt256()).add(deleveragedBaseShare);
+                quoteBalance = quoteBalance.add(poolQuoteBalance.toInt256()).add(deleveragedQuoteBalance);
             }
 
             if (baseShare != 0) {
-                uint256 sharePriceX96 = IPerpdexMarket(market).getShareMarkPriceX96();
+                uint256 sharePriceX96 = IPerpdexMarketMinimum(market).getShareMarkPriceX96();
                 accountValue = accountValue.add(baseShare.mulDiv(sharePriceX96.toInt256(), FixedPoint96.Q96));
             }
             accountValue = accountValue.add(quoteBalance);
@@ -83,16 +83,16 @@ library AccountLibrary {
         returns (int256 baseShare)
     {
         PerpdexStructs.MakerInfo storage makerInfo = accountInfo.makerInfos[market];
-        baseShare = accountInfo.takerInfos[market].baseBalanceShare.sub(makerInfo.baseDebtShare);
+        baseShare = accountInfo.takerInfos[market].baseBalanceShare;
         if (makerInfo.liquidity != 0) {
-            (uint256 poolBaseShare, ) = IPerpdexMarket(market).getLiquidityValue(makerInfo.liquidity);
-            (uint256 deleveragedBaseShare, ) =
-                IPerpdexMarket(market).getLiquidityDeleveraged(
+            (uint256 poolBaseShare, ) = IPerpdexMarketMinimum(market).getLiquidityValue(makerInfo.liquidity);
+            (int256 deleveragedBaseShare, ) =
+                IPerpdexMarketMinimum(market).getLiquidityDeleveraged(
                     makerInfo.liquidity,
                     makerInfo.cumBaseSharePerLiquidityX96,
                     makerInfo.cumQuotePerLiquidityX96
                 );
-            baseShare = baseShare.add(poolBaseShare.add(deleveragedBaseShare).toInt256());
+            baseShare = baseShare.add(poolBaseShare.toInt256()).add(deleveragedBaseShare);
         }
     }
 
@@ -103,7 +103,7 @@ library AccountLibrary {
     {
         int256 positionShare = getPositionShare(accountInfo, market);
         if (positionShare == 0) return 0;
-        uint256 sharePriceX96 = IPerpdexMarket(market).getShareMarkPriceX96();
+        uint256 sharePriceX96 = IPerpdexMarketMinimum(market).getShareMarkPriceX96();
         return positionShare.mulDiv(sharePriceX96.toInt256(), FixedPoint96.Q96);
     }
 
@@ -126,7 +126,7 @@ library AccountLibrary {
         PerpdexStructs.MakerInfo storage makerInfo = accountInfo.makerInfos[market];
         result = getPositionShare(accountInfo, market).abs();
         if (makerInfo.liquidity != 0) {
-            (uint256 poolBaseShare, ) = IPerpdexMarket(market).getLiquidityValue(makerInfo.liquidity);
+            (uint256 poolBaseShare, ) = IPerpdexMarketMinimum(market).getLiquidityValue(makerInfo.liquidity);
             result = result.add(poolBaseShare);
         }
     }
@@ -138,7 +138,7 @@ library AccountLibrary {
     {
         uint256 positionShare = getOpenPositionShare(accountInfo, market);
         if (positionShare == 0) return 0;
-        uint256 sharePriceX96 = IPerpdexMarket(market).getShareMarkPriceX96();
+        uint256 sharePriceX96 = IPerpdexMarketMinimum(market).getShareMarkPriceX96();
         return FullMath.mulDiv(positionShare, sharePriceX96, FixedPoint96.Q96);
     }
 
@@ -189,18 +189,18 @@ library AccountLibrary {
             address market = markets[i];
 
             PerpdexStructs.MakerInfo storage makerInfo = accountInfo.makerInfos[market];
-            int256 baseShare = accountInfo.takerInfos[market].baseBalanceShare.sub(makerInfo.baseDebtShare);
-            quoteBalance = quoteBalance.add(accountInfo.takerInfos[market].quoteBalance.sub(makerInfo.quoteDebt));
+            int256 baseShare = accountInfo.takerInfos[market].baseBalanceShare;
+            quoteBalance = quoteBalance.add(accountInfo.takerInfos[market].quoteBalance);
 
             if (makerInfo.liquidity != 0) {
-                (uint256 deleveragedBaseShare, uint256 deleveragedQuoteBalance) =
-                    IPerpdexMarket(market).getLiquidityDeleveraged(
+                (int256 deleveragedBaseShare, int256 deleveragedQuoteBalance) =
+                    IPerpdexMarketMinimum(market).getLiquidityDeleveraged(
                         makerInfo.liquidity,
                         makerInfo.cumBaseSharePerLiquidityX96,
                         makerInfo.cumQuotePerLiquidityX96
                     );
-                baseShare = baseShare.add(deleveragedBaseShare.toInt256());
-                quoteBalance = quoteBalance.add(deleveragedQuoteBalance.toInt256());
+                baseShare = baseShare.add(deleveragedBaseShare);
+                quoteBalance = quoteBalance.add(deleveragedQuoteBalance);
             }
 
             if (baseShare < 0) return false;

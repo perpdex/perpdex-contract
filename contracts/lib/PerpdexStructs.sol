@@ -8,8 +8,6 @@ library PerpdexStructs {
     }
 
     struct MakerInfo {
-        int256 baseDebtShare;
-        int256 quoteDebt;
         uint256 liquidity;
         uint256 cumBaseSharePerLiquidityX96;
         uint256 cumQuotePerLiquidityX96;

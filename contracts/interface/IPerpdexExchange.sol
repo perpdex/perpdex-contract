@@ -75,8 +75,6 @@ interface IPerpdexExchange {
         uint256 base,
         uint256 quote,
         uint256 liquidity,
-        uint256 cumBasePerLiquidityX96,
-        uint256 cumQuotePerLiquidityX96,
         int256 takerBase,
         int256 takerQuote,
         int256 realizedPnl,

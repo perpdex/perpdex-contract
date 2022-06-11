@@ -3,6 +3,8 @@ import { waffle } from "hardhat"
 import { TestPerpdexExchange, TestPerpdexMarket } from "../../typechain"
 import { createPerpdexExchangeFixture } from "./fixtures"
 import { BigNumber, Wallet } from "ethers"
+import { getTimestamp, setNextTimestamp } from "../helper/time"
+import { MockContract } from "ethereum-waffle"
 
 describe("PerpdexExchange removeLiquidity", () => {
     let loadFixture = waffle.createFixtureLoader(waffle.provider.getWallets())
@@ -13,6 +15,7 @@ describe("PerpdexExchange removeLiquidity", () => {
     let owner: Wallet
     let alice: Wallet
     let bob: Wallet
+    let priceFeed: MockContract
 
     const Q96 = BigNumber.from(2).pow(96)
     const deadline = Q96
@@ -24,6 +27,7 @@ describe("PerpdexExchange removeLiquidity", () => {
         owner = fixture.owner
         alice = fixture.alice
         bob = fixture.bob
+        priceFeed = fixture.priceFeed
 
         await exchange.connect(owner).setImRatio(10e4)
         await exchange.connect(owner).setMmRatio(5e4)
@@ -63,11 +67,9 @@ describe("PerpdexExchange removeLiquidity", () => {
                     quoteBalance: 0,
                 },
                 makerInfo: {
-                    baseDebtShare: 50,
-                    quoteDebt: 50,
                     liquidity: 100,
-                    cumBaseSharePerLiquidityX96: 0,
-                    cumQuotePerLiquidityX96: 0,
+                    cumBaseSharePerLiquidityX96: Q96.div(2), // debt 50
+                    cumQuotePerLiquidityX96: Q96.div(2), // debt 50
                 },
                 outputBase: 50,
                 outputQuote: 50,
@@ -79,11 +81,9 @@ describe("PerpdexExchange removeLiquidity", () => {
                     quoteBalance: -25,
                 },
                 afterMakerInfo: {
-                    baseDebtShare: 25,
-                    quoteDebt: 25,
                     liquidity: 50,
-                    cumBaseSharePerLiquidityX96: 0,
-                    cumQuotePerLiquidityX96: 0,
+                    cumBaseSharePerLiquidityX96: Q96.div(2), // debt 25
+                    cumQuotePerLiquidityX96: Q96.div(2), // debt 25
                 },
             },
             {
@@ -97,8 +97,6 @@ describe("PerpdexExchange removeLiquidity", () => {
                     quoteBalance: 0,
                 },
                 makerInfo: {
-                    baseDebtShare: 0,
-                    quoteDebt: 0,
                     liquidity: 2,
                     cumBaseSharePerLiquidityX96: 0,
                     cumQuotePerLiquidityX96: 0,
@@ -121,14 +119,51 @@ describe("PerpdexExchange removeLiquidity", () => {
                     quoteBalance: -11,
                 },
                 afterMakerInfo: {
-                    baseDebtShare: -10,
-                    quoteDebt: -20,
                     liquidity: 1,
-                    cumBaseSharePerLiquidityX96: Q96.mul(10),
-                    cumQuotePerLiquidityX96: Q96.mul(20),
+                    cumBaseSharePerLiquidityX96: 0, // debt -10
+                    cumQuotePerLiquidityX96: 0, // debt -20
                 },
-                cumBaseSharePerLiquidityX96: Q96.mul(10),
-                cumQuotePerLiquidityX96: Q96.mul(20),
+            },
+            {
+                title: "deleverage. funding not affect cumPerLiquidity calc",
+                liquidity: 1,
+                minBase: 0,
+                minQuote: 0,
+                collateralBalance: 100,
+                funding: true,
+                takerInfo: {
+                    baseBalanceShare: 0,
+                    quoteBalance: 0,
+                },
+                makerInfo: {
+                    liquidity: 2,
+                    cumBaseSharePerLiquidityX96: 0,
+                    cumQuotePerLiquidityX96: 0,
+                },
+                poolInfo: {
+                    base: 10000,
+                    quote: 10000,
+                    totalLiquidity: 10000,
+                    cumBasePerLiquidityX96: Q96.mul(10),
+                    cumQuotePerLiquidityX96: Q96.mul(20),
+                    baseBalancePerShareX96: Q96,
+                },
+                outputBase: 1,
+                outputQuote: 1,
+                outputTakerBase: 11,
+                outputTakerQuote: 21,
+                afterCollateralBalance: 132,
+                afterTakerInfo: {
+                    baseBalanceShare: 11,
+                    quoteBalance: -11,
+                },
+                afterMakerInfo: {
+                    liquidity: 1,
+                    cumBaseSharePerLiquidityX96: 0, // debt -10
+                    cumQuotePerLiquidityX96: 0, // debt -20
+                },
+                baseBalancePerShareX96: BigNumber.from("71305346262837903834189555303"),
+                sharePrice: BigNumber.from("71312477510588962730462601562"),
             },
             {
                 title: "minBase condition",
@@ -141,8 +176,6 @@ describe("PerpdexExchange removeLiquidity", () => {
                     quoteBalance: 0,
                 },
                 makerInfo: {
-                    baseDebtShare: 0,
-                    quoteDebt: 0,
                     liquidity: 100,
                     cumBaseSharePerLiquidityX96: 0,
                     cumQuotePerLiquidityX96: 0,
@@ -160,8 +193,6 @@ describe("PerpdexExchange removeLiquidity", () => {
                     quoteBalance: 0,
                 },
                 makerInfo: {
-                    baseDebtShare: 0,
-                    quoteDebt: 0,
                     liquidity: 100,
                     cumBaseSharePerLiquidityX96: 0,
                     cumQuotePerLiquidityX96: 0,
@@ -179,11 +210,9 @@ describe("PerpdexExchange removeLiquidity", () => {
                     quoteBalance: 0,
                 },
                 makerInfo: {
-                    baseDebtShare: 100,
-                    quoteDebt: 100,
                     liquidity: 100,
-                    cumBaseSharePerLiquidityX96: 0,
-                    cumQuotePerLiquidityX96: 0,
+                    cumBaseSharePerLiquidityX96: Q96, // debt 100
+                    cumQuotePerLiquidityX96: Q96, // debt 100
                 },
                 isMarketAllowed: false,
                 revertedWith: "PE_CMA: market not allowed",
@@ -200,11 +229,9 @@ describe("PerpdexExchange removeLiquidity", () => {
                     quoteBalance: 0,
                 },
                 makerInfo: {
-                    baseDebtShare: 0,
-                    quoteDebt: 200,
                     liquidity: 100,
                     cumBaseSharePerLiquidityX96: 0,
-                    cumQuotePerLiquidityX96: 0,
+                    cumQuotePerLiquidityX96: Q96.mul(2), // debt 200
                 },
                 outputBase: 50,
                 outputQuote: 50,
@@ -217,11 +244,9 @@ describe("PerpdexExchange removeLiquidity", () => {
                     quoteBalance: -50,
                 },
                 afterMakerInfo: {
-                    baseDebtShare: 0,
-                    quoteDebt: 100,
                     liquidity: 50,
                     cumBaseSharePerLiquidityX96: 0,
-                    cumQuotePerLiquidityX96: 0,
+                    cumQuotePerLiquidityX96: Q96.mul(2), // debt 100
                 },
             },
             {
@@ -236,11 +261,9 @@ describe("PerpdexExchange removeLiquidity", () => {
                     quoteBalance: 0,
                 },
                 makerInfo: {
-                    baseDebtShare: 0,
-                    quoteDebt: 200,
                     liquidity: 100,
                     cumBaseSharePerLiquidityX96: 0,
-                    cumQuotePerLiquidityX96: 0,
+                    cumQuotePerLiquidityX96: Q96.mul(2), // debt 200
                 },
                 outputBase: 50,
                 outputQuote: 50,
@@ -253,11 +276,9 @@ describe("PerpdexExchange removeLiquidity", () => {
                     quoteBalance: -50,
                 },
                 afterMakerInfo: {
-                    baseDebtShare: 0,
-                    quoteDebt: 100,
                     liquidity: 50,
                     cumBaseSharePerLiquidityX96: 0,
-                    cumQuotePerLiquidityX96: 0,
+                    cumQuotePerLiquidityX96: Q96.mul(2), // debt 100
                 },
             },
             {
@@ -272,11 +293,9 @@ describe("PerpdexExchange removeLiquidity", () => {
                     quoteBalance: 0,
                 },
                 makerInfo: {
-                    baseDebtShare: 0,
-                    quoteDebt: 200,
                     liquidity: 100,
                     cumBaseSharePerLiquidityX96: 0,
-                    cumQuotePerLiquidityX96: 0,
+                    cumQuotePerLiquidityX96: Q96.mul(2), // debt 200
                 },
                 revertedWith: "ML_RL: enough mm",
             },
@@ -298,6 +317,21 @@ describe("PerpdexExchange removeLiquidity", () => {
 
                 if (test.poolInfo) {
                     await market.setPoolInfo(test.poolInfo)
+                }
+
+                if (test.funding) {
+                    await market.connect(owner).setFundingMaxPremiumRatio(1e5)
+                    await market.connect(owner).setFundingRolloverSec(3600)
+                    await priceFeed.mock.decimals.returns(18)
+
+                    await priceFeed.mock.getPrice.returns(1)
+                    const currentTimestamp = await getTimestamp()
+                    await market.setFundingInfo({
+                        prevIndexPriceBase: BigNumber.from(10).pow(18),
+                        prevIndexPriceQuote: 1,
+                        prevIndexPriceTimestamp: currentTimestamp + 1000,
+                    })
+                    await setNextTimestamp(currentTimestamp + 1000 + 3600)
                 }
 
                 const res = expect(
@@ -325,13 +359,11 @@ describe("PerpdexExchange removeLiquidity", () => {
                             test.outputBase,
                             test.outputQuote,
                             test.liquidity,
-                            test.cumBaseSharePerLiquidityX96 || 0,
-                            test.cumQuotePerLiquidityX96 || 0,
                             test.outputTakerBase,
                             test.outputTakerQuote,
                             test.afterCollateralBalance - test.collateralBalance,
-                            test.poolInfo ? test.poolInfo.baseBalancePerShareX96 : Q96,
-                            sharePrice,
+                            test.baseBalancePerShareX96 || (test.poolInfo ? test.poolInfo.baseBalancePerShareX96 : Q96),
+                            test.sharePrice || sharePrice,
                         )
 
                     const accountInfo = await exchange.accountInfos(alice.address)
@@ -342,8 +374,6 @@ describe("PerpdexExchange removeLiquidity", () => {
                     expect(takerInfo.quoteBalance).to.eq(test.afterTakerInfo.quoteBalance)
 
                     const makerInfo = await exchange.getMakerInfo(alice.address, market.address)
-                    expect(makerInfo.baseDebtShare).to.eq(test.afterMakerInfo.baseDebtShare)
-                    expect(makerInfo.quoteDebt).to.eq(test.afterMakerInfo.quoteDebt)
                     expect(makerInfo.liquidity).to.eq(test.afterMakerInfo.liquidity)
                     expect(makerInfo.cumBaseSharePerLiquidityX96).to.eq(test.afterMakerInfo.cumBaseSharePerLiquidityX96)
                     expect(makerInfo.cumQuotePerLiquidityX96).to.eq(test.afterMakerInfo.cumQuotePerLiquidityX96)

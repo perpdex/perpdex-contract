@@ -41,20 +41,22 @@ library PoolLibrary {
         poolInfo.baseBalancePerShareX96 = FixedPoint96.Q96;
     }
 
+    // underestimate deleveraged tokens
     function applyFunding(MarketStructs.PoolInfo storage poolInfo, int256 fundingRateX96) internal {
         if (fundingRateX96 == 0) return;
 
+        uint256 frAbs = fundingRateX96.abs();
+
         if (fundingRateX96 > 0) {
             uint256 poolQuote = poolInfo.quote;
-            uint256 deleveratedQuote = FullMath.mulDiv(poolQuote, fundingRateX96.abs(), FixedPoint96.Q96);
+            uint256 deleveratedQuote = FullMath.mulDiv(poolQuote, frAbs, FixedPoint96.Q96);
             poolInfo.quote = poolQuote.sub(deleveratedQuote);
             poolInfo.cumQuotePerLiquidityX96 = poolInfo.cumQuotePerLiquidityX96.add(
                 FullMath.mulDiv(deleveratedQuote, FixedPoint96.Q96, poolInfo.totalLiquidity)
             );
         } else {
             uint256 poolBase = poolInfo.base;
-            uint256 deleveratedBase =
-                poolBase.sub(FullMath.mulDiv(poolBase, FixedPoint96.Q96, FixedPoint96.Q96.add(fundingRateX96.abs())));
+            uint256 deleveratedBase = FullMath.mulDiv(poolBase, frAbs, FixedPoint96.Q96.add(frAbs));
             poolInfo.base = poolBase.sub(deleveratedBase);
             poolInfo.cumBasePerLiquidityX96 = poolInfo.cumBasePerLiquidityX96.add(
                 FullMath.mulDiv(deleveratedBase, FixedPoint96.Q96, poolInfo.totalLiquidity)
@@ -190,15 +192,19 @@ library PoolLibrary {
         if (params.isExactInput) {
             uint256 amountSubFee = params.amount.mulRatio(oneSubFeeRatio);
             if (params.isBaseToQuote) {
-                output = quote.sub(FullMath.mulDivRoundingUp(base, quote, base.add(amountSubFee)));
+                // output = quote.sub(FullMath.mulDivRoundingUp(base, quote, base.add(amountSubFee)));
+                output = FullMath.mulDiv(quote, amountSubFee, base.add(amountSubFee));
             } else {
-                output = base.sub(FullMath.mulDivRoundingUp(base, quote, quote.add(amountSubFee)));
+                // output = base.sub(FullMath.mulDivRoundingUp(base, quote, quote.add(amountSubFee)));
+                output = FullMath.mulDiv(base, amountSubFee, quote.add(amountSubFee));
             }
         } else {
             if (params.isBaseToQuote) {
-                output = FullMath.mulDivRoundingUp(base, quote, quote.sub(params.amount)).sub(base);
+                // output = FullMath.mulDivRoundingUp(base, quote, quote.sub(params.amount)).sub(base);
+                output = FullMath.mulDivRoundingUp(base, params.amount, quote.sub(params.amount));
             } else {
-                output = FullMath.mulDivRoundingUp(base, quote, base.sub(params.amount)).sub(quote);
+                // output = FullMath.mulDivRoundingUp(base, quote, base.sub(params.amount)).sub(quote);
+                output = FullMath.mulDivRoundingUp(quote, params.amount, base.sub(params.amount));
             }
             output = output.divRatioRoundingUp(oneSubFeeRatio);
         }
@@ -257,18 +263,18 @@ library PoolLibrary {
     }
 
     function getLiquidityDeleveraged(
-        uint256 poolCumDeleveragedBasePerLiquidityX96,
-        uint256 poolCumDeleveragedQuotePerLiquidityX96,
+        uint256 poolCumBasePerLiquidityX96,
+        uint256 poolCumQuotePerLiquidityX96,
         uint256 liquidity,
         uint256 cumBasePerLiquidityX96,
         uint256 cumQuotePerLiquidityX96
-    ) internal pure returns (uint256, uint256) {
-        uint256 deleveragedBasePerLiquidityX96 = poolCumDeleveragedBasePerLiquidityX96.sub(cumBasePerLiquidityX96);
-        uint256 deleveragedQuotePerLiquidityX96 = poolCumDeleveragedQuotePerLiquidityX96.sub(cumQuotePerLiquidityX96);
+    ) internal pure returns (int256, int256) {
+        int256 BasePerLiquidityX96 = poolCumBasePerLiquidityX96.toInt256().sub(cumBasePerLiquidityX96.toInt256());
+        int256 QuotePerLiquidityX96 = poolCumQuotePerLiquidityX96.toInt256().sub(cumQuotePerLiquidityX96.toInt256());
 
         return (
-            FullMath.mulDiv(liquidity, deleveragedBasePerLiquidityX96, FixedPoint96.Q96),
-            FullMath.mulDiv(liquidity, deleveragedQuotePerLiquidityX96, FixedPoint96.Q96)
+            liquidity.toInt256().mulDiv(BasePerLiquidityX96, FixedPoint96.Q96),
+            liquidity.toInt256().mulDiv(QuotePerLiquidityX96, FixedPoint96.Q96)
         );
     }
 }

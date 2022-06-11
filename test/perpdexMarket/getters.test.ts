@@ -154,7 +154,8 @@ describe("PerpdexMarket getters", () => {
                 liquidity: 1,
                 cumBasePerLiquidityX96: BigNumber.from(2).pow(96),
                 cumQuotePerLiquidityX96: BigNumber.from(2).pow(96),
-                revertedWith: "SafeMath: subtraction overflow",
+                outputBase: -1,
+                outputQuote: 0,
             },
             {
                 title: "minus quote",
@@ -163,7 +164,9 @@ describe("PerpdexMarket getters", () => {
                 liquidity: 1,
                 cumBasePerLiquidityX96: BigNumber.from(2).pow(96),
                 cumQuotePerLiquidityX96: BigNumber.from(2).pow(96),
-                revertedWith: "SafeMath: subtraction overflow",
+                outputBase: 0,
+                outputQuote: -1,
+                revertedWith: void 0,
             },
         ].forEach(test => {
             it(test.title, async () => {

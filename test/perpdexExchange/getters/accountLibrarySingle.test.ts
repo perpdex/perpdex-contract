@@ -1,7 +1,7 @@
 import { expect } from "chai"
 import { waffle } from "hardhat"
-import { TestPerpdexExchange, TestPerpdexMarket } from "../../typechain"
-import { createPerpdexExchangeFixture } from "./fixtures"
+import { TestPerpdexExchange, TestPerpdexMarket } from "../../../typechain"
+import { createPerpdexExchangeFixture } from "../fixtures"
 import { BigNumber, Wallet } from "ethers"
 
 describe("PerpdexExchange getters", () => {
@@ -23,84 +23,6 @@ describe("PerpdexExchange getters", () => {
         alice = fixture.alice
     })
 
-    describe("getTakerInfo", () => {
-        it("ok", async () => {
-            await exchange.setTakerInfo(alice.address, market.address, {
-                baseBalanceShare: 1,
-                quoteBalance: 2,
-            })
-            const takerInfo = await exchange.getTakerInfo(alice.address, market.address)
-            expect(takerInfo.baseBalanceShare).to.eq(1)
-            expect(takerInfo.quoteBalance).to.eq(2)
-        })
-    })
-
-    describe("getMakerInfo", () => {
-        it("ok", async () => {
-            await exchange.setMakerInfo(alice.address, market.address, {
-                baseDebtShare: 1,
-                quoteDebt: 2,
-                liquidity: 3,
-                cumBaseSharePerLiquidityX96: 4,
-                cumQuotePerLiquidityX96: 5,
-            })
-            const makerInfo = await exchange.getMakerInfo(alice.address, market.address)
-            expect(makerInfo.baseDebtShare).to.eq(1)
-            expect(makerInfo.quoteDebt).to.eq(2)
-            expect(makerInfo.liquidity).to.eq(3)
-            expect(makerInfo.cumBaseSharePerLiquidityX96).to.eq(4)
-            expect(makerInfo.cumQuotePerLiquidityX96).to.eq(5)
-        })
-    })
-
-    describe("getAccountMarkets", () => {
-        it("ok", async () => {
-            await exchange.setAccountInfo(
-                alice.address,
-                {
-                    collateralBalance: 0,
-                },
-                [market.address],
-            )
-            const markets = await exchange.getAccountMarkets(alice.address)
-            expect(markets.length).to.eq(1)
-            expect(markets[0]).to.eq(market.address)
-        })
-    })
-
-    // TODO:
-    // describe("AccountLibrary getters multiple market", () => {
-    //     it('two', async () => {
-    //         await exchange.connect(owner).setImRatio(10e4)
-    //         await exchange.connect(owner).setMmRatio(5e4)
-    //
-    //         await exchange.setAccountInfo(
-    //             alice.address,
-    //             {
-    //                 collateralBalance: test.collateralBalance,
-    //             },
-    //             [market.address],
-    //         )
-    //
-    //         await exchange.setTakerInfo(alice.address, market.address, test.takerInfo)
-    //         await exchange.setMakerInfo(alice.address, market.address, test.makerInfo)
-    //
-    //         await market.setPoolInfo(test.poolInfo)
-    //
-    //         expect(await exchange.getTotalAccountValue(alice.address)).to.eq(test.totalAccountValue)
-    //         expect(await exchange.getPositionShare(alice.address, market.address)).to.eq(test.positionShare)
-    //         expect(await exchange.getPositionNotional(alice.address, market.address)).to.eq(test.positionNotional)
-    //         expect(await exchange.getTotalPositionNotional(alice.address)).to.eq(Math.abs(test.positionNotional))
-    //         expect(await exchange.getOpenPositionShare(alice.address, market.address)).to.eq(test.openPositionShare)
-    //         expect(await exchange.getOpenPositionNotional(alice.address, market.address)).to.eq(
-    //             test.openPositionNotional,
-    //         )
-    //         expect(await exchange.getTotalOpenPositionNotional(alice.address)).to.eq(test.openPositionNotional)
-    //         expect(await exchange.hasEnoughMaintenanceMargin(alice.address)).to.eq(test.hasEnoughMaintenanceMargin)
-    //         expect(await exchange.hasEnoughInitialMargin(alice.address)).to.eq(test.hasEnoughInitialMargin)
-    //     })
-    // });
-
     describe("AccountLibrary getters single market", () => {
         ;[
             {
@@ -111,8 +33,6 @@ describe("PerpdexExchange getters", () => {
                     quoteBalance: 0,
                 },
                 makerInfo: {
-                    baseDebtShare: 0,
-                    quoteDebt: 0,
                     liquidity: 0,
                     cumBaseSharePerLiquidityX96: 0,
                     cumQuotePerLiquidityX96: 0,
@@ -141,8 +61,6 @@ describe("PerpdexExchange getters", () => {
                     quoteBalance: 0,
                 },
                 makerInfo: {
-                    baseDebtShare: 0,
-                    quoteDebt: 0,
                     liquidity: 0,
                     cumBaseSharePerLiquidityX96: 0,
                     cumQuotePerLiquidityX96: 0,
@@ -171,8 +89,6 @@ describe("PerpdexExchange getters", () => {
                     quoteBalance: 0,
                 },
                 makerInfo: {
-                    baseDebtShare: 0,
-                    quoteDebt: 0,
                     liquidity: 0,
                     cumBaseSharePerLiquidityX96: 0,
                     cumQuotePerLiquidityX96: 0,
@@ -201,8 +117,6 @@ describe("PerpdexExchange getters", () => {
                     quoteBalance: 0,
                 },
                 makerInfo: {
-                    baseDebtShare: 0,
-                    quoteDebt: 0,
                     liquidity: 0,
                     cumBaseSharePerLiquidityX96: 0,
                     cumQuotePerLiquidityX96: 0,
@@ -231,8 +145,6 @@ describe("PerpdexExchange getters", () => {
                     quoteBalance: 0,
                 },
                 makerInfo: {
-                    baseDebtShare: 0,
-                    quoteDebt: 0,
                     liquidity: 0,
                     cumBaseSharePerLiquidityX96: 0,
                     cumQuotePerLiquidityX96: 0,
@@ -261,8 +173,6 @@ describe("PerpdexExchange getters", () => {
                     quoteBalance: 0,
                 },
                 makerInfo: {
-                    baseDebtShare: 0,
-                    quoteDebt: 0,
                     liquidity: 0,
                     cumBaseSharePerLiquidityX96: 0,
                     cumQuotePerLiquidityX96: 0,
@@ -291,8 +201,6 @@ describe("PerpdexExchange getters", () => {
                     quoteBalance: -100,
                 },
                 makerInfo: {
-                    baseDebtShare: 0,
-                    quoteDebt: 0,
                     liquidity: 0,
                     cumBaseSharePerLiquidityX96: 0,
                     cumQuotePerLiquidityX96: 0,
@@ -321,8 +229,6 @@ describe("PerpdexExchange getters", () => {
                     quoteBalance: 100,
                 },
                 makerInfo: {
-                    baseDebtShare: 0,
-                    quoteDebt: 0,
                     liquidity: 0,
                     cumBaseSharePerLiquidityX96: 0,
                     cumQuotePerLiquidityX96: 0,
@@ -351,8 +257,6 @@ describe("PerpdexExchange getters", () => {
                     quoteBalance: -50,
                 },
                 makerInfo: {
-                    baseDebtShare: 0,
-                    quoteDebt: 0,
                     liquidity: 0,
                     cumBaseSharePerLiquidityX96: 0,
                     cumQuotePerLiquidityX96: 0,
@@ -381,8 +285,6 @@ describe("PerpdexExchange getters", () => {
                     quoteBalance: -50,
                 },
                 makerInfo: {
-                    baseDebtShare: 0,
-                    quoteDebt: 0,
                     liquidity: 0,
                     cumBaseSharePerLiquidityX96: 0,
                     cumQuotePerLiquidityX96: 0,
@@ -411,8 +313,6 @@ describe("PerpdexExchange getters", () => {
                     quoteBalance: -200,
                 },
                 makerInfo: {
-                    baseDebtShare: 0,
-                    quoteDebt: 0,
                     liquidity: 0,
                     cumBaseSharePerLiquidityX96: 0,
                     cumQuotePerLiquidityX96: 0,
@@ -441,8 +341,6 @@ describe("PerpdexExchange getters", () => {
                     quoteBalance: 150,
                 },
                 makerInfo: {
-                    baseDebtShare: 0,
-                    quoteDebt: 0,
                     liquidity: 0,
                     cumBaseSharePerLiquidityX96: 0,
                     cumQuotePerLiquidityX96: 0,
@@ -471,8 +369,6 @@ describe("PerpdexExchange getters", () => {
                     quoteBalance: 0,
                 },
                 makerInfo: {
-                    baseDebtShare: 0,
-                    quoteDebt: 0,
                     liquidity: 0,
                     cumBaseSharePerLiquidityX96: 0,
                     cumQuotePerLiquidityX96: 0,
@@ -501,8 +397,6 @@ describe("PerpdexExchange getters", () => {
                     quoteBalance: -250,
                 },
                 makerInfo: {
-                    baseDebtShare: 0,
-                    quoteDebt: 0,
                     liquidity: 0,
                     cumBaseSharePerLiquidityX96: 0,
                     cumQuotePerLiquidityX96: 0,
@@ -531,11 +425,9 @@ describe("PerpdexExchange getters", () => {
                     quoteBalance: 0,
                 },
                 makerInfo: {
-                    baseDebtShare: 25,
-                    quoteDebt: 100,
                     liquidity: 50,
-                    cumBaseSharePerLiquidityX96: 0,
-                    cumQuotePerLiquidityX96: 0,
+                    cumBaseSharePerLiquidityX96: Q96.div(2), // debt 25
+                    cumQuotePerLiquidityX96: Q96.mul(2), // debt 100
                 },
                 poolInfo: {
                     base: 10000,
@@ -561,11 +453,9 @@ describe("PerpdexExchange getters", () => {
                     quoteBalance: 0,
                 },
                 makerInfo: {
-                    baseDebtShare: 25,
-                    quoteDebt: 100,
                     liquidity: 50,
-                    cumBaseSharePerLiquidityX96: 0,
-                    cumQuotePerLiquidityX96: 0,
+                    cumBaseSharePerLiquidityX96: Q96.div(2), // debt 25
+                    cumQuotePerLiquidityX96: Q96.mul(2), // debt 100
                 },
                 poolInfo: {
                     base: 20000,
@@ -591,11 +481,9 @@ describe("PerpdexExchange getters", () => {
                     quoteBalance: 0,
                 },
                 makerInfo: {
-                    baseDebtShare: 25,
-                    quoteDebt: 100,
                     liquidity: 50,
-                    cumBaseSharePerLiquidityX96: 0,
-                    cumQuotePerLiquidityX96: 0,
+                    cumBaseSharePerLiquidityX96: Q96.div(2), // debt 25
+                    cumQuotePerLiquidityX96: Q96.mul(2), // debt 100
                 },
                 poolInfo: {
                     base: 20000,
@@ -621,11 +509,9 @@ describe("PerpdexExchange getters", () => {
                     quoteBalance: 0,
                 },
                 makerInfo: {
-                    baseDebtShare: 50,
-                    quoteDebt: 50,
                     liquidity: 50,
-                    cumBaseSharePerLiquidityX96: 0,
-                    cumQuotePerLiquidityX96: 0,
+                    cumBaseSharePerLiquidityX96: Q96, // debt 50
+                    cumQuotePerLiquidityX96: Q96, // debt 50
                 },
                 poolInfo: {
                     base: 10000,
@@ -651,11 +537,9 @@ describe("PerpdexExchange getters", () => {
                     quoteBalance: -100,
                 },
                 makerInfo: {
-                    baseDebtShare: 50,
-                    quoteDebt: 50,
                     liquidity: 50,
-                    cumBaseSharePerLiquidityX96: 0,
-                    cumQuotePerLiquidityX96: 0,
+                    cumBaseSharePerLiquidityX96: Q96, // debt 50
+                    cumQuotePerLiquidityX96: Q96, // debt 50
                 },
                 poolInfo: {
                     base: 10000,
@@ -681,11 +565,9 @@ describe("PerpdexExchange getters", () => {
                     quoteBalance: 0,
                 },
                 makerInfo: {
-                    baseDebtShare: 25,
-                    quoteDebt: 100,
                     liquidity: 50,
-                    cumBaseSharePerLiquidityX96: 0,
-                    cumQuotePerLiquidityX96: 0,
+                    cumBaseSharePerLiquidityX96: Q96.div(2), // debt 25
+                    cumQuotePerLiquidityX96: Q96.mul(2), // debt 100
                 },
                 poolInfo: {
                     base: 10000,
@@ -711,11 +593,13 @@ describe("PerpdexExchange getters", () => {
                     quoteBalance: 0,
                 },
                 makerInfo: {
-                    baseDebtShare: 25,
-                    quoteDebt: 100,
                     liquidity: 50,
-                    cumBaseSharePerLiquidityX96: Q96.mul(10),
-                    cumQuotePerLiquidityX96: Q96.mul(20),
+                    cumBaseSharePerLiquidityX96: Q96.mul(10).add(
+                        Q96.div(2), // debt 25
+                    ),
+                    cumQuotePerLiquidityX96: Q96.mul(20).add(
+                        Q96.mul(2), // debt 100
+                    ),
                 },
                 poolInfo: {
                     base: 10000,
@@ -741,8 +625,6 @@ describe("PerpdexExchange getters", () => {
                     quoteBalance: 0,
                 },
                 makerInfo: {
-                    baseDebtShare: 0,
-                    quoteDebt: 0,
                     liquidity: 0,
                     cumBaseSharePerLiquidityX96: 0,
                     cumQuotePerLiquidityX96: 0,
@@ -771,8 +653,6 @@ describe("PerpdexExchange getters", () => {
                     quoteBalance: 0,
                 },
                 makerInfo: {
-                    baseDebtShare: 0,
-                    quoteDebt: 0,
                     liquidity: 0,
                     cumBaseSharePerLiquidityX96: 0,
                     cumQuotePerLiquidityX96: 0,
@@ -801,8 +681,6 @@ describe("PerpdexExchange getters", () => {
                     quoteBalance: 0,
                 },
                 makerInfo: {
-                    baseDebtShare: 0,
-                    quoteDebt: 0,
                     liquidity: 0,
                     cumBaseSharePerLiquidityX96: 0,
                     cumQuotePerLiquidityX96: 0,
@@ -831,8 +709,6 @@ describe("PerpdexExchange getters", () => {
                     quoteBalance: 0,
                 },
                 makerInfo: {
-                    baseDebtShare: 0,
-                    quoteDebt: 0,
                     liquidity: 0,
                     cumBaseSharePerLiquidityX96: 0,
                     cumQuotePerLiquidityX96: 0,
@@ -861,8 +737,6 @@ describe("PerpdexExchange getters", () => {
                     quoteBalance: -100,
                 },
                 makerInfo: {
-                    baseDebtShare: 0,
-                    quoteDebt: 0,
                     liquidity: 0,
                     cumBaseSharePerLiquidityX96: 0,
                     cumQuotePerLiquidityX96: 0,
@@ -891,8 +765,6 @@ describe("PerpdexExchange getters", () => {
                     quoteBalance: Q96.mul(-1),
                 },
                 makerInfo: {
-                    baseDebtShare: 0,
-                    quoteDebt: 0,
                     liquidity: 0,
                     cumBaseSharePerLiquidityX96: 0,
                     cumQuotePerLiquidityX96: 0,
@@ -921,11 +793,9 @@ describe("PerpdexExchange getters", () => {
                     quoteBalance: -50,
                 },
                 makerInfo: {
-                    baseDebtShare: 50,
-                    quoteDebt: 50,
                     liquidity: 1,
-                    cumBaseSharePerLiquidityX96: 0,
-                    cumQuotePerLiquidityX96: 0,
+                    cumBaseSharePerLiquidityX96: Q96.mul(50), // debt 50
+                    cumQuotePerLiquidityX96: Q96.mul(50), // debt 50
                 },
                 poolInfo: {
                     base: Q96,

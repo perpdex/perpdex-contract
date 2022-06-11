@@ -3,6 +3,8 @@ import { waffle } from "hardhat"
 import { TestPerpdexExchange, TestPerpdexMarket } from "../../typechain"
 import { createPerpdexExchangeFixture } from "./fixtures"
 import { BigNumber, Wallet } from "ethers"
+import { getTimestamp, setNextTimestamp } from "../helper/time"
+import { MockContract } from "ethereum-waffle"
 
 describe("PerpdexExchange trade", () => {
     let loadFixture = waffle.createFixtureLoader(waffle.provider.getWallets())
@@ -13,6 +15,7 @@ describe("PerpdexExchange trade", () => {
     let owner: Wallet
     let alice: Wallet
     let bob: Wallet
+    let priceFeed: MockContract
 
     const Q96 = BigNumber.from(2).pow(96)
     const deadline = Q96
@@ -24,6 +27,7 @@ describe("PerpdexExchange trade", () => {
         owner = fixture.owner
         alice = fixture.alice
         bob = fixture.bob
+        priceFeed = fixture.priceFeed
 
         await exchange.connect(owner).setImRatio(10e4)
         await exchange.connect(owner).setMmRatio(5e4)
@@ -62,13 +66,6 @@ describe("PerpdexExchange trade", () => {
             minQuote: 0,
             deadline: deadline,
         })
-    })
-
-    // TODO:
-    describe("too many market", () => {
-        it("max markets condition", async () => {})
-
-        it("check gas fee", async () => {})
     })
 
     describe("various cases", () => {
@@ -501,6 +498,31 @@ describe("PerpdexExchange trade", () => {
                 revertedWith: "TL_VS: too large opposite amount",
                 revertedWithDry: "TL_VS: too large opposite amount",
             },
+            {
+                title: "long. funding not affect calc",
+                isBaseToQuote: false,
+                isExactInput: true,
+                amount: 100,
+                oppositeAmountBound: 0,
+                protocolFeeRatio: 0,
+                collateralBalance: 100,
+                funding: true,
+                takerInfo: {
+                    baseBalanceShare: 0,
+                    quoteBalance: 0,
+                },
+                outputBase: 99,
+                outputQuote: -100,
+                afterCollateralBalance: 100,
+                afterTakerInfo: {
+                    baseBalanceShare: 99,
+                    quoteBalance: -100,
+                },
+                protocolFee: 0,
+                insuranceFund: 0,
+                baseBalancePerShareX96: BigNumber.from("71305346262837903834189555303"),
+                sharePrice: BigNumber.from("72746513020621865777487935815"),
+            },
         ].forEach(test => {
             describe(test.title, () => {
                 beforeEach(async () => {
@@ -522,6 +544,21 @@ describe("PerpdexExchange trade", () => {
                 })
 
                 it("mutable", async () => {
+                    if (test.funding) {
+                        await market.connect(owner).setFundingMaxPremiumRatio(1e5)
+                        await market.connect(owner).setFundingRolloverSec(3600)
+                        await priceFeed.mock.decimals.returns(18)
+
+                        await priceFeed.mock.getPrice.returns(1)
+                        const currentTimestamp = await getTimestamp()
+                        await market.setFundingInfo({
+                            prevIndexPriceBase: BigNumber.from(10).pow(18),
+                            prevIndexPriceQuote: 1,
+                            prevIndexPriceTimestamp: currentTimestamp + 1000,
+                        })
+                        await setNextTimestamp(currentTimestamp + 1000 + 3600)
+                    }
+
                     const res = expect(
                         exchange.connect(test.notSelf ? bob : alice).trade({
                             trader: alice.address,
@@ -569,8 +606,8 @@ describe("PerpdexExchange trade", () => {
                                     test.outputQuote,
                                     test.afterCollateralBalance - test.collateralBalance,
                                     test.protocolFee,
-                                    Q96,
-                                    sharePrice,
+                                    test.baseBalancePerShareX96 || Q96,
+                                    test.sharePrice || sharePrice,
                                 )
                         }
 

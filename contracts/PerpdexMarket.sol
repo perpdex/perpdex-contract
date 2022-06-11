@@ -222,7 +222,7 @@ contract PerpdexMarket is IPerpdexMarket, ReentrancyGuard, Ownable {
         uint256 liquidity,
         uint256 cumBasePerLiquidityX96,
         uint256 cumQuotePerLiquidityX96
-    ) external view override returns (uint256, uint256) {
+    ) external view override returns (int256, int256) {
         return
             PoolLibrary.getLiquidityDeleveraged(
                 poolInfo.cumBasePerLiquidityX96,
@@ -262,7 +262,14 @@ contract PerpdexMarket is IPerpdexMarket, ReentrancyGuard, Ownable {
         if (fundingRateX96 == 0) return;
 
         PoolLibrary.applyFunding(poolInfo, fundingRateX96);
-        emit FundingPaid(fundingRateX96, elapsedSec, premiumX96, markPriceX96);
+        emit FundingPaid(
+            fundingRateX96,
+            elapsedSec,
+            premiumX96,
+            markPriceX96,
+            poolInfo.cumBasePerLiquidityX96,
+            poolInfo.cumQuotePerLiquidityX96
+        );
     }
 
     function _doMaxSwap(
