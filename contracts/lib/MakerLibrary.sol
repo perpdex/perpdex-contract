@@ -33,8 +33,6 @@ library MakerLibrary {
         uint256 base;
         uint256 quote;
         uint256 liquidity;
-        uint256 cumBasePerLiquidityX96;
-        uint256 cumQuotePerLiquidityX96;
     }
 
     struct RemoveLiquidityParams {
@@ -54,8 +52,6 @@ library MakerLibrary {
         int256 takerQuote;
         int256 realizedPnl;
         uint256 shareMarkPriceAfterX96;
-        uint256 cumBasePerLiquidityX96;
-        uint256 cumQuotePerLiquidityX96;
         bool isLiquidation;
     }
 
@@ -65,8 +61,8 @@ library MakerLibrary {
     {
         PerpdexStructs.MakerInfo storage makerInfo = accountInfo.makerInfos[params.market];
 
-        (response.cumBasePerLiquidityX96, response.cumQuotePerLiquidityX96) = IPerpdexMarket(params.market)
-            .getCumDeleveragedPerLiquidityX96();
+        (uint256 cumBasePerLiquidityX96, uint256 cumQuotePerLiquidityX96) =
+            IPerpdexMarket(params.market).getCumDeleveragedPerLiquidityX96();
 
         (response.base, response.quote, response.liquidity) = IPerpdexMarket(params.market).addLiquidity(
             params.base,
@@ -84,14 +80,14 @@ library MakerLibrary {
                 response.liquidity,
                 response.base,
                 makerInfo.cumBaseSharePerLiquidityX96,
-                response.cumBasePerLiquidityX96
+                cumBasePerLiquidityX96
             );
             makerInfo.cumQuotePerLiquidityX96 = blendCumPerLiquidity(
                 liquidityBefore,
                 response.liquidity,
                 response.quote,
                 makerInfo.cumQuotePerLiquidityX96,
-                response.cumQuotePerLiquidityX96
+                cumQuotePerLiquidityX96
             );
         }
 
@@ -128,11 +124,6 @@ library MakerLibrary {
 
         if (!params.isSelf) {
             require(response.isLiquidation, "ML_RL: enough mm");
-        }
-
-        {
-            (response.cumBasePerLiquidityX96, response.cumQuotePerLiquidityX96) = IPerpdexMarket(params.market)
-                .getCumDeleveragedPerLiquidityX96();
         }
 
         {

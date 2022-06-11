@@ -346,8 +346,8 @@ describe("PerpdexExchange addLiquidity", () => {
                             test.outputBase,
                             test.outputQuote,
                             test.afterMakerInfo.liquidity - test.makerInfo.liquidity,
-                            test.cumBaseSharePerLiquidityX96 || 0,
-                            test.cumQuotePerLiquidityX96 || 0,
+                            test.afterMakerInfo.cumBaseSharePerLiquidityX96,
+                            test.afterMakerInfo.cumQuotePerLiquidityX96,
                             test.poolInfo ? test.poolInfo.baseBalancePerShareX96 : Q96,
                             sharePrice,
                         )

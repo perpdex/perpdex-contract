@@ -262,7 +262,14 @@ contract PerpdexMarket is IPerpdexMarket, ReentrancyGuard, Ownable {
         if (fundingRateX96 == 0) return;
 
         PoolLibrary.applyFunding(poolInfo, fundingRateX96);
-        emit FundingPaid(fundingRateX96, elapsedSec, premiumX96, markPriceX96);
+        emit FundingPaid(
+            fundingRateX96,
+            elapsedSec,
+            premiumX96,
+            markPriceX96,
+            poolInfo.cumBasePerLiquidityX96,
+            poolInfo.cumQuotePerLiquidityX96
+        );
     }
 
     function _doMaxSwap(

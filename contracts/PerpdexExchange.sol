@@ -173,14 +173,15 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
         uint256 baseBalancePerShareX96 = IPerpdexMarket(params.market).baseBalancePerShareX96();
         uint256 shareMarkPriceAfterX96 = IPerpdexMarket(params.market).getShareMarkPriceX96();
 
+        PerpdexStructs.MakerInfo storage makerInfo = accountInfos[trader].makerInfos[params.market];
         emit LiquidityAdded(
             trader,
             params.market,
             response.base,
             response.quote,
             response.liquidity,
-            response.cumBasePerLiquidityX96,
-            response.cumQuotePerLiquidityX96,
+            makerInfo.cumBaseSharePerLiquidityX96,
+            makerInfo.cumQuotePerLiquidityX96,
             baseBalancePerShareX96,
             shareMarkPriceAfterX96
         );
@@ -223,8 +224,6 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
             response.base,
             response.quote,
             params.liquidity,
-            response.cumBasePerLiquidityX96,
-            response.cumQuotePerLiquidityX96,
             response.takerBase,
             response.takerQuote,
             response.realizedPnl,

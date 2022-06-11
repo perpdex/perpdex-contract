@@ -44,17 +44,18 @@ library PoolLibrary {
     function applyFunding(MarketStructs.PoolInfo storage poolInfo, int256 fundingRateX96) internal {
         if (fundingRateX96 == 0) return;
 
+        uint256 frAbs = fundingRateX96.abs();
+
         if (fundingRateX96 > 0) {
             uint256 poolQuote = poolInfo.quote;
-            uint256 deleveratedQuote = FullMath.mulDiv(poolQuote, fundingRateX96.abs(), FixedPoint96.Q96);
+            uint256 deleveratedQuote = FullMath.mulDiv(poolQuote, frAbs, FixedPoint96.Q96);
             poolInfo.quote = poolQuote.sub(deleveratedQuote);
             poolInfo.cumQuotePerLiquidityX96 = poolInfo.cumQuotePerLiquidityX96.add(
                 FullMath.mulDiv(deleveratedQuote, FixedPoint96.Q96, poolInfo.totalLiquidity)
             );
         } else {
             uint256 poolBase = poolInfo.base;
-            uint256 deleveratedBase =
-                poolBase.sub(FullMath.mulDiv(poolBase, FixedPoint96.Q96, FixedPoint96.Q96.add(fundingRateX96.abs())));
+            uint256 deleveratedBase = FullMath.mulDiv(poolBase, frAbs, FixedPoint96.Q96.add(frAbs));
             poolInfo.base = poolBase.sub(deleveratedBase);
             poolInfo.cumBasePerLiquidityX96 = poolInfo.cumBasePerLiquidityX96.add(
                 FullMath.mulDiv(deleveratedBase, FixedPoint96.Q96, poolInfo.totalLiquidity)

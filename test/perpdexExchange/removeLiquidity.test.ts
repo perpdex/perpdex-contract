@@ -301,8 +301,6 @@ describe("PerpdexExchange removeLiquidity", () => {
                             test.outputBase,
                             test.outputQuote,
                             test.liquidity,
-                            test.cumBaseSharePerLiquidityX96 || 0,
-                            test.cumQuotePerLiquidityX96 || 0,
                             test.outputTakerBase,
                             test.outputTakerQuote,
                             test.afterCollateralBalance - test.collateralBalance,
