@@ -108,6 +108,30 @@ describe("PerpdexMarket config", () => {
                 }),
             ).to.be.revertedWith("PE_SPLC: invalid")
         })
+
+        it("revert when ema too large", async () => {
+            await expect(
+                market.connect(owner).setPriceLimitConfig({
+                    normalOrderRatio: 0,
+                    liquidationRatio: 0,
+                    emaNormalOrderRatio: 0,
+                    emaLiquidationRatio: 1e6,
+                    emaSec: 0,
+                }),
+            ).to.be.revertedWith("PE_SPLC: ema too large liq")
+        })
+
+        it("revert when ema normal order > liquidation", async () => {
+            await expect(
+                market.connect(owner).setPriceLimitConfig({
+                    normalOrderRatio: 0,
+                    liquidationRatio: 0,
+                    emaNormalOrderRatio: 2,
+                    emaLiquidationRatio: 1,
+                    emaSec: 0,
+                }),
+            ).to.be.revertedWith("PE_SPLC: ema invalid")
+        })
     })
 
     describe("setPoolFeeRatio", () => {
