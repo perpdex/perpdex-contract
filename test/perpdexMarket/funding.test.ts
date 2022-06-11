@@ -130,4 +130,56 @@ describe("PerpdexMarket funding", () => {
             expect(poolInfo.cumBasePerLiquidityX96).to.eq(cumBasePerLiquidityX96)
         })
     })
+
+    describe("price change", () => {
+        beforeEach(async () => {
+            // sufficiently large pool to minimize swap impact
+            await market.connect(exchange).addLiquidity(Q96, Q96)
+            await market.connect(owner).setFundingMaxPremiumRatio(1e4)
+
+            const currentTimestamp = await getTimestamp()
+
+            await market.setFundingInfo({
+                prevIndexPriceBase: BigNumber.from(10).pow(18),
+                prevIndexPriceQuote: 1,
+                prevIndexPriceTimestamp: currentTimestamp + 1000,
+            })
+
+            await setNextTimestamp(currentTimestamp + 1000 + 3600)
+        })
+
+        it("positive funding", async () => {
+            await priceFeed.mock.getPrice.returns(BigNumber.from(10).pow(18).div(2))
+
+            const priceBefore = await market.getMarkPriceX96()
+            const sharePriceBefore = await market.getShareMarkPriceX96()
+            await expect(market.connect(exchange).swap(false, true, 2, false)).to.emit(market, "FundingPaid")
+
+            const priceAfter = await market.getMarkPriceX96()
+            const priceRange = priceBefore.div(BigNumber.from(10).pow(18))
+            expect(priceAfter).to.be.gt(priceBefore.sub(priceRange))
+            expect(priceAfter).to.be.lt(priceBefore.add(priceRange))
+
+            const sharePriceAfter = await market.getShareMarkPriceX96()
+            expect(sharePriceAfter).to.be.gt(sharePriceBefore.sub(sharePriceBefore.mul(11).div(1000)))
+            expect(sharePriceAfter).to.be.lt(sharePriceBefore.sub(sharePriceBefore.mul(9).div(1000)))
+        })
+
+        it("negative funding", async () => {
+            await priceFeed.mock.getPrice.returns(BigNumber.from(10).pow(18).mul(2))
+
+            const priceBefore = await market.getMarkPriceX96()
+            const sharePriceBefore = await market.getShareMarkPriceX96()
+            await expect(market.connect(exchange).swap(false, true, 2, false)).to.emit(market, "FundingPaid")
+
+            const priceAfter = await market.getMarkPriceX96()
+            const priceError = priceBefore.div(BigNumber.from(10).pow(18))
+            expect(priceAfter).to.be.gt(priceBefore.sub(priceError))
+            expect(priceAfter).to.be.lt(priceBefore.add(priceError))
+
+            const sharePriceAfter = await market.getShareMarkPriceX96()
+            expect(sharePriceAfter).to.be.gt(sharePriceBefore.add(sharePriceBefore.mul(9).div(1000)))
+            expect(sharePriceAfter).to.be.lt(sharePriceBefore.add(sharePriceBefore.mul(11).div(1000)))
+        })
+    })
 })
