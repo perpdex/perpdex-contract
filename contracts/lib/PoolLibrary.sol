@@ -192,15 +192,19 @@ library PoolLibrary {
         if (params.isExactInput) {
             uint256 amountSubFee = params.amount.mulRatio(oneSubFeeRatio);
             if (params.isBaseToQuote) {
-                output = quote.sub(FullMath.mulDivRoundingUp(base, quote, base.add(amountSubFee)));
+                // output = quote.sub(FullMath.mulDivRoundingUp(base, quote, base.add(amountSubFee)));
+                output = FullMath.mulDiv(quote, amountSubFee, base.add(amountSubFee));
             } else {
-                output = base.sub(FullMath.mulDivRoundingUp(base, quote, quote.add(amountSubFee)));
+                // output = base.sub(FullMath.mulDivRoundingUp(base, quote, quote.add(amountSubFee)));
+                output = FullMath.mulDiv(base, amountSubFee, quote.add(amountSubFee));
             }
         } else {
             if (params.isBaseToQuote) {
-                output = FullMath.mulDivRoundingUp(base, quote, quote.sub(params.amount)).sub(base);
+                // output = FullMath.mulDivRoundingUp(base, quote, quote.sub(params.amount)).sub(base);
+                output = FullMath.mulDivRoundingUp(base, params.amount, quote.sub(params.amount));
             } else {
-                output = FullMath.mulDivRoundingUp(base, quote, base.sub(params.amount)).sub(quote);
+                // output = FullMath.mulDivRoundingUp(base, quote, base.sub(params.amount)).sub(quote);
+                output = FullMath.mulDivRoundingUp(quote, params.amount, base.sub(params.amount));
             }
             output = output.divRatioRoundingUp(oneSubFeeRatio);
         }
