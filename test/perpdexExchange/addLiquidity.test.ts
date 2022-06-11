@@ -3,6 +3,8 @@ import { waffle } from "hardhat"
 import { TestPerpdexExchange, TestPerpdexMarket } from "../../typechain"
 import { createPerpdexExchangeFixture } from "./fixtures"
 import { BigNumber, Wallet } from "ethers"
+import { MockContract } from "ethereum-waffle"
+import { getTimestamp, setNextTimestamp } from "../helper/time"
 
 describe("PerpdexExchange addLiquidity", () => {
     let loadFixture = waffle.createFixtureLoader(waffle.provider.getWallets())
@@ -13,6 +15,7 @@ describe("PerpdexExchange addLiquidity", () => {
     let owner: Wallet
     let alice: Wallet
     let bob: Wallet
+    let priceFeed: MockContract
 
     const Q96 = BigNumber.from(2).pow(96)
     const deadline = Q96
@@ -24,6 +27,7 @@ describe("PerpdexExchange addLiquidity", () => {
         owner = fixture.owner
         alice = fixture.alice
         bob = fixture.bob
+        priceFeed = fixture.priceFeed
 
         await exchange.connect(owner).setImRatio(10e4)
         await exchange.connect(owner).setMmRatio(5e4)
@@ -150,8 +154,6 @@ describe("PerpdexExchange addLiquidity", () => {
                         Q96.mul(97).div(101), // debt 97
                     ),
                 },
-                cumBaseSharePerLiquidityX96: Q96.mul(2),
-                cumQuotePerLiquidityX96: Q96.mul(3),
             },
             {
                 title: "deleverage add",
@@ -191,8 +193,48 @@ describe("PerpdexExchange addLiquidity", () => {
                         .div(5)
                         .sub(1), // 1000 + rounding error
                 },
-                cumBaseSharePerLiquidityX96: Q96.mul(2),
-                cumQuotePerLiquidityX96: Q96.mul(3),
+            },
+            {
+                title: "deleverage add. funding not affect cumPerLiquidity calc",
+                base: 100,
+                quote: 200,
+                minBase: 100,
+                minQuote: 100,
+                collateralBalance: 80,
+                funding: true,
+                takerInfo: {
+                    baseBalanceShare: 0,
+                    quoteBalance: 0,
+                },
+                makerInfo: {
+                    liquidity: 400,
+                    cumBaseSharePerLiquidityX96: Q96.div(4), // 700
+                    cumQuotePerLiquidityX96: Q96.div(4), // 1100
+                },
+                poolInfo: {
+                    base: 10000,
+                    quote: 10000,
+                    totalLiquidity: 10000,
+                    cumBasePerLiquidityX96: Q96.mul(2),
+                    cumQuotePerLiquidityX96: Q96.mul(3),
+                    baseBalancePerShareX96: Q96,
+                },
+                outputBase: 100,
+                outputQuote: 100,
+                afterCollateralBalance: 80,
+                afterTakerInfo: {
+                    baseBalanceShare: 0,
+                    quoteBalance: 0,
+                },
+                afterMakerInfo: {
+                    liquidity: 500,
+                    cumBaseSharePerLiquidityX96: Q96.mul(2 * 5 - 6).div(5), // 600
+                    cumQuotePerLiquidityX96: Q96.mul(3 * 5 - 10)
+                        .div(5)
+                        .sub(1), // 1000 + rounding error
+                },
+                baseBalancePerShareX96: BigNumber.from("71305346262837903834189555303"),
+                sharePrice: BigNumber.from("71313190635364068620089906188"),
             },
             {
                 title: "minBase condition",
@@ -324,6 +366,21 @@ describe("PerpdexExchange addLiquidity", () => {
                     await market.setPoolInfo(test.poolInfo)
                 }
 
+                if (test.funding) {
+                    await market.connect(owner).setFundingMaxPremiumRatio(1e5)
+                    await market.connect(owner).setFundingRolloverSec(3600)
+                    await priceFeed.mock.decimals.returns(18)
+
+                    await priceFeed.mock.getPrice.returns(1)
+                    const currentTimestamp = await getTimestamp()
+                    await market.setFundingInfo({
+                        prevIndexPriceBase: BigNumber.from(10).pow(18),
+                        prevIndexPriceQuote: 1,
+                        prevIndexPriceTimestamp: currentTimestamp + 1000,
+                    })
+                    await setNextTimestamp(currentTimestamp + 1000 + 3600)
+                }
+
                 const res = expect(
                     exchange.connect(alice).addLiquidity({
                         market: market.address,
@@ -348,8 +405,8 @@ describe("PerpdexExchange addLiquidity", () => {
                             test.afterMakerInfo.liquidity - test.makerInfo.liquidity,
                             test.afterMakerInfo.cumBaseSharePerLiquidityX96,
                             test.afterMakerInfo.cumQuotePerLiquidityX96,
-                            test.poolInfo ? test.poolInfo.baseBalancePerShareX96 : Q96,
-                            sharePrice,
+                            test.baseBalancePerShareX96 || (test.poolInfo ? test.poolInfo.baseBalancePerShareX96 : Q96),
+                            test.sharePrice || sharePrice,
                         )
 
                     const accountInfo = await exchange.accountInfos(alice.address)

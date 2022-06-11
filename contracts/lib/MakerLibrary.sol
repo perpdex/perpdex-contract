@@ -61,6 +61,7 @@ library MakerLibrary {
     {
         PerpdexStructs.MakerInfo storage makerInfo = accountInfo.makerInfos[params.market];
 
+        // retrieve before addLiquidity
         (uint256 cumBasePerLiquidityX96, uint256 cumQuotePerLiquidityX96) =
             IPerpdexMarket(params.market).getCumDeleveragedPerLiquidityX96();
 
@@ -128,6 +129,7 @@ library MakerLibrary {
 
         {
             PerpdexStructs.MakerInfo storage makerInfo = accountInfo.makerInfos[params.market];
+            // retrieve before removeLiquidity
             (response.takerBase, response.takerQuote) = IPerpdexMarket(params.market).getLiquidityDeleveraged(
                 params.liquidity,
                 makerInfo.cumBaseSharePerLiquidityX96,
