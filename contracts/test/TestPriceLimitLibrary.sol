@@ -11,6 +11,10 @@ contract TestPriceLimitLibrary {
     MarketStructs.PriceLimitInfo public priceLimitInfo;
     MarketStructs.PriceLimitConfig public priceLimitConfig;
 
+    function update(MarketStructs.PriceLimitInfo memory value) external {
+        return PriceLimitLibrary.update(priceLimitInfo, value);
+    }
+
     function updateDry(uint256 price) external view returns (MarketStructs.PriceLimitInfo memory) {
         return PriceLimitLibrary.updateDry(priceLimitInfo, priceLimitConfig, price);
     }
