@@ -41,6 +41,7 @@ library PoolLibrary {
         poolInfo.baseBalancePerShareX96 = FixedPoint96.Q96;
     }
 
+    // underestimate deleveraged tokens
     function applyFunding(MarketStructs.PoolInfo storage poolInfo, int256 fundingRateX96) internal {
         if (fundingRateX96 == 0) return;
 
