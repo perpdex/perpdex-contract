@@ -7,7 +7,7 @@ import { SignedSafeMath } from "@openzeppelin/contracts/math/SignedSafeMath.sol"
 import { FullMath } from "@uniswap/v3-core/contracts/libraries/FullMath.sol";
 import { PerpMath } from "./PerpMath.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/SafeCast.sol";
-import { IPerpdexMarket } from "../interface/IPerpdexMarket.sol";
+import { IPerpdexMarketMinimum } from "../interface/IPerpdexMarketMinimum.sol";
 import { PerpdexStructs } from "./PerpdexStructs.sol";
 import { AccountLibrary } from "./AccountLibrary.sol";
 
@@ -167,7 +167,7 @@ library TakerLibrary {
 
         oppositeAmount;
         if (params.protocolFeeRatio == 0) {
-            oppositeAmount = IPerpdexMarket(params.market).previewSwap(
+            oppositeAmount = IPerpdexMarketMinimum(params.market).previewSwap(
                 params.isBaseToQuote,
                 params.isExactInput,
                 params.amount,
@@ -203,7 +203,7 @@ library TakerLibrary {
         }
 
         if (protocolFeeRatio == 0) {
-            amount = IPerpdexMarket(market).maxSwap(isBaseToQuote, isExactInput, isLiquidation);
+            amount = IPerpdexMarketMinimum(market).maxSwap(isBaseToQuote, isExactInput, isLiquidation);
         } else {
             amount = maxSwapWithProtocolFee(market, isBaseToQuote, isExactInput, protocolFeeRatio, isLiquidation);
         }
@@ -242,7 +242,7 @@ library TakerLibrary {
                 isLiquidation
             );
         } else {
-            oppositeAmount = IPerpdexMarket(market).swap(isBaseToQuote, isExactInput, amount, isLiquidation);
+            oppositeAmount = IPerpdexMarketMinimum(market).swap(isBaseToQuote, isExactInput, amount, isLiquidation);
         }
         validateSlippage(isExactInput, oppositeAmount, oppositeAmountBound);
 
@@ -261,12 +261,12 @@ library TakerLibrary {
     ) internal returns (uint256 oppositeAmount, uint256 protocolFee) {
         if (isExactInput) {
             if (isBaseToQuote) {
-                oppositeAmount = IPerpdexMarket(market).swap(isBaseToQuote, isExactInput, amount, isLiquidation);
+                oppositeAmount = IPerpdexMarketMinimum(market).swap(isBaseToQuote, isExactInput, amount, isLiquidation);
                 protocolFee = oppositeAmount.mulRatio(protocolFeeRatio);
                 oppositeAmount = oppositeAmount.sub(protocolFee);
             } else {
                 protocolFee = amount.mulRatio(protocolFeeRatio);
-                oppositeAmount = IPerpdexMarket(market).swap(
+                oppositeAmount = IPerpdexMarketMinimum(market).swap(
                     isBaseToQuote,
                     isExactInput,
                     amount.sub(protocolFee),
@@ -276,7 +276,7 @@ library TakerLibrary {
         } else {
             if (isBaseToQuote) {
                 protocolFee = amount.divRatio(PerpMath.subRatio(1e6, protocolFeeRatio)).sub(amount);
-                oppositeAmount = IPerpdexMarket(market).swap(
+                oppositeAmount = IPerpdexMarketMinimum(market).swap(
                     isBaseToQuote,
                     isExactInput,
                     amount.add(protocolFee),
@@ -284,7 +284,7 @@ library TakerLibrary {
                 );
             } else {
                 uint256 oppositeAmountWithoutFee =
-                    IPerpdexMarket(market).swap(isBaseToQuote, isExactInput, amount, isLiquidation);
+                    IPerpdexMarketMinimum(market).swap(isBaseToQuote, isExactInput, amount, isLiquidation);
                 oppositeAmount = oppositeAmountWithoutFee.divRatio(PerpMath.subRatio(1e6, protocolFeeRatio));
                 protocolFee = oppositeAmount.sub(oppositeAmountWithoutFee);
             }
@@ -343,12 +343,17 @@ library TakerLibrary {
     ) internal view returns (uint256 oppositeAmount, uint256 protocolFee) {
         if (isExactInput) {
             if (isBaseToQuote) {
-                oppositeAmount = IPerpdexMarket(market).previewSwap(isBaseToQuote, isExactInput, amount, isLiquidation);
+                oppositeAmount = IPerpdexMarketMinimum(market).previewSwap(
+                    isBaseToQuote,
+                    isExactInput,
+                    amount,
+                    isLiquidation
+                );
                 protocolFee = oppositeAmount.mulRatio(protocolFeeRatio);
                 oppositeAmount = oppositeAmount.sub(protocolFee);
             } else {
                 protocolFee = amount.mulRatio(protocolFeeRatio);
-                oppositeAmount = IPerpdexMarket(market).previewSwap(
+                oppositeAmount = IPerpdexMarketMinimum(market).previewSwap(
                     isBaseToQuote,
                     isExactInput,
                     amount.sub(protocolFee),
@@ -358,7 +363,7 @@ library TakerLibrary {
         } else {
             if (isBaseToQuote) {
                 protocolFee = amount.divRatio(PerpMath.subRatio(1e6, protocolFeeRatio)).sub(amount);
-                oppositeAmount = IPerpdexMarket(market).previewSwap(
+                oppositeAmount = IPerpdexMarketMinimum(market).previewSwap(
                     isBaseToQuote,
                     isExactInput,
                     amount.add(protocolFee),
@@ -366,7 +371,7 @@ library TakerLibrary {
                 );
             } else {
                 uint256 oppositeAmountWithoutFee =
-                    IPerpdexMarket(market).previewSwap(isBaseToQuote, isExactInput, amount, isLiquidation);
+                    IPerpdexMarketMinimum(market).previewSwap(isBaseToQuote, isExactInput, amount, isLiquidation);
                 oppositeAmount = oppositeAmountWithoutFee.divRatio(PerpMath.subRatio(1e6, protocolFeeRatio));
                 protocolFee = oppositeAmount.sub(oppositeAmountWithoutFee);
             }
@@ -380,7 +385,7 @@ library TakerLibrary {
         uint24 protocolFeeRatio,
         bool isLiquidation
     ) internal view returns (uint256 amount) {
-        amount = IPerpdexMarket(market).maxSwap(isBaseToQuote, isExactInput, isLiquidation);
+        amount = IPerpdexMarketMinimum(market).maxSwap(isBaseToQuote, isExactInput, isLiquidation);
 
         if (isExactInput) {
             if (isBaseToQuote) {} else {

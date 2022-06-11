@@ -7,7 +7,7 @@ import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.s
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/SafeCast.sol";
 import { IPerpdexExchange } from "./interface/IPerpdexExchange.sol";
-import { IPerpdexMarket } from "./interface/IPerpdexMarket.sol";
+import { IPerpdexMarketMinimum } from "./interface/IPerpdexMarketMinimum.sol";
 import { PerpdexStructs } from "./lib/PerpdexStructs.sol";
 import { AccountLibrary } from "./lib/AccountLibrary.sol";
 import { MakerLibrary } from "./lib/MakerLibrary.sol";
@@ -108,8 +108,8 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
     {
         TakerLibrary.TradeResponse memory response = _doTrade(params);
 
-        uint256 baseBalancePerShareX96 = IPerpdexMarket(params.market).baseBalancePerShareX96();
-        uint256 shareMarkPriceAfterX96 = IPerpdexMarket(params.market).getShareMarkPriceX96();
+        uint256 baseBalancePerShareX96 = IPerpdexMarketMinimum(params.market).baseBalancePerShareX96();
+        uint256 shareMarkPriceAfterX96 = IPerpdexMarketMinimum(params.market).getShareMarkPriceX96();
 
         if (response.isLiquidation) {
             emit PositionLiquidated(
@@ -170,8 +170,8 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
                 })
             );
 
-        uint256 baseBalancePerShareX96 = IPerpdexMarket(params.market).baseBalancePerShareX96();
-        uint256 shareMarkPriceAfterX96 = IPerpdexMarket(params.market).getShareMarkPriceX96();
+        uint256 baseBalancePerShareX96 = IPerpdexMarketMinimum(params.market).baseBalancePerShareX96();
+        uint256 shareMarkPriceAfterX96 = IPerpdexMarketMinimum(params.market).getShareMarkPriceX96();
 
         PerpdexStructs.MakerInfo storage makerInfo = accountInfos[trader].makerInfos[params.market];
         emit LiquidityAdded(
@@ -211,8 +211,8 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
                 })
             );
 
-        uint256 baseBalancePerShareX96 = IPerpdexMarket(params.market).baseBalancePerShareX96();
-        uint256 shareMarkPriceAfterX96 = IPerpdexMarket(params.market).getShareMarkPriceX96();
+        uint256 baseBalancePerShareX96 = IPerpdexMarketMinimum(params.market).baseBalancePerShareX96();
+        uint256 shareMarkPriceAfterX96 = IPerpdexMarketMinimum(params.market).getShareMarkPriceX96();
 
         emit LiquidityRemoved(
             params.trader,

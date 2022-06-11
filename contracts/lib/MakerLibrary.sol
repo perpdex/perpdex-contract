@@ -8,7 +8,7 @@ import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
 import { SignedSafeMath } from "@openzeppelin/contracts/math/SignedSafeMath.sol";
 import { PerpMath } from "./PerpMath.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/SafeCast.sol";
-import { IPerpdexMarket } from "../interface/IPerpdexMarket.sol";
+import { IPerpdexMarketMinimum } from "../interface/IPerpdexMarketMinimum.sol";
 import { PerpdexStructs } from "./PerpdexStructs.sol";
 import { AccountLibrary } from "./AccountLibrary.sol";
 import { TakerLibrary } from "./TakerLibrary.sol";
@@ -62,9 +62,9 @@ library MakerLibrary {
 
         // retrieve before addLiquidity
         (uint256 cumBasePerLiquidityX96, uint256 cumQuotePerLiquidityX96) =
-            IPerpdexMarket(params.market).getCumDeleveragedPerLiquidityX96();
+            IPerpdexMarketMinimum(params.market).getCumDeleveragedPerLiquidityX96();
 
-        (response.base, response.quote, response.liquidity) = IPerpdexMarket(params.market).addLiquidity(
+        (response.base, response.quote, response.liquidity) = IPerpdexMarketMinimum(params.market).addLiquidity(
             params.base,
             params.quote
         );
@@ -130,17 +130,17 @@ library MakerLibrary {
         {
             PerpdexStructs.MakerInfo storage makerInfo = accountInfo.makerInfos[params.market];
             // retrieve before removeLiquidity
-            (response.takerBase, response.takerQuote) = IPerpdexMarket(params.market).getLiquidityDeleveraged(
+            (response.takerBase, response.takerQuote) = IPerpdexMarketMinimum(params.market).getLiquidityDeleveraged(
                 params.liquidity,
                 makerInfo.cumBaseSharePerLiquidityX96,
                 makerInfo.cumQuotePerLiquidityX96
             );
 
-            shareMarkPriceBeforeX96 = IPerpdexMarket(params.market).getShareMarkPriceX96();
+            shareMarkPriceBeforeX96 = IPerpdexMarketMinimum(params.market).getShareMarkPriceX96();
         }
 
         {
-            (response.base, response.quote) = IPerpdexMarket(params.market).removeLiquidity(params.liquidity);
+            (response.base, response.quote) = IPerpdexMarketMinimum(params.market).removeLiquidity(params.liquidity);
 
             require(response.base >= params.minBase, "ML_RL: too small output base");
             require(response.quote >= params.minQuote, "ML_RL: too small output base");
