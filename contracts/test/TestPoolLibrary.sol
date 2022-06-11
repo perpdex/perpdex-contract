@@ -29,6 +29,17 @@ contract TestPoolLibrary {
         return PoolLibrary.previewSwap(base, quote, params, false);
     }
 
+    function maxSwap(
+        uint256 base,
+        uint256 quote,
+        bool isBaseToQuote,
+        bool isExactInput,
+        uint24 feeRatio,
+        uint256 priceBoundX96
+    ) external pure returns (uint256 output) {
+        return PoolLibrary.maxSwap(base, quote, isBaseToQuote, isExactInput, feeRatio, priceBoundX96);
+    }
+
     function setPoolInfo(MarketStructs.PoolInfo memory value) external {
         poolInfo = value;
     }

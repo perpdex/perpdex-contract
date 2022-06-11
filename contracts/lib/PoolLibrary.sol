@@ -231,18 +231,18 @@ library PoolLibrary {
 
         if (isBaseToQuote) {
             uint256 kDivP = FullMath.mulDiv(k, FixedPoint96.Q96, priceBoundX96);
-            uint256 b = base.add(base.mulRatio(oneSubFeeRatio));
             uint256 baseSqr = base.mul(base);
             if (kDivP <= baseSqr) return 0;
             uint256 cNeg = kDivP.sub(baseSqr);
+            uint256 b = base.add(base.mulRatio(oneSubFeeRatio));
             output = _solveQuadratic(b.divRatio(oneSubFeeRatio), cNeg.divRatio(oneSubFeeRatio));
         } else {
             // https://www.wolframalpha.com/input?i=%28x+%2B+a%29+*+%28x+%2B+a+*+%281+-+f%29%29+%3D+kp+solve+a
             uint256 kp = FullMath.mulDiv(k, priceBoundX96, FixedPoint96.Q96);
-            uint256 b = quote.add(quote.mulRatio(oneSubFeeRatio));
             uint256 quoteSqr = quote.mul(quote);
             if (kp <= quoteSqr) return 0;
             uint256 cNeg = kp.sub(quoteSqr);
+            uint256 b = quote.add(quote.mulRatio(oneSubFeeRatio));
             output = _solveQuadratic(b.divRatio(oneSubFeeRatio), cNeg.divRatio(oneSubFeeRatio));
         }
         if (!isExactInput) {
