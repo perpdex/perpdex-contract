@@ -170,7 +170,7 @@ interface IPerpdexExchange {
 
     function settlementToken() external view returns (address);
 
-    function decimals() external view returns (uint8);
+    function quoteDecimals() external view returns (uint8);
 
     function maxMarketsPerAccount() external view returns (uint8);
 

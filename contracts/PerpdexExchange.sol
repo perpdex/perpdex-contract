@@ -29,7 +29,7 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
 
     // config
     address public immutable override settlementToken;
-    uint8 public constant override decimals = 18;
+    uint8 public constant override quoteDecimals = 18;
     uint8 public override maxMarketsPerAccount = 16;
     uint24 public override imRatio = 10e4;
     uint24 public override mmRatio = 5e4;
