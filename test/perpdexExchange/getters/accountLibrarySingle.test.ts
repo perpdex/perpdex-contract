@@ -1,7 +1,7 @@
 import { expect } from "chai"
 import { waffle } from "hardhat"
-import { TestPerpdexExchange, TestPerpdexMarket } from "../../typechain"
-import { createPerpdexExchangeFixture } from "./fixtures"
+import { TestPerpdexExchange, TestPerpdexMarket } from "../../../typechain"
+import { createPerpdexExchangeFixture } from "../fixtures"
 import { BigNumber, Wallet } from "ethers"
 
 describe("PerpdexExchange getters", () => {
@@ -22,80 +22,6 @@ describe("PerpdexExchange getters", () => {
         owner = fixture.owner
         alice = fixture.alice
     })
-
-    describe("getTakerInfo", () => {
-        it("ok", async () => {
-            await exchange.setTakerInfo(alice.address, market.address, {
-                baseBalanceShare: 1,
-                quoteBalance: 2,
-            })
-            const takerInfo = await exchange.getTakerInfo(alice.address, market.address)
-            expect(takerInfo.baseBalanceShare).to.eq(1)
-            expect(takerInfo.quoteBalance).to.eq(2)
-        })
-    })
-
-    describe("getMakerInfo", () => {
-        it("ok", async () => {
-            await exchange.setMakerInfo(alice.address, market.address, {
-                liquidity: 3,
-                cumBaseSharePerLiquidityX96: 4,
-                cumQuotePerLiquidityX96: 5,
-            })
-            const makerInfo = await exchange.getMakerInfo(alice.address, market.address)
-            expect(makerInfo.liquidity).to.eq(3)
-            expect(makerInfo.cumBaseSharePerLiquidityX96).to.eq(4)
-            expect(makerInfo.cumQuotePerLiquidityX96).to.eq(5)
-        })
-    })
-
-    describe("getAccountMarkets", () => {
-        it("ok", async () => {
-            await exchange.setAccountInfo(
-                alice.address,
-                {
-                    collateralBalance: 0,
-                },
-                [market.address],
-            )
-            const markets = await exchange.getAccountMarkets(alice.address)
-            expect(markets.length).to.eq(1)
-            expect(markets[0]).to.eq(market.address)
-        })
-    })
-
-    // TODO:
-    // describe("AccountLibrary getters multiple market", () => {
-    //     it('two', async () => {
-    //         await exchange.connect(owner).setImRatio(10e4)
-    //         await exchange.connect(owner).setMmRatio(5e4)
-    //
-    //         await exchange.setAccountInfo(
-    //             alice.address,
-    //             {
-    //                 collateralBalance: test.collateralBalance,
-    //             },
-    //             [market.address],
-    //         )
-    //
-    //         await exchange.setTakerInfo(alice.address, market.address, test.takerInfo)
-    //         await exchange.setMakerInfo(alice.address, market.address, test.makerInfo)
-    //
-    //         await market.setPoolInfo(test.poolInfo)
-    //
-    //         expect(await exchange.getTotalAccountValue(alice.address)).to.eq(test.totalAccountValue)
-    //         expect(await exchange.getPositionShare(alice.address, market.address)).to.eq(test.positionShare)
-    //         expect(await exchange.getPositionNotional(alice.address, market.address)).to.eq(test.positionNotional)
-    //         expect(await exchange.getTotalPositionNotional(alice.address)).to.eq(Math.abs(test.positionNotional))
-    //         expect(await exchange.getOpenPositionShare(alice.address, market.address)).to.eq(test.openPositionShare)
-    //         expect(await exchange.getOpenPositionNotional(alice.address, market.address)).to.eq(
-    //             test.openPositionNotional,
-    //         )
-    //         expect(await exchange.getTotalOpenPositionNotional(alice.address)).to.eq(test.openPositionNotional)
-    //         expect(await exchange.hasEnoughMaintenanceMargin(alice.address)).to.eq(test.hasEnoughMaintenanceMargin)
-    //         expect(await exchange.hasEnoughInitialMargin(alice.address)).to.eq(test.hasEnoughInitialMargin)
-    //     })
-    // });
 
     describe("AccountLibrary getters single market", () => {
         ;[
