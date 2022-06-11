@@ -269,12 +269,12 @@ library PoolLibrary {
         uint256 cumBasePerLiquidityX96,
         uint256 cumQuotePerLiquidityX96
     ) internal pure returns (int256, int256) {
-        int256 BasePerLiquidityX96 = poolCumBasePerLiquidityX96.toInt256().sub(cumBasePerLiquidityX96.toInt256());
-        int256 QuotePerLiquidityX96 = poolCumQuotePerLiquidityX96.toInt256().sub(cumQuotePerLiquidityX96.toInt256());
+        int256 basePerLiquidityX96 = poolCumBasePerLiquidityX96.toInt256().sub(cumBasePerLiquidityX96.toInt256());
+        int256 quotePerLiquidityX96 = poolCumQuotePerLiquidityX96.toInt256().sub(cumQuotePerLiquidityX96.toInt256());
 
         return (
-            liquidity.toInt256().mulDiv(BasePerLiquidityX96, FixedPoint96.Q96),
-            liquidity.toInt256().mulDiv(QuotePerLiquidityX96, FixedPoint96.Q96)
+            liquidity.toInt256().mulDiv(basePerLiquidityX96, FixedPoint96.Q96),
+            liquidity.toInt256().mulDiv(quotePerLiquidityX96, FixedPoint96.Q96)
         );
     }
 }

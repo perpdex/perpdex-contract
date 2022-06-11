@@ -2,12 +2,13 @@
 pragma solidity 0.7.6;
 pragma abicoder v2;
 
+import { SafeCast } from "@openzeppelin/contracts/utils/SafeCast.sol";
 import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
 import { SignedSafeMath } from "@openzeppelin/contracts/math/SignedSafeMath.sol";
 import { FullMath } from "@uniswap/v3-core/contracts/libraries/FullMath.sol";
-import { PerpMath } from "./PerpMath.sol";
-import { SafeCast } from "@openzeppelin/contracts/utils/SafeCast.sol";
+import { FixedPoint96 } from "@uniswap/v3-core/contracts/libraries/FixedPoint96.sol";
 import { IPerpdexMarketMinimum } from "../interface/IPerpdexMarketMinimum.sol";
+import { PerpMath } from "./PerpMath.sol";
 import { PerpdexStructs } from "./PerpdexStructs.sol";
 import { AccountLibrary } from "./AccountLibrary.sol";
 
@@ -120,16 +121,15 @@ library TakerLibrary {
             require(baseShare.sign() * quoteBalance.sign() == -1, "TL_ATTB: invalid input");
 
             if (takerInfo.baseBalanceShare.sign() * baseShare.sign() == -1) {
-                uint256 FULLY_CLOSED_RATIO = 1e18;
-                uint256 closedRatio =
-                    FullMath.mulDiv(baseShare.abs(), FULLY_CLOSED_RATIO, takerInfo.baseBalanceShare.abs());
+                uint256 closedRatioX96 =
+                    FullMath.mulDiv(baseShare.abs(), FixedPoint96.Q96, takerInfo.baseBalanceShare.abs());
 
-                if (closedRatio <= FULLY_CLOSED_RATIO) {
+                if (closedRatioX96 <= FixedPoint96.Q96) {
                     int256 reducedOpenNotional =
-                        takerInfo.quoteBalance.mulDiv(closedRatio.toInt256(), FULLY_CLOSED_RATIO);
+                        takerInfo.quoteBalance.mulDiv(closedRatioX96.toInt256(), FixedPoint96.Q96);
                     realizedPnl = quoteBalance.add(reducedOpenNotional);
                 } else {
-                    int256 closedPositionNotional = quoteBalance.mulDiv(int256(FULLY_CLOSED_RATIO), closedRatio);
+                    int256 closedPositionNotional = quoteBalance.mulDiv(int256(FixedPoint96.Q96), closedRatioX96);
                     realizedPnl = takerInfo.quoteBalance.add(closedPositionNotional);
                 }
             }
@@ -312,7 +312,7 @@ library TakerLibrary {
         liquidationReward = penalty.mulRatio(liquidationRewardConfig.rewardRatio);
         insuranceFundReward = penalty.sub(liquidationReward);
 
-        (insuranceFundInfo.liquidationRewardBalance, liquidationReward) = _smoothLiquidationReward(
+        (insuranceFundInfo.liquidationRewardBalance, liquidationReward) = smoothLiquidationReward(
             insuranceFundInfo.liquidationRewardBalance,
             liquidationReward,
             liquidationRewardConfig.smoothEmaTime
@@ -323,7 +323,7 @@ library TakerLibrary {
         insuranceFundInfo.balance = insuranceFundInfo.balance.add(insuranceFundReward.toInt256());
     }
 
-    function _smoothLiquidationReward(
+    function smoothLiquidationReward(
         uint256 rewardBalance,
         uint256 reward,
         uint24 emaTime
