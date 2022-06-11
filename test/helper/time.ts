@@ -4,6 +4,9 @@ export async function getTimestamp() {
     return block.timestamp
 }
 
-export async function setNextTimestamp(value) {
+export async function setNextTimestamp(value, mine = false) {
     await hre.ethers.provider.send("evm_setNextBlockTimestamp", [value])
+    if (mine) {
+        await hre.ethers.provider.send("evm_mine", [])
+    }
 }

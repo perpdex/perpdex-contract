@@ -21,6 +21,36 @@ library PriceLimitLibrary {
         priceLimitInfo.emaPrice = value.emaPrice;
     }
 
+    // referenceTimestamp == 0 indicates not updated
+    function updateDry(
+        MarketStructs.PriceLimitInfo storage priceLimitInfo,
+        MarketStructs.PriceLimitConfig storage config,
+        uint256 price
+    ) internal view returns (MarketStructs.PriceLimitInfo memory updated) {
+        uint256 currentTimestamp = block.timestamp;
+        uint256 refTimestamp = priceLimitInfo.referenceTimestamp;
+        if (currentTimestamp <= refTimestamp) {
+            updated.referencePrice = priceLimitInfo.referencePrice;
+            updated.emaPrice = priceLimitInfo.emaPrice;
+            return updated;
+        }
+
+        uint256 elapsed = currentTimestamp.sub(refTimestamp);
+
+        if (priceLimitInfo.referencePrice == 0) {
+            updated.emaPrice = price;
+        } else {
+            uint32 emaSec = config.emaSec;
+            uint256 denominator = elapsed.add(emaSec);
+            updated.emaPrice = FullMath.mulDiv(priceLimitInfo.emaPrice, emaSec, denominator).add(
+                FullMath.mulDiv(price, elapsed, denominator)
+            );
+        }
+
+        updated.referencePrice = price;
+        updated.referenceTimestamp = currentTimestamp;
+    }
+
     function maxPrice(
         uint256 referencePrice,
         uint256 emaPrice,
@@ -49,35 +79,5 @@ library PriceLimitLibrary {
         uint256 lowerBoundEma =
             emaPrice.sub(emaPrice.mulRatio(isLiquidation ? config.emaLiquidationRatio : config.emaNormalOrderRatio));
         return Math.max(lowerBound, lowerBoundEma);
-    }
-
-    // referenceTimestamp == 0 indicates not updated
-    function updateDry(
-        MarketStructs.PriceLimitInfo storage priceLimitInfo,
-        MarketStructs.PriceLimitConfig storage config,
-        uint256 price
-    ) internal view returns (MarketStructs.PriceLimitInfo memory updated) {
-        uint256 currentTimestamp = block.number;
-        uint256 refTimestamp = priceLimitInfo.referenceTimestamp;
-        if (currentTimestamp <= refTimestamp) {
-            updated.referencePrice = priceLimitInfo.referencePrice;
-            updated.emaPrice = priceLimitInfo.emaPrice;
-            return updated;
-        }
-
-        uint256 elapsed = currentTimestamp.sub(refTimestamp);
-
-        if (priceLimitInfo.referencePrice == 0) {
-            updated.emaPrice = price;
-        } else {
-            uint32 emaSec = config.emaSec;
-            uint256 denominator = elapsed.add(emaSec);
-            updated.emaPrice = FullMath.mulDiv(priceLimitInfo.emaPrice, emaSec, denominator).add(
-                FullMath.mulDiv(price, elapsed, denominator)
-            );
-        }
-
-        updated.referencePrice = price;
-        updated.referenceTimestamp = currentTimestamp;
     }
 }
