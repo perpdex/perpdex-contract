@@ -18,7 +18,7 @@ library TakerLibrary {
     using SafeMath for uint256;
     using SignedSafeMath for int256;
 
-    struct OpenPositionParams {
+    struct TradeParams {
         address market;
         bool isBaseToQuote;
         bool isExactInput;
@@ -32,7 +32,7 @@ library TakerLibrary {
         PerpdexStructs.LiquidationRewardConfig liquidationRewardConfig;
     }
 
-    struct PreviewOpenPositionParams {
+    struct PreviewTradeParams {
         address market;
         bool isBaseToQuote;
         bool isExactInput;
@@ -43,7 +43,7 @@ library TakerLibrary {
         bool isSelf;
     }
 
-    struct OpenPositionResponse {
+    struct TradeResponse {
         int256 base;
         int256 quote;
         int256 realizedPnl;
@@ -54,13 +54,13 @@ library TakerLibrary {
         bool isLiquidation;
     }
 
-    function openPosition(
+    function trade(
         PerpdexStructs.AccountInfo storage accountInfo,
         PerpdexStructs.VaultInfo storage liquidatorVaultInfo,
         PerpdexStructs.InsuranceFundInfo storage insuranceFundInfo,
         PerpdexStructs.ProtocolInfo storage protocolInfo,
-        OpenPositionParams memory params
-    ) internal returns (OpenPositionResponse memory response) {
+        TradeParams memory params
+    ) internal returns (TradeResponse memory response) {
         response.isLiquidation = !AccountLibrary.hasEnoughMaintenanceMargin(accountInfo, params.mmRatio);
 
         if (!params.isSelf) {
@@ -151,13 +151,14 @@ library TakerLibrary {
         AccountLibrary.updateMarkets(accountInfo, market, maxMarketsPerAccount);
     }
 
-    // Even if openPosition reverts, it may not revert.
+    // Even if trade reverts, it may not revert.
     // Attempting to match reverts makes the implementation too complicated
     // ignore initial margin check and close only check when liquidation
-    function previewOpenPosition(
-        PerpdexStructs.AccountInfo storage accountInfo,
-        PreviewOpenPositionParams memory params
-    ) internal view returns (uint256 oppositeAmount) {
+    function previewTrade(PerpdexStructs.AccountInfo storage accountInfo, PreviewTradeParams memory params)
+        internal
+        view
+        returns (uint256 oppositeAmount)
+    {
         bool isLiquidation = !AccountLibrary.hasEnoughMaintenanceMargin(accountInfo, params.mmRatio);
 
         if (!params.isSelf) {
@@ -186,7 +187,7 @@ library TakerLibrary {
     }
 
     // ignore initial margin check and close only check when liquidation
-    function maxOpenPosition(
+    function maxTrade(
         PerpdexStructs.AccountInfo storage accountInfo,
         address market,
         bool isBaseToQuote,

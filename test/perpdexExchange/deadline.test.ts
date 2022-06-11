@@ -45,10 +45,10 @@ describe("PerpdexExchange deadline", () => {
         await setNextTimestamp(nextBlockTimestamp)
     })
 
-    describe("openPosition", () => {
+    describe("trade", () => {
         it("before", async () => {
             await expect(
-                exchange.connect(alice).openPosition({
+                exchange.connect(alice).trade({
                     trader: alice.address,
                     market: market.address,
                     isBaseToQuote: false,
@@ -62,7 +62,7 @@ describe("PerpdexExchange deadline", () => {
 
         it("just", async () => {
             await expect(
-                exchange.connect(alice).openPosition({
+                exchange.connect(alice).trade({
                     trader: alice.address,
                     market: market.address,
                     isBaseToQuote: false,
@@ -76,7 +76,7 @@ describe("PerpdexExchange deadline", () => {
 
         it("after", async () => {
             await expect(
-                exchange.connect(alice).openPosition({
+                exchange.connect(alice).trade({
                     trader: alice.address,
                     market: market.address,
                     isBaseToQuote: false,

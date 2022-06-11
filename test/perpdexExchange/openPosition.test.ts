@@ -4,7 +4,7 @@ import { TestPerpdexExchange, TestPerpdexMarket } from "../../typechain"
 import { createPerpdexExchangeFixture } from "./fixtures"
 import { BigNumber, Wallet } from "ethers"
 
-describe("PerpdexExchange openPosition", () => {
+describe("PerpdexExchange trade", () => {
     let loadFixture = waffle.createFixtureLoader(waffle.provider.getWallets())
     let fixture
 
@@ -523,7 +523,7 @@ describe("PerpdexExchange openPosition", () => {
 
                 it("mutable", async () => {
                     const res = expect(
-                        exchange.connect(test.notSelf ? bob : alice).openPosition({
+                        exchange.connect(test.notSelf ? bob : alice).trade({
                             trader: alice.address,
                             market: market.address,
                             isBaseToQuote: test.isBaseToQuote,
@@ -597,7 +597,7 @@ describe("PerpdexExchange openPosition", () => {
 
                 if (!test.liquidation) {
                     it("dry", async () => {
-                        const call = exchange.previewOpenPosition({
+                        const call = exchange.previewTrade({
                             trader: alice.address,
                             market: market.address,
                             caller: (test.notSelf ? bob : alice).address,

@@ -4,7 +4,7 @@ import { TestPerpdexExchange, TestPerpdexMarket } from "../../typechain"
 import { createPerpdexExchangeFixture } from "./fixtures"
 import { BigNumber, Wallet } from "ethers"
 
-describe("PerpdexExchange maxOpenPosition", () => {
+describe("PerpdexExchange maxTrade", () => {
     let loadFixture = waffle.createFixtureLoader(waffle.provider.getWallets())
     let fixture
 
@@ -212,7 +212,7 @@ describe("PerpdexExchange maxOpenPosition", () => {
                 })
 
                 it("dry", async () => {
-                    const call = exchange.maxOpenPosition({
+                    const call = exchange.maxTrade({
                         trader: alice.address,
                         market: market.address,
                         caller: (test.notSelf ? bob : alice).address,

@@ -23,7 +23,7 @@ interface IPerpdexExchange {
         uint256 deadline;
     }
 
-    struct OpenPositionParams {
+    struct TradeParams {
         address trader;
         address market;
         bool isBaseToQuote;
@@ -33,7 +33,7 @@ interface IPerpdexExchange {
         uint256 deadline;
     }
 
-    struct PreviewOpenPositionParams {
+    struct PreviewTradeParams {
         address trader;
         address market;
         address caller;
@@ -43,7 +43,7 @@ interface IPerpdexExchange {
         uint256 oppositeAmountBound;
     }
 
-    struct MaxOpenPositionParams {
+    struct MaxTradeParams {
         address trader;
         address market;
         address caller;
@@ -135,7 +135,7 @@ interface IPerpdexExchange {
 
     function removeLiquidity(RemoveLiquidityParams calldata params) external returns (uint256 base, uint256 quote);
 
-    function openPosition(OpenPositionParams calldata params) external returns (uint256 oppositeAmount);
+    function trade(TradeParams calldata params) external returns (uint256 oppositeAmount);
 
     // setters
 
@@ -153,12 +153,9 @@ interface IPerpdexExchange {
 
     // dry run getters
 
-    function previewOpenPosition(PreviewOpenPositionParams calldata params)
-        external
-        view
-        returns (uint256 oppositeAmount);
+    function previewTrade(PreviewTradeParams calldata params) external view returns (uint256 oppositeAmount);
 
-    function maxOpenPosition(MaxOpenPositionParams calldata params) external view returns (uint256 amount);
+    function maxTrade(MaxTradeParams calldata params) external view returns (uint256 amount);
 
     // default getters
 

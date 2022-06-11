@@ -70,7 +70,7 @@ describe("Vault withdraw test", () => {
             await expect(perpdexExchange.connect(alice).withdraw("0")).to.be.revertedWith("VL_W: zero amount")
         })
 
-        // TODO: will write this after openPosition test
+        // TODO: will write this after trade test
         it("reverts when account does not have enough initial margin")
     })
 })
