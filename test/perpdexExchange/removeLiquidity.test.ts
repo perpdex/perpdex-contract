@@ -3,6 +3,8 @@ import { waffle } from "hardhat"
 import { TestPerpdexExchange, TestPerpdexMarket } from "../../typechain"
 import { createPerpdexExchangeFixture } from "./fixtures"
 import { BigNumber, Wallet } from "ethers"
+import { getTimestamp, setNextTimestamp } from "../helper/time"
+import { MockContract } from "ethereum-waffle"
 
 describe("PerpdexExchange removeLiquidity", () => {
     let loadFixture = waffle.createFixtureLoader(waffle.provider.getWallets())
@@ -13,6 +15,7 @@ describe("PerpdexExchange removeLiquidity", () => {
     let owner: Wallet
     let alice: Wallet
     let bob: Wallet
+    let priceFeed: MockContract
 
     const Q96 = BigNumber.from(2).pow(96)
     const deadline = Q96
@@ -24,6 +27,7 @@ describe("PerpdexExchange removeLiquidity", () => {
         owner = fixture.owner
         alice = fixture.alice
         bob = fixture.bob
+        priceFeed = fixture.priceFeed
 
         await exchange.connect(owner).setImRatio(10e4)
         await exchange.connect(owner).setMmRatio(5e4)
@@ -119,8 +123,47 @@ describe("PerpdexExchange removeLiquidity", () => {
                     cumBaseSharePerLiquidityX96: 0, // debt -10
                     cumQuotePerLiquidityX96: 0, // debt -20
                 },
-                cumBaseSharePerLiquidityX96: Q96.mul(10),
-                cumQuotePerLiquidityX96: Q96.mul(20),
+            },
+            {
+                title: "deleverage. funding not affect cumPerLiquidity calc",
+                liquidity: 1,
+                minBase: 0,
+                minQuote: 0,
+                collateralBalance: 100,
+                funding: true,
+                takerInfo: {
+                    baseBalanceShare: 0,
+                    quoteBalance: 0,
+                },
+                makerInfo: {
+                    liquidity: 2,
+                    cumBaseSharePerLiquidityX96: 0,
+                    cumQuotePerLiquidityX96: 0,
+                },
+                poolInfo: {
+                    base: 10000,
+                    quote: 10000,
+                    totalLiquidity: 10000,
+                    cumBasePerLiquidityX96: Q96.mul(10),
+                    cumQuotePerLiquidityX96: Q96.mul(20),
+                    baseBalancePerShareX96: Q96,
+                },
+                outputBase: 1,
+                outputQuote: 1,
+                outputTakerBase: 11,
+                outputTakerQuote: 21,
+                afterCollateralBalance: 132,
+                afterTakerInfo: {
+                    baseBalanceShare: 11,
+                    quoteBalance: -11,
+                },
+                afterMakerInfo: {
+                    liquidity: 1,
+                    cumBaseSharePerLiquidityX96: 0, // debt -10
+                    cumQuotePerLiquidityX96: 0, // debt -20
+                },
+                baseBalancePerShareX96: BigNumber.from("71305346262837903834189555303"),
+                sharePrice: BigNumber.from("71312477510588962730462601562"),
             },
             {
                 title: "minBase condition",
@@ -276,6 +319,21 @@ describe("PerpdexExchange removeLiquidity", () => {
                     await market.setPoolInfo(test.poolInfo)
                 }
 
+                if (test.funding) {
+                    await market.connect(owner).setFundingMaxPremiumRatio(1e5)
+                    await market.connect(owner).setFundingRolloverSec(3600)
+                    await priceFeed.mock.decimals.returns(18)
+
+                    await priceFeed.mock.getPrice.returns(1)
+                    const currentTimestamp = await getTimestamp()
+                    await market.setFundingInfo({
+                        prevIndexPriceBase: BigNumber.from(10).pow(18),
+                        prevIndexPriceQuote: 1,
+                        prevIndexPriceTimestamp: currentTimestamp + 1000,
+                    })
+                    await setNextTimestamp(currentTimestamp + 1000 + 3600)
+                }
+
                 const res = expect(
                     exchange.connect(test.notSelf ? bob : alice).removeLiquidity({
                         trader: alice.address,
@@ -304,8 +362,8 @@ describe("PerpdexExchange removeLiquidity", () => {
                             test.outputTakerBase,
                             test.outputTakerQuote,
                             test.afterCollateralBalance - test.collateralBalance,
-                            test.poolInfo ? test.poolInfo.baseBalancePerShareX96 : Q96,
-                            sharePrice,
+                            test.baseBalancePerShareX96 || (test.poolInfo ? test.poolInfo.baseBalancePerShareX96 : Q96),
+                            test.sharePrice || sharePrice,
                         )
 
                     const accountInfo = await exchange.accountInfos(alice.address)
