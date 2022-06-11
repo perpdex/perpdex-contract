@@ -22,7 +22,7 @@ describe("PerpdexExchange getters", () => {
         market = fixture.perpdexMarket
         owner = fixture.owner
         alice = fixture.alice
-        markets = [fixture.perpdexMarket, fixture.perpdexMarket2]
+        markets = fixture.perpdexMarkets
     })
 
     describe("AccountLibrary getters two markets", () => {

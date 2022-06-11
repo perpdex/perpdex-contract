@@ -68,13 +68,6 @@ describe("PerpdexExchange trade", () => {
         })
     })
 
-    // TODO:
-    describe("too many market", () => {
-        it("max markets condition", async () => {})
-
-        it("check gas fee", async () => {})
-    })
-
     describe("various cases", () => {
         ;[
             {
