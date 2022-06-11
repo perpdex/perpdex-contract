@@ -121,15 +121,14 @@ library TakerLibrary {
             require(baseShare.sign() * quoteBalance.sign() == -1, "TL_ATTB: invalid input");
 
             if (takerInfo.baseBalanceShare.sign() * baseShare.sign() == -1) {
-                uint256 closedRatioX96 =
-                    FullMath.mulDiv(baseShare.abs(), FixedPoint96.Q96, takerInfo.baseBalanceShare.abs());
+                uint256 baseAbs = baseShare.abs();
+                uint256 takerBaseAbs = takerInfo.baseBalanceShare.abs();
 
-                if (closedRatioX96 <= FixedPoint96.Q96) {
-                    int256 reducedOpenNotional =
-                        takerInfo.quoteBalance.mulDiv(closedRatioX96.toInt256(), FixedPoint96.Q96);
+                if (baseAbs <= takerBaseAbs) {
+                    int256 reducedOpenNotional = takerInfo.quoteBalance.mulDiv(baseAbs.toInt256(), takerBaseAbs);
                     realizedPnl = quoteBalance.add(reducedOpenNotional);
                 } else {
-                    int256 closedPositionNotional = quoteBalance.mulDiv(int256(FixedPoint96.Q96), closedRatioX96);
+                    int256 closedPositionNotional = quoteBalance.mulDiv(takerBaseAbs.toInt256(), baseAbs);
                     realizedPnl = takerInfo.quoteBalance.add(closedPositionNotional);
                 }
             }
