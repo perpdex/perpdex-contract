@@ -4,7 +4,7 @@ import { TestPerpdexExchange, TestPerpdexMarket } from "../../typechain"
 import { createPerpdexExchangeFixture } from "./fixtures"
 import { BigNumber, BigNumberish, Wallet } from "ethers"
 
-describe("PerpdexExchange openPosition consistency", () => {
+describe("PerpdexExchange trade consistency", () => {
     let loadFixture = waffle.createFixtureLoader(waffle.provider.getWallets())
     let fixture
 
@@ -82,7 +82,7 @@ describe("PerpdexExchange openPosition consistency", () => {
                                     [market.address],
                                 )
 
-                                amount = await exchange.maxOpenPosition({
+                                amount = await exchange.maxTrade({
                                     trader: alice.address,
                                     market: market.address,
                                     caller: alice.address,
@@ -91,8 +91,8 @@ describe("PerpdexExchange openPosition consistency", () => {
                                 })
                             })
 
-                            it("openPosition revert condition with maxOpenPosition", async () => {
-                                const res2 = exchange.connect(alice).openPosition({
+                            it("trade revert condition with maxTrade", async () => {
+                                const res2 = exchange.connect(alice).trade({
                                     trader: alice.address,
                                     market: market.address,
                                     isBaseToQuote: isBaseToQuote,
@@ -103,7 +103,7 @@ describe("PerpdexExchange openPosition consistency", () => {
                                 })
                                 await expect(res2).to.reverted
 
-                                const res = exchange.connect(alice).openPosition({
+                                const res = exchange.connect(alice).trade({
                                     trader: alice.address,
                                     market: market.address,
                                     isBaseToQuote: isBaseToQuote,
@@ -115,8 +115,8 @@ describe("PerpdexExchange openPosition consistency", () => {
                                 await expect(res).not.to.reverted
                             })
 
-                            it("previewOpenPosition revert condition with maxOpenPosition", async () => {
-                                const res2 = exchange.previewOpenPosition({
+                            it("previewTrade revert condition with maxTrade", async () => {
+                                const res2 = exchange.previewTrade({
                                     trader: alice.address,
                                     market: market.address,
                                     caller: alice.address,
@@ -127,7 +127,7 @@ describe("PerpdexExchange openPosition consistency", () => {
                                 })
                                 await expect(res2).to.reverted
 
-                                const res = exchange.previewOpenPosition({
+                                const res = exchange.previewTrade({
                                     trader: alice.address,
                                     market: market.address,
                                     caller: alice.address,
@@ -139,8 +139,8 @@ describe("PerpdexExchange openPosition consistency", () => {
                                 await expect(res).not.to.reverted
                             })
 
-                            it("openPosition and previewOpenPosition", async () => {
-                                const previewBaseQuote = exchange.previewOpenPosition({
+                            it("trade and previewTrade", async () => {
+                                const previewBaseQuote = exchange.previewTrade({
                                     trader: alice.address,
                                     market: market.address,
                                     caller: alice.address,
@@ -150,7 +150,7 @@ describe("PerpdexExchange openPosition consistency", () => {
                                     oppositeAmountBound: isExactInput ? 0 : maxUint,
                                 })
 
-                                const res = exchange.connect(alice).openPosition({
+                                const res = exchange.connect(alice).trade({
                                     trader: alice.address,
                                     market: market.address,
                                     isBaseToQuote: isBaseToQuote,

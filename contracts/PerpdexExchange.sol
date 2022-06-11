@@ -98,7 +98,7 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
         emit ProtocolFeeTransferred(trader, amount);
     }
 
-    function openPosition(OpenPositionParams calldata params)
+    function trade(TradeParams calldata params)
         external
         override
         nonReentrant
@@ -106,7 +106,7 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
         checkMarketAllowed(params.market)
         returns (uint256 oppositeAmount)
     {
-        TakerLibrary.OpenPositionResponse memory response = _doOpenPosition(params);
+        TakerLibrary.TradeResponse memory response = _doTrade(params);
 
         uint256 baseBalancePerShareX96 = IPerpdexMarket(params.market).baseBalancePerShareX96();
         uint256 shareMarkPriceAfterX96 = IPerpdexMarket(params.market).getShareMarkPriceX96();
@@ -304,7 +304,7 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
 
     // dry run
 
-    function previewOpenPosition(PreviewOpenPositionParams calldata params)
+    function previewTrade(PreviewTradeParams calldata params)
         external
         view
         override
@@ -315,9 +315,9 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
         address caller = params.caller;
 
         return
-            TakerLibrary.previewOpenPosition(
+            TakerLibrary.previewTrade(
                 accountInfos[trader],
-                TakerLibrary.PreviewOpenPositionParams({
+                TakerLibrary.PreviewTradeParams({
                     market: params.market,
                     isBaseToQuote: params.isBaseToQuote,
                     isExactInput: params.isExactInput,
@@ -330,14 +330,14 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
             );
     }
 
-    function maxOpenPosition(MaxOpenPositionParams calldata params) external view override returns (uint256 amount) {
+    function maxTrade(MaxTradeParams calldata params) external view override returns (uint256 amount) {
         if (!isMarketAllowed[params.market]) return 0;
 
         address trader = params.trader;
         address caller = params.caller;
 
         return
-            TakerLibrary.maxOpenPosition({
+            TakerLibrary.maxTrade({
                 accountInfo: accountInfos[trader],
                 market: params.market,
                 isBaseToQuote: params.isBaseToQuote,
@@ -387,17 +387,14 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
     }
 
     // for avoiding stack too deep error
-    function _doOpenPosition(OpenPositionParams calldata params)
-        private
-        returns (TakerLibrary.OpenPositionResponse memory)
-    {
+    function _doTrade(TradeParams calldata params) private returns (TakerLibrary.TradeResponse memory) {
         return
-            TakerLibrary.openPosition(
+            TakerLibrary.trade(
                 accountInfos[params.trader],
                 accountInfos[_msgSender()].vaultInfo,
                 insuranceFundInfo,
                 protocolInfo,
-                TakerLibrary.OpenPositionParams({
+                TakerLibrary.TradeParams({
                     market: params.market,
                     isBaseToQuote: params.isBaseToQuote,
                     isExactInput: params.isExactInput,
