@@ -126,8 +126,6 @@ describe("AccountLibrary updateMarkets", () => {
                         quoteBalance: -1,
                     })
                     await library.setMakerInfo(idxToMarket(test.accountInfo[i].market), {
-                        baseDebtShare: 0,
-                        quoteDebt: 0,
                         liquidity: test.accountInfo[i].makerLiquidity,
                         cumBaseSharePerLiquidityX96: 0,
                         cumQuotePerLiquidityX96: 0,

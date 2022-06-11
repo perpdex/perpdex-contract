@@ -63,11 +63,9 @@ describe("PerpdexExchange removeLiquidity", () => {
                     quoteBalance: 0,
                 },
                 makerInfo: {
-                    baseDebtShare: 50,
-                    quoteDebt: 50,
                     liquidity: 100,
-                    cumBaseSharePerLiquidityX96: 0,
-                    cumQuotePerLiquidityX96: 0,
+                    cumBaseSharePerLiquidityX96: Q96.div(2), // debt 50
+                    cumQuotePerLiquidityX96: Q96.div(2), // debt 50
                 },
                 outputBase: 50,
                 outputQuote: 50,
@@ -79,11 +77,9 @@ describe("PerpdexExchange removeLiquidity", () => {
                     quoteBalance: -25,
                 },
                 afterMakerInfo: {
-                    baseDebtShare: 25,
-                    quoteDebt: 25,
                     liquidity: 50,
-                    cumBaseSharePerLiquidityX96: 0,
-                    cumQuotePerLiquidityX96: 0,
+                    cumBaseSharePerLiquidityX96: Q96.div(2), // debt 25
+                    cumQuotePerLiquidityX96: Q96.div(2), // debt 25
                 },
             },
             {
@@ -97,8 +93,6 @@ describe("PerpdexExchange removeLiquidity", () => {
                     quoteBalance: 0,
                 },
                 makerInfo: {
-                    baseDebtShare: 0,
-                    quoteDebt: 0,
                     liquidity: 2,
                     cumBaseSharePerLiquidityX96: 0,
                     cumQuotePerLiquidityX96: 0,
@@ -121,11 +115,9 @@ describe("PerpdexExchange removeLiquidity", () => {
                     quoteBalance: -11,
                 },
                 afterMakerInfo: {
-                    baseDebtShare: -10,
-                    quoteDebt: -20,
                     liquidity: 1,
-                    cumBaseSharePerLiquidityX96: Q96.mul(10),
-                    cumQuotePerLiquidityX96: Q96.mul(20),
+                    cumBaseSharePerLiquidityX96: 0, // debt -10
+                    cumQuotePerLiquidityX96: 0, // debt -20
                 },
                 cumBaseSharePerLiquidityX96: Q96.mul(10),
                 cumQuotePerLiquidityX96: Q96.mul(20),
@@ -141,8 +133,6 @@ describe("PerpdexExchange removeLiquidity", () => {
                     quoteBalance: 0,
                 },
                 makerInfo: {
-                    baseDebtShare: 0,
-                    quoteDebt: 0,
                     liquidity: 100,
                     cumBaseSharePerLiquidityX96: 0,
                     cumQuotePerLiquidityX96: 0,
@@ -160,8 +150,6 @@ describe("PerpdexExchange removeLiquidity", () => {
                     quoteBalance: 0,
                 },
                 makerInfo: {
-                    baseDebtShare: 0,
-                    quoteDebt: 0,
                     liquidity: 100,
                     cumBaseSharePerLiquidityX96: 0,
                     cumQuotePerLiquidityX96: 0,
@@ -179,11 +167,9 @@ describe("PerpdexExchange removeLiquidity", () => {
                     quoteBalance: 0,
                 },
                 makerInfo: {
-                    baseDebtShare: 100,
-                    quoteDebt: 100,
                     liquidity: 100,
-                    cumBaseSharePerLiquidityX96: 0,
-                    cumQuotePerLiquidityX96: 0,
+                    cumBaseSharePerLiquidityX96: Q96, // debt 100
+                    cumQuotePerLiquidityX96: Q96, // debt 100
                 },
                 isMarketAllowed: false,
                 revertedWith: "PE_CMA: market not allowed",
@@ -200,11 +186,9 @@ describe("PerpdexExchange removeLiquidity", () => {
                     quoteBalance: 0,
                 },
                 makerInfo: {
-                    baseDebtShare: 0,
-                    quoteDebt: 200,
                     liquidity: 100,
                     cumBaseSharePerLiquidityX96: 0,
-                    cumQuotePerLiquidityX96: 0,
+                    cumQuotePerLiquidityX96: Q96.mul(2), // debt 200
                 },
                 outputBase: 50,
                 outputQuote: 50,
@@ -217,11 +201,9 @@ describe("PerpdexExchange removeLiquidity", () => {
                     quoteBalance: -50,
                 },
                 afterMakerInfo: {
-                    baseDebtShare: 0,
-                    quoteDebt: 100,
                     liquidity: 50,
                     cumBaseSharePerLiquidityX96: 0,
-                    cumQuotePerLiquidityX96: 0,
+                    cumQuotePerLiquidityX96: Q96.mul(2), // debt 100
                 },
             },
             {
@@ -236,11 +218,9 @@ describe("PerpdexExchange removeLiquidity", () => {
                     quoteBalance: 0,
                 },
                 makerInfo: {
-                    baseDebtShare: 0,
-                    quoteDebt: 200,
                     liquidity: 100,
                     cumBaseSharePerLiquidityX96: 0,
-                    cumQuotePerLiquidityX96: 0,
+                    cumQuotePerLiquidityX96: Q96.mul(2), // debt 200
                 },
                 outputBase: 50,
                 outputQuote: 50,
@@ -253,11 +233,9 @@ describe("PerpdexExchange removeLiquidity", () => {
                     quoteBalance: -50,
                 },
                 afterMakerInfo: {
-                    baseDebtShare: 0,
-                    quoteDebt: 100,
                     liquidity: 50,
                     cumBaseSharePerLiquidityX96: 0,
-                    cumQuotePerLiquidityX96: 0,
+                    cumQuotePerLiquidityX96: Q96.mul(2), // debt 100
                 },
             },
             {
@@ -272,11 +250,9 @@ describe("PerpdexExchange removeLiquidity", () => {
                     quoteBalance: 0,
                 },
                 makerInfo: {
-                    baseDebtShare: 0,
-                    quoteDebt: 200,
                     liquidity: 100,
                     cumBaseSharePerLiquidityX96: 0,
-                    cumQuotePerLiquidityX96: 0,
+                    cumQuotePerLiquidityX96: Q96.mul(2), // debt 200
                 },
                 revertedWith: "ML_RL: enough mm",
             },
@@ -342,8 +318,6 @@ describe("PerpdexExchange removeLiquidity", () => {
                     expect(takerInfo.quoteBalance).to.eq(test.afterTakerInfo.quoteBalance)
 
                     const makerInfo = await exchange.getMakerInfo(alice.address, market.address)
-                    expect(makerInfo.baseDebtShare).to.eq(test.afterMakerInfo.baseDebtShare)
-                    expect(makerInfo.quoteDebt).to.eq(test.afterMakerInfo.quoteDebt)
                     expect(makerInfo.liquidity).to.eq(test.afterMakerInfo.liquidity)
                     expect(makerInfo.cumBaseSharePerLiquidityX96).to.eq(test.afterMakerInfo.cumBaseSharePerLiquidityX96)
                     expect(makerInfo.cumQuotePerLiquidityX96).to.eq(test.afterMakerInfo.cumQuotePerLiquidityX96)

@@ -65,6 +65,9 @@ library MakerLibrary {
     {
         PerpdexStructs.MakerInfo storage makerInfo = accountInfo.makerInfos[params.market];
 
+        (response.cumBasePerLiquidityX96, response.cumQuotePerLiquidityX96) = IPerpdexMarket(params.market)
+            .getCumDeleveragedPerLiquidityX96();
+
         (response.base, response.quote, response.liquidity) = IPerpdexMarket(params.market).addLiquidity(
             params.base,
             params.quote
@@ -72,9 +75,6 @@ library MakerLibrary {
 
         require(response.base >= params.minBase, "ML_AL: too small output base");
         require(response.quote >= params.minQuote, "ML_AL: too small output quote");
-
-        (response.cumBasePerLiquidityX96, response.cumQuotePerLiquidityX96) = IPerpdexMarket(params.market)
-            .getCumDeleveragedPerLiquidityX96();
 
         uint256 liquidityBefore = makerInfo.liquidity;
         makerInfo.liquidity = liquidityBefore.add(response.liquidity);
@@ -128,6 +128,11 @@ library MakerLibrary {
 
         if (!params.isSelf) {
             require(response.isLiquidation, "ML_RL: enough mm");
+        }
+
+        {
+            (response.cumBasePerLiquidityX96, response.cumQuotePerLiquidityX96) = IPerpdexMarket(params.market)
+                .getCumDeleveragedPerLiquidityX96();
         }
 
         {

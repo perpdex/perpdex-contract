@@ -53,7 +53,7 @@ describe("PerpdexExchange addLiquidity", () => {
     describe("various cases", () => {
         ;[
             {
-                title: "add",
+                title: "initial",
                 base: 100,
                 quote: 200,
                 minBase: 100,
@@ -64,8 +64,6 @@ describe("PerpdexExchange addLiquidity", () => {
                     quoteBalance: 0,
                 },
                 makerInfo: {
-                    baseDebtShare: 0,
-                    quoteDebt: 0,
                     liquidity: 0,
                     cumBaseSharePerLiquidityX96: 0,
                     cumQuotePerLiquidityX96: 0,
@@ -78,11 +76,38 @@ describe("PerpdexExchange addLiquidity", () => {
                     quoteBalance: 0,
                 },
                 afterMakerInfo: {
-                    baseDebtShare: 100,
-                    quoteDebt: 100,
                     liquidity: 100,
-                    cumBaseSharePerLiquidityX96: 0,
-                    cumQuotePerLiquidityX96: 0,
+                    cumBaseSharePerLiquidityX96: Q96, // debt 100
+                    cumQuotePerLiquidityX96: Q96, // debt 100
+                },
+            },
+            {
+                title: "add",
+                base: 100,
+                quote: 200,
+                minBase: 100,
+                minQuote: 100,
+                collateralBalance: 80,
+                takerInfo: {
+                    baseBalanceShare: 0,
+                    quoteBalance: 0,
+                },
+                makerInfo: {
+                    liquidity: 400,
+                    cumBaseSharePerLiquidityX96: Q96.div(4), // debt 100
+                    cumQuotePerLiquidityX96: Q96.div(4), // debt 100
+                },
+                outputBase: 100,
+                outputQuote: 100,
+                afterCollateralBalance: 80,
+                afterTakerInfo: {
+                    baseBalanceShare: 0,
+                    quoteBalance: 0,
+                },
+                afterMakerInfo: {
+                    liquidity: 500,
+                    cumBaseSharePerLiquidityX96: Q96.mul(2).div(5), // debt 200
+                    cumQuotePerLiquidityX96: Q96.mul(2).div(5), // debt 200
                 },
             },
             {
@@ -97,8 +122,6 @@ describe("PerpdexExchange addLiquidity", () => {
                     quoteBalance: 0,
                 },
                 makerInfo: {
-                    baseDebtShare: 0,
-                    quoteDebt: 0,
                     liquidity: 1,
                     cumBaseSharePerLiquidityX96: 0,
                     cumQuotePerLiquidityX96: 0,
@@ -119,11 +142,54 @@ describe("PerpdexExchange addLiquidity", () => {
                     quoteBalance: 0,
                 },
                 afterMakerInfo: {
-                    baseDebtShare: 98,
-                    quoteDebt: 97,
                     liquidity: 101,
-                    cumBaseSharePerLiquidityX96: Q96.mul(2),
+                    cumBaseSharePerLiquidityX96: Q96.mul(2).add(
+                        Q96.mul(98).div(101), // debt 98
+                    ),
+                    cumQuotePerLiquidityX96: Q96.mul(3).add(
+                        Q96.mul(97).div(101), // debt 97
+                    ),
+                },
+                cumBaseSharePerLiquidityX96: Q96.mul(2),
+                cumQuotePerLiquidityX96: Q96.mul(3),
+            },
+            {
+                title: "deleverage add",
+                base: 100,
+                quote: 200,
+                minBase: 100,
+                minQuote: 100,
+                collateralBalance: 80,
+                takerInfo: {
+                    baseBalanceShare: 0,
+                    quoteBalance: 0,
+                },
+                makerInfo: {
+                    liquidity: 400,
+                    cumBaseSharePerLiquidityX96: Q96.div(4), // 700
+                    cumQuotePerLiquidityX96: Q96.div(4), // 1100
+                },
+                poolInfo: {
+                    base: 10000,
+                    quote: 10000,
+                    totalLiquidity: 10000,
+                    cumBasePerLiquidityX96: Q96.mul(2),
                     cumQuotePerLiquidityX96: Q96.mul(3),
+                    baseBalancePerShareX96: Q96,
+                },
+                outputBase: 100,
+                outputQuote: 100,
+                afterCollateralBalance: 80,
+                afterTakerInfo: {
+                    baseBalanceShare: 0,
+                    quoteBalance: 0,
+                },
+                afterMakerInfo: {
+                    liquidity: 500,
+                    cumBaseSharePerLiquidityX96: Q96.mul(2 * 5 - 6).div(5), // 600
+                    cumQuotePerLiquidityX96: Q96.mul(3 * 5 - 10)
+                        .div(5)
+                        .sub(1), // 1000 + rounding error
                 },
                 cumBaseSharePerLiquidityX96: Q96.mul(2),
                 cumQuotePerLiquidityX96: Q96.mul(3),
@@ -140,8 +206,6 @@ describe("PerpdexExchange addLiquidity", () => {
                     quoteBalance: 0,
                 },
                 makerInfo: {
-                    baseDebtShare: 0,
-                    quoteDebt: 0,
                     liquidity: 0,
                     cumBaseSharePerLiquidityX96: 0,
                     cumQuotePerLiquidityX96: 0,
@@ -160,8 +224,6 @@ describe("PerpdexExchange addLiquidity", () => {
                     quoteBalance: 0,
                 },
                 makerInfo: {
-                    baseDebtShare: 0,
-                    quoteDebt: 0,
                     liquidity: 0,
                     cumBaseSharePerLiquidityX96: 0,
                     cumQuotePerLiquidityX96: 0,
@@ -180,8 +242,6 @@ describe("PerpdexExchange addLiquidity", () => {
                     quoteBalance: 0,
                 },
                 makerInfo: {
-                    baseDebtShare: 0,
-                    quoteDebt: 0,
                     liquidity: 0,
                     cumBaseSharePerLiquidityX96: 0,
                     cumQuotePerLiquidityX96: 0,
@@ -201,8 +261,6 @@ describe("PerpdexExchange addLiquidity", () => {
                     quoteBalance: 0,
                 },
                 makerInfo: {
-                    baseDebtShare: 0,
-                    quoteDebt: 0,
                     liquidity: 0,
                     cumBaseSharePerLiquidityX96: 0,
                     cumQuotePerLiquidityX96: 0,
@@ -221,8 +279,6 @@ describe("PerpdexExchange addLiquidity", () => {
                     quoteBalance: 0,
                 },
                 makerInfo: {
-                    baseDebtShare: 0,
-                    quoteDebt: 0,
                     liquidity: 0,
                     cumBaseSharePerLiquidityX96: 0,
                     cumQuotePerLiquidityX96: 0,
@@ -243,11 +299,9 @@ describe("PerpdexExchange addLiquidity", () => {
                     quoteBalance: 0,
                 },
                 afterMakerInfo: {
-                    baseDebtShare: 100,
-                    quoteDebt: 400,
                     liquidity: 200,
-                    cumBaseSharePerLiquidityX96: 0,
-                    cumQuotePerLiquidityX96: 0,
+                    cumBaseSharePerLiquidityX96: Q96.div(2), // debt 100
+                    cumQuotePerLiquidityX96: Q96.mul(2), // debt 400
                 },
             },
         ].forEach(test => {
@@ -306,8 +360,6 @@ describe("PerpdexExchange addLiquidity", () => {
                     expect(takerInfo.quoteBalance).to.eq(test.afterTakerInfo.quoteBalance)
 
                     const makerInfo = await exchange.getMakerInfo(alice.address, market.address)
-                    expect(makerInfo.baseDebtShare).to.eq(test.afterMakerInfo.baseDebtShare)
-                    expect(makerInfo.quoteDebt).to.eq(test.afterMakerInfo.quoteDebt)
                     expect(makerInfo.liquidity).to.eq(test.afterMakerInfo.liquidity)
                     expect(makerInfo.cumBaseSharePerLiquidityX96).to.eq(test.afterMakerInfo.cumBaseSharePerLiquidityX96)
                     expect(makerInfo.cumQuotePerLiquidityX96).to.eq(test.afterMakerInfo.cumQuotePerLiquidityX96)
