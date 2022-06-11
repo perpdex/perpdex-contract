@@ -51,7 +51,6 @@ library MakerLibrary {
         int256 takerBase;
         int256 takerQuote;
         int256 realizedPnl;
-        uint256 shareMarkPriceAfterX96;
         bool isLiquidation;
     }
 
@@ -127,6 +126,7 @@ library MakerLibrary {
             require(response.isLiquidation, "ML_RL: enough mm");
         }
 
+        uint256 shareMarkPriceBeforeX96;
         {
             PerpdexStructs.MakerInfo storage makerInfo = accountInfo.makerInfos[params.market];
             // retrieve before removeLiquidity
@@ -135,6 +135,8 @@ library MakerLibrary {
                 makerInfo.cumBaseSharePerLiquidityX96,
                 makerInfo.cumQuotePerLiquidityX96
             );
+
+            shareMarkPriceBeforeX96 = IPerpdexMarket(params.market).getShareMarkPriceX96();
         }
 
         {
@@ -151,9 +153,8 @@ library MakerLibrary {
         }
 
         {
-            response.shareMarkPriceAfterX96 = IPerpdexMarket(params.market).getMarkPriceX96();
             int256 takerQuoteCalculatedAtCurrentPrice =
-                -response.takerBase.mulDiv(response.shareMarkPriceAfterX96.toInt256(), FixedPoint96.Q96);
+                -response.takerBase.mulDiv(shareMarkPriceBeforeX96.toInt256(), FixedPoint96.Q96);
 
             // AccountLibrary.updateMarkets called
             response.realizedPnl = TakerLibrary.addToTakerBalance(

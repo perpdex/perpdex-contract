@@ -211,11 +211,8 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
                 })
             );
 
-        uint256 baseBalancePerShareX96;
-
-        {
-            baseBalancePerShareX96 = IPerpdexMarket(params.market).baseBalancePerShareX96();
-        }
+        uint256 baseBalancePerShareX96 = IPerpdexMarket(params.market).baseBalancePerShareX96();
+        uint256 shareMarkPriceAfterX96 = IPerpdexMarket(params.market).getShareMarkPriceX96();
 
         emit LiquidityRemoved(
             params.trader,
@@ -228,7 +225,7 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
             response.takerQuote,
             response.realizedPnl,
             baseBalancePerShareX96,
-            response.shareMarkPriceAfterX96
+            shareMarkPriceAfterX96
         );
 
         return (response.base, response.quote);
