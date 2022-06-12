@@ -68,7 +68,7 @@ Target repositories
 
 Target revisions
 
-- https://github.com/perpdex/perpdex-contract/tree/audit-20220612 ( TBD )
+- https://github.com/perpdex/perpdex-contract/tree/audit-20220612 ( 2008957b77dd9e5772e0178369779a8b4573f315 )
 - https://github.com/perpdex/perpdex-oracle-contract/tree/audit-20220612 ( c0935a04d78eae3c7daeeeab845d77af24f68b28 )
 - https://github.com/perpdex/perpdex-stablecoin/tree/audit-20220612 (TBD)
 
