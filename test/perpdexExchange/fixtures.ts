@@ -12,6 +12,7 @@ export interface PerpdexExchangeFixture {
     owner: Wallet
     alice: Wallet
     bob: Wallet
+    carol: Wallet
     priceFeed: MockContract
     priceFeeds: MockContract[]
 }
@@ -27,7 +28,7 @@ const Q96 = BigNumber.from(2).pow(96)
 export function createPerpdexExchangeFixture(
     params: Params = { linear: false, isMarketAllowed: false, initPool: false },
 ): (wallets, provider) => Promise<PerpdexExchangeFixture> {
-    return async ([owner, alice, bob], provider): Promise<PerpdexExchangeFixture> => {
+    return async ([owner, alice, bob, carol], provider): Promise<PerpdexExchangeFixture> => {
         let settlementToken = hre.ethers.constants.AddressZero
         let USDC
 
@@ -85,6 +86,7 @@ export function createPerpdexExchangeFixture(
             owner,
             alice,
             bob,
+            carol,
             priceFeed,
             priceFeeds,
         }
