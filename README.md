@@ -66,6 +66,12 @@ Target repositories
 - [perpdex-oracle-contract](https://github.com/perpdex/perpdex-oracle-contract)
 - [perpdex-stablecoin](https://github.com/perpdex/perpdex-stablecoin)
 
+Target revisions
+
+- https://github.com/perpdex/perpdex-contract/tree/audit-20220612 ( TBD )
+- https://github.com/perpdex/perpdex-oracle-contract/tree/audit-20220612 ( c0935a04d78eae3c7daeeeab845d77af24f68b28 )
+- https://github.com/perpdex/perpdex-stablecoin/tree/audit-20220612 (TBD)
+
 Target files
 
 - all *.sol files in contracts dir (except for contracts/test)
