@@ -25,7 +25,7 @@ contract TestPerpdexMarket is PerpdexMarket {
         poolInfo = value;
     }
 
-    function setPriceLimitInfo(address market, MarketStructs.PriceLimitInfo memory value) external {
+    function setPriceLimitInfo(MarketStructs.PriceLimitInfo memory value) external {
         priceLimitInfo = value;
     }
 }

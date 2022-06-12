@@ -53,7 +53,7 @@ describe("PerpdexExchange updateMarkets", () => {
     const removeLiquidity = async (liquidity, idx = 0) => {
         return exchange.connect(alice).removeLiquidity({
             trader: alice.address,
-            market: market.address,
+            market: markets[idx].address,
             liquidity: liquidity,
             minBase: 0,
             minQuote: 0,
