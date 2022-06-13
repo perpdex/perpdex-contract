@@ -18,6 +18,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     const settlementTokenAddress = hre.ethers.constants.AddressZero // native token
 
     await deploy("PerpdexExchange", {
+        contract: "DebugPerpdexExchange",
         from: deployer,
         args: [settlementTokenAddress],
         log: true,
