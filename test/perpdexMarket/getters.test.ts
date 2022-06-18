@@ -18,6 +18,14 @@ describe("PerpdexMarket getters", () => {
     describe("getMarkPriceX96 and getShareMarkPriceX96", () => {
         ;[
             {
+                title: "empty",
+                base: 0,
+                quote: 0,
+                baseBalancePerShareX96: BigNumber.from(2).pow(96),
+                markPriceX96: 0,
+                shareMarkPriceX96: 0,
+            },
+            {
                 title: "normal",
                 base: 1,
                 quote: 1,
