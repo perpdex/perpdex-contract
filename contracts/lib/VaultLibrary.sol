@@ -66,16 +66,6 @@ library VaultLibrary {
         }
     }
 
-    function transferInsuranceFund(
-        PerpdexStructs.AccountInfo storage accountInfo,
-        PerpdexStructs.InsuranceFundInfo storage insuranceFundInfo,
-        uint256 amount
-    ) internal {
-        accountInfo.vaultInfo.collateralBalance = accountInfo.vaultInfo.collateralBalance.add(amount.toInt256());
-        insuranceFundInfo.balance = insuranceFundInfo.balance.sub(amount.toInt256());
-        require(insuranceFundInfo.balance >= 0, "VL_TIF: negative balance");
-    }
-
     function transferProtocolFee(
         PerpdexStructs.AccountInfo storage accountInfo,
         PerpdexStructs.ProtocolInfo storage protocolInfo,
