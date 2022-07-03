@@ -3,6 +3,8 @@ import { waffle } from "hardhat"
 import { TestPerpdexExchange, TestPerpdexMarket } from "../../typechain"
 import { createPerpdexExchangeFixture } from "./fixtures"
 import { Wallet } from "ethers"
+import { MockContract } from "ethereum-waffle"
+import IPerpdexMarketJson from "../../artifacts/contracts/interface/IPerpdexMarket.sol/IPerpdexMarket.json"
 
 describe("PerpdexExchange config", () => {
     let loadFixture = waffle.createFixtureLoader(waffle.provider.getWallets())
@@ -200,6 +202,30 @@ describe("PerpdexExchange config", () => {
             await expect(exchange.connect(owner).setIsMarketAllowed(alice.address, true)).to.be.revertedWith(
                 "PE_SIMA: market address invalid",
             )
+        })
+
+        describe("different exchange", () => {
+            let marketDifferentExchange: MockContract
+
+            beforeEach(async () => {
+                marketDifferentExchange = await waffle.deployMockContract(owner, IPerpdexMarketJson.abi)
+                await marketDifferentExchange.mock.exchange.returns(alice.address)
+            })
+
+            it("revert when enable", async () => {
+                await expect(
+                    exchange.connect(owner).setIsMarketAllowed(marketDifferentExchange.address, true),
+                ).to.revertedWith("PE_SIMA: different exchange")
+            })
+
+            it("not revert when disable", async () => {
+                await exchange.connect(owner).setIsMarketAllowedForce(marketDifferentExchange.address, true)
+
+                await expect(exchange.connect(owner).setIsMarketAllowed(marketDifferentExchange.address, false))
+                    .to.emit(exchange, "IsMarketAllowedChanged")
+                    .withArgs(marketDifferentExchange.address, false)
+                expect(await exchange.isMarketAllowed(marketDifferentExchange.address)).to.eq(false)
+            })
         })
     })
 })

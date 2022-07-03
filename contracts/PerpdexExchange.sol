@@ -265,7 +265,7 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
     function setIsMarketAllowed(address market, bool value) external override onlyOwner nonReentrant {
         require(market.isContract(), "PE_SIMA: market address invalid");
         if (value) {
-            require(IPerpdexMarketMinimum(market).exchange() == address(this), "PE_SIMA: exchange different");
+            require(IPerpdexMarketMinimum(market).exchange() == address(this), "PE_SIMA: different exchange");
         }
         isMarketAllowed[market] = value;
         emit IsMarketAllowedChanged(market, value);
