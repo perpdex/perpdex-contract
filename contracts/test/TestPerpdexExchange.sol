@@ -40,4 +40,8 @@ contract TestPerpdexExchange is PerpdexExchange {
     function setProtocolInfo(PerpdexStructs.ProtocolInfo memory protocolInfoArg) external {
         protocolInfo = protocolInfoArg;
     }
+
+    function setIsMarketAllowedForce(address market, bool value) external {
+        isMarketAllowed[market] = value;
+    }
 }
