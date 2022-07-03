@@ -35,6 +35,8 @@ interface IPerpdexMarketMinimum {
         bool isLiquidation
     ) external view returns (uint256 amount);
 
+    function exchange() external view returns (address);
+
     function getShareMarkPriceX96() external view returns (uint256);
 
     function getLiquidityValue(uint256 liquidity) external view returns (uint256 baseShare, uint256 quoteBalance);

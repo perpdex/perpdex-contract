@@ -21,7 +21,5 @@ interface IPerpdexMarket is IPerpdexMarketMinimum {
 
     function symbol() external view returns (string memory);
 
-    function exchange() external view returns (address);
-
     function getMarkPriceX96() external view returns (uint256);
 }
