@@ -68,6 +68,10 @@ library TakerLibrary {
             require(response.isLiquidation, "TL_OP: enough mm");
         }
 
+        if (response.isLiquidation) {
+            require(accountInfo.makerInfos[params.market].liquidity == 0, "TL_OP: no maker when liquidation");
+        }
+
         int256 takerBaseBefore = accountInfo.takerInfos[params.market].baseBalanceShare;
 
         (response.base, response.quote, response.realizedPnl, response.protocolFee) = _doSwap(
@@ -164,6 +168,10 @@ library TakerLibrary {
             require(isLiquidation, "TL_OPD: enough mm");
         }
 
+        if (isLiquidation) {
+            require(accountInfo.makerInfos[params.market].liquidity == 0, "TL_OPD: no maker when liq");
+        }
+
         oppositeAmount;
         if (params.protocolFeeRatio == 0) {
             oppositeAmount = IPerpdexMarketMinimum(params.market).previewSwap(
@@ -198,6 +206,10 @@ library TakerLibrary {
         bool isLiquidation = !AccountLibrary.hasEnoughMaintenanceMargin(accountInfo, mmRatio);
 
         if (!isSelf && !isLiquidation) {
+            return 0;
+        }
+
+        if (isLiquidation && accountInfo.makerInfos[market].liquidity != 0) {
             return 0;
         }
 

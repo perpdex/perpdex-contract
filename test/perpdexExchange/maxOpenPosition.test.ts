@@ -115,6 +115,23 @@ describe("PerpdexExchange maxTrade", () => {
                 maxAmount: 252,
             },
             {
+                title: "long with maker position",
+                isBaseToQuote: false,
+                isExactInput: true,
+                protocolFeeRatio: 0,
+                collateralBalance: 100,
+                takerInfo: {
+                    baseBalanceShare: 0,
+                    quoteBalance: 0,
+                },
+                makerInfo: {
+                    liquidity: 1,
+                    cumBaseSharePerLiquidityX96: Q96,
+                    cumQuotePerLiquidityX96: Q96,
+                },
+                maxAmount: 246,
+            },
+            {
                 title: "not liquidatable because enough mm",
                 notSelf: true,
                 isBaseToQuote: false,
@@ -124,6 +141,24 @@ describe("PerpdexExchange maxTrade", () => {
                 takerInfo: {
                     baseBalanceShare: 100,
                     quoteBalance: -100,
+                },
+                maxAmount: 0,
+            },
+            {
+                title: "not liquidatable because maker position exist",
+                notSelf: true,
+                isBaseToQuote: false,
+                isExactInput: true,
+                protocolFeeRatio: 0,
+                collateralBalance: 4,
+                takerInfo: {
+                    baseBalanceShare: 100,
+                    quoteBalance: -100,
+                },
+                makerInfo: {
+                    liquidity: 1,
+                    cumBaseSharePerLiquidityX96: Q96,
+                    cumQuotePerLiquidityX96: Q96,
                 },
                 maxAmount: 0,
             },
@@ -205,6 +240,9 @@ describe("PerpdexExchange maxTrade", () => {
                     )
 
                     await exchange.setTakerInfo(alice.address, market.address, test.takerInfo)
+                    if (test.makerInfo) {
+                        await exchange.setMakerInfo(alice.address, market.address, test.makerInfo)
+                    }
 
                     if (test.isMarketAllowed !== void 0) {
                         await exchange.connect(owner).setIsMarketAllowed(market.address, test.isMarketAllowed)
