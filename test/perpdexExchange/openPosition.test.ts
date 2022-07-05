@@ -269,6 +269,33 @@ describe("PerpdexExchange trade", () => {
                 insuranceFund: 0,
             },
             {
+                title: "long with maker position",
+                isBaseToQuote: false,
+                isExactInput: true,
+                amount: 100,
+                oppositeAmountBound: 0,
+                protocolFeeRatio: 0,
+                collateralBalance: 100,
+                takerInfo: {
+                    baseBalanceShare: 0,
+                    quoteBalance: 0,
+                },
+                makerInfo: {
+                    liquidity: 1,
+                    cumBaseSharePerLiquidityX96: Q96,
+                    cumQuotePerLiquidityX96: Q96,
+                },
+                outputBase: 99,
+                outputQuote: -100,
+                afterCollateralBalance: 100,
+                afterTakerInfo: {
+                    baseBalanceShare: 99,
+                    quoteBalance: -100,
+                },
+                protocolFee: 0,
+                insuranceFund: 0,
+            },
+            {
                 title: "not liquidatable because enough mm",
                 notSelf: true,
                 isBaseToQuote: false,
@@ -283,6 +310,27 @@ describe("PerpdexExchange trade", () => {
                 },
                 revertedWith: "TL_OP: enough mm",
                 revertedWithDry: "TL_OPD: enough mm",
+            },
+            {
+                title: "not liquidatable because maker position exist",
+                notSelf: true,
+                isBaseToQuote: false,
+                isExactInput: true,
+                amount: 100,
+                oppositeAmountBound: 0,
+                protocolFeeRatio: 0,
+                collateralBalance: 4,
+                takerInfo: {
+                    baseBalanceShare: 100,
+                    quoteBalance: -100,
+                },
+                makerInfo: {
+                    liquidity: 1,
+                    cumBaseSharePerLiquidityX96: Q96,
+                    cumQuotePerLiquidityX96: Q96,
+                },
+                revertedWith: "TL_OP: no maker when liquidation",
+                revertedWithDry: "TL_OPD: no maker when liq",
             },
             {
                 title: "open is not allowed when liquidation",
@@ -537,6 +585,9 @@ describe("PerpdexExchange trade", () => {
                     )
 
                     await exchange.setTakerInfo(alice.address, market.address, test.takerInfo)
+                    if (test.makerInfo) {
+                        await exchange.setMakerInfo(alice.address, market.address, test.makerInfo)
+                    }
 
                     if (test.isMarketAllowed !== void 0) {
                         await exchange.connect(owner).setIsMarketAllowed(market.address, test.isMarketAllowed)
