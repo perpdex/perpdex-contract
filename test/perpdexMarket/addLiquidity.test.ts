@@ -4,6 +4,7 @@ import { PerpdexMarket } from "../../typechain"
 import { createPerpdexMarketFixture } from "./fixtures"
 import { BigNumber, BigNumberish, Wallet } from "ethers"
 import { MockContract } from "ethereum-waffle"
+import { PANIC_CODES } from "@nomicfoundation/hardhat-chai-matchers/panic"
 
 describe("PerpdexMarket addLiquidity", () => {
     let loadFixture = waffle.createFixtureLoader(waffle.provider.getWallets())
@@ -87,19 +88,23 @@ describe("PerpdexMarket addLiquidity", () => {
                 title: "too small",
                 base: 999,
                 quote: 999,
-                revertedWith: "SafeMath: subtraction overflow",
+                revertedWith: PANIC_CODES.ARITHMETIC_UNDER_OR_OVERFLOW,
             },
             {
                 title: "overflow",
                 base: BigNumber.from(2).pow(128),
                 quote: BigNumber.from(2).pow(128),
-                revertedWith: "SafeMath: multiplication overflow",
+                revertedWith: PANIC_CODES.ARITHMETIC_UNDER_OR_OVERFLOW,
             },
         ].forEach(test => {
             it(test.title, async () => {
                 const res = expect(market.connect(exchange).addLiquidity(test.base, test.quote))
                 if (test.revertedWith !== void 0) {
-                    await res.to.revertedWith(test.revertedWith)
+                    if (typeof test.revertedWith === "number") {
+                        await res.to.revertedWithPanic(test.revertedWith)
+                    } else {
+                        await res.to.revertedWith(test.revertedWith)
+                    }
                 } else {
                     await res.to.emit(market, "LiquidityAdded").withArgs(test.base, test.quote, test.outputLiquidity)
                     const poolInfo = await market.poolInfo()
@@ -156,13 +161,17 @@ describe("PerpdexMarket addLiquidity", () => {
                 title: "overflow",
                 base: BigNumber.from(2).pow(256).sub(10000),
                 quote: BigNumber.from(2).pow(256).sub(10000),
-                revertedWith: "SafeMath: addition overflow",
+                revertedWith: PANIC_CODES.ARITHMETIC_UNDER_OR_OVERFLOW,
             },
         ].forEach(test => {
             it(test.title, async () => {
                 const res = expect(market.connect(exchange).addLiquidity(test.base, test.quote))
                 if (test.revertedWith !== void 0) {
-                    await res.to.revertedWith(test.revertedWith)
+                    if (typeof test.revertedWith === "number") {
+                        await res.to.revertedWithPanic(test.revertedWith)
+                    } else {
+                        await res.to.revertedWith(test.revertedWith)
+                    }
                 } else {
                     await res.to
                         .emit(market, "LiquidityAdded")

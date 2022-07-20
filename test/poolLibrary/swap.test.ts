@@ -4,6 +4,7 @@ import { TestPoolLibrary } from "../../typechain"
 import { createPoolLibraryFixture } from "./fixtures"
 import { BigNumber, BigNumberish, Wallet } from "ethers"
 import { MockContract } from "ethereum-waffle"
+import { PANIC_CODES } from "@nomicfoundation/hardhat-chai-matchers/panic"
 
 describe("PoolLibrary swap", () => {
     let loadFixture = waffle.createFixtureLoader(waffle.provider.getWallets())
@@ -176,28 +177,28 @@ describe("PoolLibrary swap", () => {
                 isBaseToQuote: false,
                 isExactInput: false,
                 amount: 10001,
-                revertedWith: "SafeMath: subtraction overflow",
+                revertedWith: PANIC_CODES.ARITHMETIC_UNDER_OR_OVERFLOW,
             },
             {
                 title: "short revert when insufficient quote liquidity over",
                 isBaseToQuote: true,
                 isExactInput: false,
                 amount: 10001,
-                revertedWith: "SafeMath: subtraction overflow",
+                revertedWith: PANIC_CODES.ARITHMETIC_UNDER_OR_OVERFLOW,
             },
             {
                 title: "long revert when too large amount",
                 isBaseToQuote: false,
                 isExactInput: true,
                 amount: BigNumber.from(2).pow(256).sub(1),
-                revertedWith: "SafeMath: addition overflow",
+                revertedWith: PANIC_CODES.ARITHMETIC_UNDER_OR_OVERFLOW,
             },
             {
                 title: "short revert when too large amount",
                 isBaseToQuote: true,
                 isExactInput: true,
                 amount: BigNumber.from(2).pow(256).sub(1),
-                revertedWith: "SafeMath: addition overflow",
+                revertedWith: PANIC_CODES.ARITHMETIC_UNDER_OR_OVERFLOW,
             },
             {
                 title: "liquidity remain when too large long not overflow",
@@ -228,7 +229,11 @@ describe("PoolLibrary swap", () => {
                     }),
                 )
                 if (test.revertedWith !== void 0) {
-                    await res.to.revertedWith(test.revertedWith)
+                    if (typeof test.revertedWith === "number") {
+                        await res.to.revertedWithPanic(test.revertedWith)
+                    } else {
+                        await res.to.revertedWith(test.revertedWith)
+                    }
                 } else {
                     await res.to.emit(library, "SwapResult").withArgs(test.oppositeAmount)
                     const poolInfo = await library.poolInfo()
@@ -243,14 +248,19 @@ describe("PoolLibrary swap", () => {
 
             it(test.title + " dry", async () => {
                 if (test.revertedWith !== void 0) {
-                    await expect(
+                    const res = expect(
                         library.previewSwap(10000, 10000, {
                             isBaseToQuote: test.isBaseToQuote,
                             isExactInput: test.isExactInput,
                             amount: test.amount,
                             feeRatio: 0,
                         }),
-                    ).to.revertedWith(test.revertedWith)
+                    )
+                    if (typeof test.revertedWith === "number") {
+                        await res.to.revertedWithPanic(test.revertedWith)
+                    } else {
+                        await res.to.revertedWith(test.revertedWith)
+                    }
                 } else {
                     const res = await library.previewSwap(10000, 10000, {
                         isBaseToQuote: test.isBaseToQuote,

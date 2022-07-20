@@ -4,6 +4,7 @@ import { ethers, waffle } from "hardhat"
 import { TestPerpdexExchange, TestERC20 } from "../../typechain"
 import { createPerpdexExchangeFixture } from "./fixtures"
 import { Wallet } from "ethers"
+import { PANIC_CODES } from "@nomicfoundation/hardhat-chai-matchers/panic"
 
 describe("PerpdexExchange transfer", () => {
     let loadFixture = waffle.createFixtureLoader(waffle.provider.getWallets())
@@ -34,8 +35,8 @@ describe("PerpdexExchange transfer", () => {
         })
 
         it("force error, not enough balance", async () => {
-            await expect(exchange.connect(owner).transferProtocolFee(30)).to.revertedWith(
-                "SafeMath: subtraction overflow",
+            await expect(exchange.connect(owner).transferProtocolFee(30)).to.revertedWithPanic(
+                PANIC_CODES.ARITHMETIC_UNDER_OR_OVERFLOW,
             )
         })
     })
