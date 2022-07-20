@@ -34,6 +34,7 @@
     "test": "hardhat test",
     "parallel-test": "hardhat test --parallel",
     "build": "npm run typechain && hardhat compile",
+    "build-zksync": "npm run typechain && hardhat compile --network zksync2_testnet",
     "prepare": "husky install",
     "lint": "npm run lint-contracts && npm run lint-tests",
     "lint-contracts": "solhint 'contracts/**/*.sol'",

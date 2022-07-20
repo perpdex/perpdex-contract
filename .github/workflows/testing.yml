@@ -59,6 +59,47 @@ jobs:
           # to solve problem of memory leak https://stackoverflow.com/a/59572966
           NODE_OPTIONS: "--max-old-space-size=4096"
 
+  build-zksync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          persist-credentials: false
+          submodules: recursive
+
+      # fix SSH error: git@github.com: Permission denied (publickey).
+      # copy from https://github.com/actions/setup-node/issues/214#issuecomment-810829250
+      - name: Reconfigure git to use HTTP authentication
+        run: >
+          git config --global url."https://github.com/".insteadOf
+          ssh://git@github.com/
+
+      - name: Get npm cache directory
+        id: npm-cache
+        run: |
+          echo "::set-output name=dir::$(npm config get cache)"
+      - uses: actions/cache@v2
+        with:
+          path: |
+            ${{ steps.npm-cache.outputs.dir }}
+            **/node_modules
+          key: ${{ github.job }}-${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ github.job }}-${{ runner.os }}-node-
+
+      - name: Use Node.js 16.x
+        uses: actions/setup-node@v1
+        with:
+          node-version: 16.x
+
+      - name: Install contract package dependencies
+        run: npm install
+
+      - name: Build contract package
+        run: npm run build-zksync
+        env:
+          TESTNET_PRIVATE_KEY: '0000000000000000000000000000000000000000000000000000000000000000'
+
   coverage:
     runs-on: ubuntu-latest
     steps:
