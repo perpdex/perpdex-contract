@@ -11,7 +11,6 @@ import "@matterlabs/hardhat-zksync-solc"
 import { HardhatUserConfig } from "hardhat/config"
 import { resolve } from "path"
 import "solidity-coverage"
-import "./mocha-test"
 
 // import after mocha-test
 import "hardhat-gas-reporter"
