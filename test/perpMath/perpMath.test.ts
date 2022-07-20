@@ -23,7 +23,7 @@ describe("PerpMath test", () => {
     })
 
     it("formatX10_18ToX96", async () => {
-        const value = maxUint256.mul(x10_18).div(x96) // per on FullMath.mulDiv() specs, max input without overflow
+        const value = maxUint256.mul(x10_18).div(x96) // per on PRBMath.mulDiv() specs, max input without overflow
         expect(await perpMath.testFormatX10_18ToX96(value)).to.be.deep.eq(value.mul(x96).div(x10_18))
     })
 
@@ -61,7 +61,7 @@ describe("PerpMath test", () => {
     })
 
     it("mulRatio", async () => {
-        // per on FullMath.mulDiv() specs, max input without overflow
+        // per on PRBMath.mulDiv() specs, max input without overflow
         const value = BigNumber.from(2).pow(256).sub(1).div(2)
         const ratio = x10_6.mul(2)
         expect(await perpMath.testMulRatio(value, ratio)).to.be.deep.eq(value.mul(ratio).div(x10_6))

@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.7.6;
+pragma solidity >=0.7.6;
 pragma abicoder v2;
 
 import { Address } from "@openzeppelin/contracts/utils/Address.sol";
-import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import { ReentrancyGuard } from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
-import { SafeCast } from "@openzeppelin/contracts/utils/SafeCast.sol";
+import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { IPerpdexExchange } from "./interface/IPerpdexExchange.sol";
 import { IPerpdexMarketMinimum } from "./interface/IPerpdexMarketMinimum.sol";
 import { PerpdexStructs } from "./lib/PerpdexStructs.sol";
@@ -72,7 +72,7 @@ contract PerpdexExchange is IPerpdexExchange, ReentrancyGuard, Ownable {
     }
 
     function withdraw(uint256 amount) external override nonReentrant {
-        address payable trader = _msgSender();
+        address payable trader = payable(_msgSender());
 
         VaultLibrary.withdraw(
             accountInfos[trader],

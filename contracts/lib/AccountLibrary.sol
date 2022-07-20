@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.7.6;
+pragma solidity >=0.7.6;
 
 import { FixedPoint96 } from "@uniswap/v3-core/contracts/libraries/FixedPoint96.sol";
 import { PerpMath } from "./PerpMath.sol";
-import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
-import { SignedSafeMath } from "@openzeppelin/contracts/math/SignedSafeMath.sol";
-import { FullMath } from "@uniswap/v3-core/contracts/libraries/FullMath.sol";
-import { SafeCast } from "@openzeppelin/contracts/utils/SafeCast.sol";
+import { SafeMath } from "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import { SignedSafeMath } from "@openzeppelin/contracts/utils/math/SignedSafeMath.sol";
+import { PRBMath } from "prb-math/contracts/PRBMath.sol";
+import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { IPerpdexMarketMinimum } from "../interface/IPerpdexMarketMinimum.sol";
 import { PerpdexStructs } from "./PerpdexStructs.sol";
 
@@ -139,7 +139,7 @@ library AccountLibrary {
         uint256 positionShare = getOpenPositionShare(accountInfo, market);
         if (positionShare == 0) return 0;
         uint256 sharePriceX96 = IPerpdexMarketMinimum(market).getShareMarkPriceX96();
-        return FullMath.mulDiv(positionShare, sharePriceX96, FixedPoint96.Q96);
+        return PRBMath.mulDiv(positionShare, sharePriceX96, FixedPoint96.Q96);
     }
 
     function getTotalOpenPositionNotional(PerpdexStructs.AccountInfo storage accountInfo)

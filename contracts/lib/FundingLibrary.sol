@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.7.6;
+pragma solidity >=0.7.6;
 pragma abicoder v2;
 
 import { Math } from "../amm/uniswap_v2/libraries/Math.sol";
-import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
-import { SignedSafeMath } from "@openzeppelin/contracts/math/SignedSafeMath.sol";
+import { SafeMath } from "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import { SignedSafeMath } from "@openzeppelin/contracts/utils/math/SignedSafeMath.sol";
 import { PerpMath } from "./PerpMath.sol";
-import { SafeCast } from "@openzeppelin/contracts/utils/SafeCast.sol";
+import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { MarketStructs } from "./MarketStructs.sol";
 import { IPerpdexPriceFeed } from "../interface/IPerpdexPriceFeed.sol";
-import { FullMath } from "@uniswap/v3-core/contracts/libraries/FullMath.sol";
+import { PRBMath } from "prb-math/contracts/PRBMath.sol";
 import { FixedPoint96 } from "@uniswap/v3-core/contracts/libraries/FixedPoint96.sol";
 
 library FundingLibrary {
@@ -91,7 +91,7 @@ library FundingLibrary {
         require(decimalsBase <= MAX_DECIMALS, "FL_VILP: invalid base decimals");
         require(decimalsQuote <= MAX_DECIMALS, "FL_VILP: invalid quote decimals");
 
-        uint256 markPriceX96 = FullMath.mulDiv(quote, FixedPoint96.Q96, base);
+        uint256 markPriceX96 = PRBMath.mulDiv(quote, FixedPoint96.Q96, base);
         int256 premiumX96 = _calcPremiumX96(decimalsBase, decimalsQuote, indexPriceBase, indexPriceQuote, markPriceX96);
 
         require(premiumX96.abs() <= FixedPoint96.Q96.mulRatio(1e5), "FL_VILP: too far from index");
@@ -128,10 +128,10 @@ library FundingLibrary {
         uint256 priceRatioX96 = markPriceX96;
 
         if (decimalsBase != 0 || indexPriceBase != 1) {
-            priceRatioX96 = FullMath.mulDiv(priceRatioX96, 10**decimalsBase, indexPriceBase);
+            priceRatioX96 = PRBMath.mulDiv(priceRatioX96, 10**decimalsBase, indexPriceBase);
         }
         if (decimalsQuote != 0 || indexPriceQuote != 1) {
-            priceRatioX96 = FullMath.mulDiv(priceRatioX96, indexPriceQuote, 10**decimalsQuote);
+            priceRatioX96 = PRBMath.mulDiv(priceRatioX96, indexPriceQuote, 10**decimalsQuote);
         }
 
         premiumX96 = priceRatioX96.toInt256().sub(FixedPoint96.Q96.toInt256());

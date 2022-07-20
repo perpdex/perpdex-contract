@@ -1,16 +1,17 @@
 import "@nomiclabs/hardhat-ethers"
 import "@nomiclabs/hardhat-etherscan"
 import "@nomiclabs/hardhat-waffle"
+import "@nomicfoundation/hardhat-chai-matchers"
 import "@openzeppelin/hardhat-upgrades"
 import "@typechain/hardhat"
 import { config as dotenvConfig } from "dotenv"
 import "hardhat-contract-sizer"
 import "hardhat-dependency-compiler"
 import "hardhat-deploy"
+import "@matterlabs/hardhat-zksync-solc"
 import { HardhatUserConfig } from "hardhat/config"
 import { resolve } from "path"
 import "solidity-coverage"
-import "./mocha-test"
 
 // import after mocha-test
 import "hardhat-gas-reporter"
@@ -19,7 +20,7 @@ dotenvConfig({ path: resolve(__dirname, "./.env") })
 
 const config: HardhatUserConfig = {
     solidity: {
-        version: "0.7.6",
+        version: "0.8.12",
         settings: {
             optimizer: { enabled: true, runs: 100 },
             evmVersion: "berlin",
@@ -28,6 +29,18 @@ const config: HardhatUserConfig = {
                 "*": {
                     "*": ["storageLayout"],
                 },
+            },
+        },
+    },
+    zksolc: {
+        version: "0.1.0",
+        compilerSource: "docker",
+        settings: {
+            optimizer: {
+                enabled: true,
+            },
+            experimental: {
+                dockerImage: "matterlabs/zksolc",
             },
         },
     },
@@ -100,6 +113,19 @@ if (process.env.TESTNET_PRIVATE_KEY) {
                 apiUrl: "https://blockscout.com/shibuya",
             },
         },
+    }
+
+    config.networks.zksync2_testnet = {
+        url: "https://zksync2-testnet.zksync.dev",
+        chainId: 280,
+        accounts: [process.env.TESTNET_PRIVATE_KEY],
+        gasMultiplier: 2,
+        verify: {
+            etherscan: {
+                apiUrl: "https://zksync2-testnet.zkscan.io/",
+            },
+        },
+        zksync: true,
     }
 }
 

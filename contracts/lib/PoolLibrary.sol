@@ -1,15 +1,16 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.7.6;
+pragma solidity >=0.7.6;
 pragma abicoder v2;
 
 import { Math } from "../amm/uniswap_v2/libraries/Math.sol";
-import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
-import { SignedSafeMath } from "@openzeppelin/contracts/math/SignedSafeMath.sol";
+import { SafeMath } from "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import { SignedSafeMath } from "@openzeppelin/contracts/utils/math/SignedSafeMath.sol";
 import { PerpMath } from "./PerpMath.sol";
-import { SafeCast } from "@openzeppelin/contracts/utils/SafeCast.sol";
+import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { MarketStructs } from "./MarketStructs.sol";
-import { FullMath } from "@uniswap/v3-core/contracts/libraries/FullMath.sol";
+import { PRBMath } from "prb-math/contracts/PRBMath.sol";
 import { FixedPoint96 } from "@uniswap/v3-core/contracts/libraries/FixedPoint96.sol";
+import { FullMath } from "./FullMath.sol";
 
 library PoolLibrary {
     using PerpMath for int256;
@@ -49,21 +50,21 @@ library PoolLibrary {
 
         if (fundingRateX96 > 0) {
             uint256 poolQuote = poolInfo.quote;
-            uint256 deleveratedQuote = FullMath.mulDiv(poolQuote, frAbs, FixedPoint96.Q96);
+            uint256 deleveratedQuote = PRBMath.mulDiv(poolQuote, frAbs, FixedPoint96.Q96);
             poolInfo.quote = poolQuote.sub(deleveratedQuote);
             poolInfo.cumQuotePerLiquidityX96 = poolInfo.cumQuotePerLiquidityX96.add(
-                FullMath.mulDiv(deleveratedQuote, FixedPoint96.Q96, poolInfo.totalLiquidity)
+                PRBMath.mulDiv(deleveratedQuote, FixedPoint96.Q96, poolInfo.totalLiquidity)
             );
         } else {
             uint256 poolBase = poolInfo.base;
-            uint256 deleveratedBase = FullMath.mulDiv(poolBase, frAbs, FixedPoint96.Q96.add(frAbs));
+            uint256 deleveratedBase = PRBMath.mulDiv(poolBase, frAbs, FixedPoint96.Q96.add(frAbs));
             poolInfo.base = poolBase.sub(deleveratedBase);
             poolInfo.cumBasePerLiquidityX96 = poolInfo.cumBasePerLiquidityX96.add(
-                FullMath.mulDiv(deleveratedBase, FixedPoint96.Q96, poolInfo.totalLiquidity)
+                PRBMath.mulDiv(deleveratedBase, FixedPoint96.Q96, poolInfo.totalLiquidity)
             );
         }
 
-        poolInfo.baseBalancePerShareX96 = FullMath.mulDiv(
+        poolInfo.baseBalancePerShareX96 = PRBMath.mulDiv(
             poolInfo.baseBalancePerShareX96,
             FixedPoint96.Q96.toInt256().sub(fundingRateX96).toUint256(),
             FixedPoint96.Q96
@@ -137,11 +138,11 @@ library PoolLibrary {
         uint256 poolBase = poolInfo.base;
         uint256 poolQuote = poolInfo.quote;
 
-        uint256 base = Math.min(params.base, FullMath.mulDiv(params.quote, poolBase, poolQuote));
-        uint256 quote = Math.min(params.quote, FullMath.mulDiv(params.base, poolQuote, poolBase));
+        uint256 base = Math.min(params.base, PRBMath.mulDiv(params.quote, poolBase, poolQuote));
+        uint256 quote = Math.min(params.quote, PRBMath.mulDiv(params.base, poolQuote, poolBase));
         liquidity = Math.min(
-            FullMath.mulDiv(base, poolTotalLiquidity, poolBase),
-            FullMath.mulDiv(quote, poolTotalLiquidity, poolQuote)
+            PRBMath.mulDiv(base, poolTotalLiquidity, poolBase),
+            PRBMath.mulDiv(quote, poolTotalLiquidity, poolQuote)
         );
         require(base > 0 && quote > 0 && liquidity > 0, "PL_AL: liquidity zero");
 
@@ -159,8 +160,8 @@ library PoolLibrary {
         uint256 poolBase = poolInfo.base;
         uint256 poolQuote = poolInfo.quote;
         uint256 poolTotalLiquidity = poolInfo.totalLiquidity;
-        uint256 base = FullMath.mulDiv(params.liquidity, poolBase, poolTotalLiquidity);
-        uint256 quote = FullMath.mulDiv(params.liquidity, poolQuote, poolTotalLiquidity);
+        uint256 base = PRBMath.mulDiv(params.liquidity, poolBase, poolTotalLiquidity);
+        uint256 quote = PRBMath.mulDiv(params.liquidity, poolQuote, poolTotalLiquidity);
         require(base > 0 && quote > 0, "PL_RL: output is zero");
         poolInfo.base = poolBase.sub(base);
         poolInfo.quote = poolQuote.sub(quote);
@@ -176,8 +177,8 @@ library PoolLibrary {
         returns (uint256, uint256)
     {
         return (
-            FullMath.mulDiv(liquidity, poolInfo.base, poolInfo.totalLiquidity),
-            FullMath.mulDiv(liquidity, poolInfo.quote, poolInfo.totalLiquidity)
+            PRBMath.mulDiv(liquidity, poolInfo.base, poolInfo.totalLiquidity),
+            PRBMath.mulDiv(liquidity, poolInfo.quote, poolInfo.totalLiquidity)
         );
     }
 
@@ -193,10 +194,10 @@ library PoolLibrary {
             uint256 amountSubFee = params.amount.mulRatio(oneSubFeeRatio);
             if (params.isBaseToQuote) {
                 // output = quote.sub(FullMath.mulDivRoundingUp(base, quote, base.add(amountSubFee)));
-                output = FullMath.mulDiv(quote, amountSubFee, base.add(amountSubFee));
+                output = PRBMath.mulDiv(quote, amountSubFee, base.add(amountSubFee));
             } else {
                 // output = base.sub(FullMath.mulDivRoundingUp(base, quote, quote.add(amountSubFee)));
-                output = FullMath.mulDiv(base, amountSubFee, quote.add(amountSubFee));
+                output = PRBMath.mulDiv(base, amountSubFee, quote.add(amountSubFee));
             }
         } else {
             if (params.isBaseToQuote) {
@@ -230,7 +231,7 @@ library PoolLibrary {
         uint256 k = base.mul(quote);
 
         if (isBaseToQuote) {
-            uint256 kDivP = FullMath.mulDiv(k, FixedPoint96.Q96, priceBoundX96);
+            uint256 kDivP = PRBMath.mulDiv(k, FixedPoint96.Q96, priceBoundX96);
             uint256 baseSqr = base.mul(base);
             if (kDivP <= baseSqr) return 0;
             uint256 cNeg = kDivP.sub(baseSqr);
@@ -238,7 +239,7 @@ library PoolLibrary {
             output = _solveQuadratic(b.divRatio(oneSubFeeRatio), cNeg.divRatio(oneSubFeeRatio));
         } else {
             // https://www.wolframalpha.com/input?i=%28x+%2B+a%29+*+%28x+%2B+a+*+%281+-+f%29%29+%3D+kp+solve+a
-            uint256 kp = FullMath.mulDiv(k, priceBoundX96, FixedPoint96.Q96);
+            uint256 kp = PRBMath.mulDiv(k, priceBoundX96, FixedPoint96.Q96);
             uint256 quoteSqr = quote.mul(quote);
             if (kp <= quoteSqr) return 0;
             uint256 cNeg = kp.sub(quoteSqr);
@@ -260,11 +261,11 @@ library PoolLibrary {
         uint256 quote,
         uint256 baseBalancePerShareX96
     ) internal pure returns (uint256) {
-        return FullMath.mulDiv(getShareMarkPriceX96(base, quote), FixedPoint96.Q96, baseBalancePerShareX96);
+        return PRBMath.mulDiv(getShareMarkPriceX96(base, quote), FixedPoint96.Q96, baseBalancePerShareX96);
     }
 
     function getShareMarkPriceX96(uint256 base, uint256 quote) internal pure returns (uint256) {
-        return FullMath.mulDiv(quote, FixedPoint96.Q96, base);
+        return PRBMath.mulDiv(quote, FixedPoint96.Q96, base);
     }
 
     function getLiquidityDeleveraged(

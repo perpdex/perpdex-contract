@@ -4,6 +4,7 @@ import { PerpdexMarket } from "../../typechain"
 import { createPerpdexMarketFixture } from "./fixtures"
 import { BigNumber, BigNumberish, Wallet } from "ethers"
 import { MockContract } from "ethereum-waffle"
+import { PANIC_CODES } from "@nomicfoundation/hardhat-chai-matchers/panic"
 
 describe("PerpdexMarket removeLiquidity", () => {
     let loadFixture = waffle.createFixtureLoader(waffle.provider.getWallets())
@@ -95,18 +96,22 @@ describe("PerpdexMarket removeLiquidity", () => {
             {
                 title: "too large",
                 liquidity: 10001,
-                revertedWith: "SafeMath: subtraction overflow",
+                revertedWith: PANIC_CODES.ARITHMETIC_UNDER_OR_OVERFLOW,
             },
             {
                 title: "overflow",
                 liquidity: BigNumber.from(2).pow(256).sub(1),
-                revertedWith: "SafeMath: subtraction overflow",
+                revertedWith: PANIC_CODES.ARITHMETIC_UNDER_OR_OVERFLOW,
             },
         ].forEach(test => {
             it(test.title, async () => {
                 const res = expect(market.connect(exchange).removeLiquidity(test.liquidity))
                 if (test.revertedWith !== void 0) {
-                    await res.to.revertedWith(test.revertedWith)
+                    if (typeof test.revertedWith === "number") {
+                        await res.to.revertedWithPanic(test.revertedWith)
+                    } else {
+                        await res.to.revertedWith(test.revertedWith)
+                    }
                 } else {
                     await res.to
                         .emit(market, "LiquidityRemoved")
