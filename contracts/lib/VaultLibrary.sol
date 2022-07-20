@@ -89,7 +89,7 @@ library VaultLibrary {
         );
     }
 
-    function _toCollateralAmount(uint256 amount, uint8 tokenDecimals) private view returns (uint256) {
+    function _toCollateralAmount(uint256 amount, uint8 tokenDecimals) private pure returns (uint256) {
         int256 decimalsDiff = int256(18).sub(uint256(tokenDecimals).toInt256());
         uint256 decimalsDiffAbs = decimalsDiff.abs();
         require(decimalsDiffAbs <= 77, "VL_TCA: too large decimals diff");
