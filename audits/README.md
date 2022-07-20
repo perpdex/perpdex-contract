@@ -1,18 +1,15 @@
-# Perpetual Protocol V2 Audit Reports
+# PerpDEX Audit Reports
 
-- 2021.11.02 - HashCloak
-    - [Audit Report](https://github.com/perpetual-protocol/perp-curie-contract/blob/main/audits/2021.11.02-hashcloak.pdf)
-    - [Source Code](https://github.com/perpetual-protocol/perp-curie-contract/tree/audit-hashcloak)
+- 2022.07.06 - Haechi
+  - [Audit Report](20220706-haechi.pdf)
+  - Source Code
+    - [perpdex-contract](https://github.com/perpdex/perpdex-contract/tree/audit-20220612-3)
+    - [perpdex-oracle-contract](https://github.com/perpdex/perpdex-oracle-contract/tree/audit-20220612)
+    - [perpdex-stablecoin](https://github.com/perpdex/perpdex-stablecoin/tree/audit-20220612)
 
-- 2021.12.21 - Dedaub
-    - [Audit Report](https://github.com/perpetual-protocol/perp-curie-contract/blob/main/audits/2021.12.21-dedaub.pdf)
-    - [Source Code](https://github.com/perpetual-protocol/perp-curie-contract/tree/audit-dedaub)
+## Perpetual Protocol reports
 
-- 2022.03.04 - Dedaub
-    - [Audit Report](https://github.com/perpetual-protocol/perp-curie-contract/blob/main/audits/2022.03.04-dedaub-2.pdf)
-    - [Source Code](https://github.com/perpetual-protocol/perp-curie-contract/tree/audit-dedaub-2)
+Please see also [audit reports of Perpetual Protocol](https://github.com/perpetual-protocol/perp-curie-contract/tree/main/audits)
 
-- 2022.03.22 - Trail of Bits (ToB)
-    - [Audit Report - Retest](https://github.com/perpetual-protocol/perp-curie-contract/blob/main/audits/2022.03.21-tob-retest.pdf)
-    - [Audit Report - Final](https://github.com/perpetual-protocol/perp-curie-contract/blob/main/audits/2022.03.22-tob-final.pdf)
-    - [Source Code](https://github.com/perpetual-protocol/perp-curie-contract/tree/audit-tob)
+- They are the fork source of PerpDEX
+- The code is mostly rewritten, but the architecture is similar, so it's helpful.
