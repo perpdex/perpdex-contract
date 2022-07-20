@@ -6,7 +6,7 @@ import { Address } from "@openzeppelin/contracts/utils/Address.sol";
 import { ReentrancyGuard } from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { SafeMath } from "@openzeppelin/contracts/utils/math/SafeMath.sol";
-import { IPerpdexMarket } from "./interface/IPerpdexMarket.sol";
+import { IPerpdexMarket } from "./interfaces/IPerpdexMarket.sol";
 import { MarketStructs } from "./lib/MarketStructs.sol";
 import { FundingLibrary } from "./lib/FundingLibrary.sol";
 import { PoolLibrary } from "./lib/PoolLibrary.sol";

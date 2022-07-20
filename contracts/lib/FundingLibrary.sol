@@ -8,7 +8,7 @@ import { SignedSafeMath } from "@openzeppelin/contracts/utils/math/SignedSafeMat
 import { PerpMath } from "./PerpMath.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { MarketStructs } from "./MarketStructs.sol";
-import { IPerpdexPriceFeed } from "../interface/IPerpdexPriceFeed.sol";
+import { IPerpdexPriceFeed } from "../interfaces/IPerpdexPriceFeed.sol";
 import { PRBMath } from "prb-math/contracts/PRBMath.sol";
 import { FixedPoint96 } from "@uniswap/v3-core/contracts/libraries/FixedPoint96.sol";
 

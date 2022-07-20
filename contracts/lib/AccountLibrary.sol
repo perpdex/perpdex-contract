@@ -7,7 +7,7 @@ import { SafeMath } from "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import { SignedSafeMath } from "@openzeppelin/contracts/utils/math/SignedSafeMath.sol";
 import { PRBMath } from "prb-math/contracts/PRBMath.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
-import { IPerpdexMarketMinimum } from "../interface/IPerpdexMarketMinimum.sol";
+import { IPerpdexMarketMinimum } from "../interfaces/IPerpdexMarketMinimum.sol";
 import { PerpdexStructs } from "./PerpdexStructs.sol";
 
 // https://help.ftx.com/hc/en-us/articles/360024780511-Complete-Futures-Specs

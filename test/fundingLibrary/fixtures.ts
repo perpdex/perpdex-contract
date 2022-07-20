@@ -1,6 +1,6 @@
 import { ethers, waffle } from "hardhat"
 import { TestFundingLibrary } from "../../typechain"
-import IPerpdexPriceFeedJson from "../../artifacts/contracts/interface/IPerpdexPriceFeed.sol/IPerpdexPriceFeed.json"
+import IPerpdexPriceFeedJson from "../../artifacts/contracts/interfaces/IPerpdexPriceFeed.sol/IPerpdexPriceFeed.json"
 import { MockContract } from "ethereum-waffle"
 
 interface FundingLibraryFixture {

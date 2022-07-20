@@ -4,7 +4,7 @@ import { TestPerpdexExchange, TestPerpdexMarket } from "../../typechain"
 import { createPerpdexExchangeFixture } from "./fixtures"
 import { Wallet } from "ethers"
 import { MockContract } from "ethereum-waffle"
-import IPerpdexMarketJson from "../../artifacts/contracts/interface/IPerpdexMarket.sol/IPerpdexMarket.json"
+import IPerpdexMarketJson from "../../artifacts/contracts/interfaces/IPerpdexMarket.sol/IPerpdexMarket.json"
 
 describe("PerpdexExchange config", () => {
     let loadFixture = waffle.createFixtureLoader(waffle.provider.getWallets())
