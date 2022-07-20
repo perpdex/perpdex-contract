@@ -8,7 +8,7 @@ import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { PerpMath } from "./PerpMath.sol";
-import { IERC20Metadata } from "../interface/IERC20Metadata.sol";
+import { IERC20Metadata } from "../interfaces/IERC20Metadata.sol";
 import { AccountLibrary } from "./AccountLibrary.sol";
 import { PerpdexStructs } from "./PerpdexStructs.sol";
 

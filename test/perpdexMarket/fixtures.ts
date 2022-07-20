@@ -1,6 +1,6 @@
 import { ethers, waffle } from "hardhat"
 import { TestPerpdexMarket } from "../../typechain"
-import IPerpdexPriceFeedJson from "../../artifacts/contracts/interface/IPerpdexPriceFeed.sol/IPerpdexPriceFeed.json"
+import IPerpdexPriceFeedJson from "../../artifacts/contracts/interfaces/IPerpdexPriceFeed.sol/IPerpdexPriceFeed.json"
 import { MockContract } from "ethereum-waffle"
 import { BigNumber, Wallet } from "ethers"
 

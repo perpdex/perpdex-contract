@@ -1,7 +1,7 @@
 import { ethers, waffle } from "hardhat"
 import { TestTakerLibrary } from "../../typechain"
 import { MockContract } from "ethereum-waffle"
-import IPerpdexMarketJson from "../../artifacts/contracts/interface/IPerpdexMarket.sol/IPerpdexMarket.json"
+import IPerpdexMarketJson from "../../artifacts/contracts/interfaces/IPerpdexMarket.sol/IPerpdexMarket.json"
 
 interface TakerLibraryFixture {
     takerLibrary: TestTakerLibrary

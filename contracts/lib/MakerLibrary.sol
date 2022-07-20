@@ -8,7 +8,7 @@ import { SafeMath } from "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import { SignedSafeMath } from "@openzeppelin/contracts/utils/math/SignedSafeMath.sol";
 import { PerpMath } from "./PerpMath.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
-import { IPerpdexMarketMinimum } from "../interface/IPerpdexMarketMinimum.sol";
+import { IPerpdexMarketMinimum } from "../interfaces/IPerpdexMarketMinimum.sol";
 import { PerpdexStructs } from "./PerpdexStructs.sol";
 import { AccountLibrary } from "./AccountLibrary.sol";
 import { TakerLibrary } from "./TakerLibrary.sol";
