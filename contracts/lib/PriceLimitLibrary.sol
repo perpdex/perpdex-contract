@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.7.6;
+pragma solidity >=0.7.6;
 pragma abicoder v2;
 
-import { Math } from "@openzeppelin/contracts/math/Math.sol";
-import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
-import { FullMath } from "@uniswap/v3-core/contracts/libraries/FullMath.sol";
+import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
+import { SafeMath } from "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import { PRBMath } from "prb-math/contracts/PRBMath.sol";
 import { PerpMath } from "./PerpMath.sol";
 import { MarketStructs } from "./MarketStructs.sol";
 
@@ -42,8 +42,8 @@ library PriceLimitLibrary {
         } else {
             uint32 emaSec = config.emaSec;
             uint256 denominator = elapsed.add(emaSec);
-            updated.emaPrice = FullMath.mulDiv(priceLimitInfo.emaPrice, emaSec, denominator).add(
-                FullMath.mulDiv(price, elapsed, denominator)
+            updated.emaPrice = PRBMath.mulDiv(priceLimitInfo.emaPrice, emaSec, denominator).add(
+                PRBMath.mulDiv(price, elapsed, denominator)
             );
         }
 

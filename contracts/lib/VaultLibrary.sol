@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.7.6;
+pragma solidity >=0.7.6;
 pragma abicoder v2;
 
-import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
-import { SignedSafeMath } from "@openzeppelin/contracts/math/SignedSafeMath.sol";
+import { SafeMath } from "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import { SignedSafeMath } from "@openzeppelin/contracts/utils/math/SignedSafeMath.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
-import { SafeCast } from "@openzeppelin/contracts/utils/SafeCast.sol";
+import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { PerpMath } from "./PerpMath.sol";
 import { IERC20Metadata } from "../interface/IERC20Metadata.sol";
 import { AccountLibrary } from "./AccountLibrary.sol";
@@ -90,7 +90,7 @@ library VaultLibrary {
     }
 
     function _toCollateralAmount(uint256 amount, uint8 tokenDecimals) private view returns (uint256) {
-        int256 decimalsDiff = 18 - tokenDecimals;
+        int256 decimalsDiff = int256(18).sub(uint256(tokenDecimals).toInt256());
         uint256 decimalsDiffAbs = decimalsDiff.abs();
         require(decimalsDiffAbs <= 77, "VL_TCA: too large decimals diff");
         return decimalsDiff >= 0 ? amount.mul(10**decimalsDiffAbs) : amount.div(10**decimalsDiffAbs);

@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.7.6;
+pragma solidity >=0.7.6;
 pragma abicoder v2;
 
-import { FullMath } from "@uniswap/v3-core/contracts/libraries/FullMath.sol";
+import { PRBMath } from "prb-math/contracts/PRBMath.sol";
 import { FixedPoint96 } from "@uniswap/v3-core/contracts/libraries/FixedPoint96.sol";
-import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
-import { SignedSafeMath } from "@openzeppelin/contracts/math/SignedSafeMath.sol";
+import { SafeMath } from "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import { SignedSafeMath } from "@openzeppelin/contracts/utils/math/SignedSafeMath.sol";
 import { PerpMath } from "./PerpMath.sol";
-import { SafeCast } from "@openzeppelin/contracts/utils/SafeCast.sol";
+import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { IPerpdexMarketMinimum } from "../interface/IPerpdexMarketMinimum.sol";
 import { PerpdexStructs } from "./PerpdexStructs.sol";
 import { AccountLibrary } from "./AccountLibrary.sol";
@@ -108,11 +108,11 @@ library MakerLibrary {
         uint256 cumAfter
     ) internal pure returns (uint256) {
         uint256 liquidityAfter = liquidityBefore.add(addedLiquidity);
-        cumAfter = cumAfter.add(FullMath.mulDiv(addedToken, FixedPoint96.Q96, addedLiquidity));
+        cumAfter = cumAfter.add(PRBMath.mulDiv(addedToken, FixedPoint96.Q96, addedLiquidity));
 
         return
-            FullMath.mulDiv(cumBefore, liquidityBefore, liquidityAfter).add(
-                FullMath.mulDiv(cumAfter, addedLiquidity, liquidityAfter)
+            PRBMath.mulDiv(cumBefore, liquidityBefore, liquidityAfter).add(
+                PRBMath.mulDiv(cumAfter, addedLiquidity, liquidityAfter)
             );
     }
 
